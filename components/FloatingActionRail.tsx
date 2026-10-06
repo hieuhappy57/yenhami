@@ -120,8 +120,8 @@ export function FloatingActionRail() {
         </div>
       )}
 
-      {/* 1. Nút Đặt hàng (Trên cùng) */}
-      <div className="group relative flex items-center">
+      {/* 1. Nút Đặt hàng (Chỉ hiện trên Desktop vì Mobile đã có Giỏ hàng Header + Thanh nổi dưới đáy) */}
+      <div className="group relative hidden md:flex items-center">
         <span
           role="tooltip"
           className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#155132] px-3 py-1.5 text-xs font-medium text-[#FFFCF4] shadow-md border border-[#BD9342]/60"
@@ -148,37 +148,25 @@ export function FloatingActionRail() {
         </button>
       </div>
 
-      {/* 2. Nút Nhắn tin Zalo (Ở giữa) */}
+      {/* 2. Nút Nhắn tin Zalo */}
       <div className="group relative flex items-center">
         <span
           role="tooltip"
           className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#2B433A] px-3 py-1.5 text-xs font-medium text-white shadow-md"
         >
-          {zaloConfigured
-            ? "Nhắn tin Zalo Yến Sào Hà Mi"
-            : "Nhắn tin Zalo Hà Mi (Chưa cấu hình URL chính thức)"}
+          Nhắn tin Zalo Yến Sào Hà Mi
         </span>
         <button
           type="button"
           onClick={handleZaloClick}
           data-testid="rail-btn-zalo"
-          aria-label={
-            zaloConfigured
-              ? "Nhắn tin Zalo Yến Sào Hà Mi"
-              : "Nhắn tin Zalo Yến Sào Hà Mi - Chưa cấu hình URL chính thức"
-          }
-          aria-disabled={!zaloConfigured}
-          title={
-            zaloConfigured
-              ? "Nhắn tin Zalo Yến Sào Hà Mi"
-              : "Nhắn tin Zalo (Chưa cấu hình URL chính thức)"
-          }
-          className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border border-[#155132]/25 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
+          aria-label="Nhắn tin Zalo Yến Sào Hà Mi"
+          title="Nhắn tin Zalo Yến Sào Hà Mi"
+          className="relative flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border border-[#155132]/25 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
         >
-          {/* Recognizable Zalo speech bubble badge */}
           <svg
             viewBox="0 0 40 40"
-            className="w-7 h-7"
+            className="w-6 h-6 md:w-7 md:h-7"
             aria-hidden="true"
             focusable="false"
           >
@@ -195,70 +183,44 @@ export function FloatingActionRail() {
               Zalo
             </text>
           </svg>
-          {!zaloConfigured && (
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#BD9342] border border-white flex items-center justify-center text-[9px] font-bold text-white"
-            >
-              !
-            </span>
-          )}
         </button>
       </div>
 
-      {/* 3. Nút Chat Messenger (Dưới cùng) */}
-      <div className="group relative flex items-center">
-        <span
-          role="tooltip"
-          className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#2B433A] px-3 py-1.5 text-xs font-medium text-white shadow-md"
-        >
-          {messengerConfigured
-            ? "Chat Messenger Yến Sào Hà Mi"
-            : "Chat Messenger Hà Mi (Chưa cấu hình URL chính thức)"}
-        </span>
-        <button
-          type="button"
-          onClick={handleMessengerClick}
-          data-testid="rail-btn-messenger"
-          aria-label={
-            messengerConfigured
-              ? "Chat Messenger Yến Sào Hà Mi"
-              : "Chat Messenger Yến Sào Hà Mi - Chưa cấu hình URL chính thức"
-          }
-          aria-disabled={!messengerConfigured}
-          title={
-            messengerConfigured
-              ? "Chat Messenger Yến Sào Hà Mi"
-              : "Chat Messenger (Chưa cấu hình URL chính thức)"
-          }
-          className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0084FF] border border-[#155132]/25 shadow-md hover:border-[#0084FF] transition-colors cursor-pointer"
-        >
-          {/* Official style Messenger lightning bubble icon */}
-          <svg
-            viewBox="0 0 36 36"
-            className="w-6 h-6"
-            aria-hidden="true"
-            focusable="false"
+      {/* 3. Nút Chat Messenger (Chỉ hiển thị khi đã cấu hình URL chính thức) */}
+      {messengerConfigured && (
+        <div className="group relative flex items-center">
+          <span
+            role="tooltip"
+            className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#2B433A] px-3 py-1.5 text-xs font-medium text-white shadow-md"
           >
-            <path
-              fill="#0084FF"
-              d="M18 3C9.716 3 3 9.216 3 16.884c0 4.37 2.183 8.268 5.596 10.816.29.217.466.56.476.925l.097 2.893a1.2 1.2 0 0 0 1.683 1.06l3.228-1.425a1.2 1.2 0 0 1 .802-.063c1.002.275 2.059.424 3.118.424 8.284 0 15-6.216 15-13.884S26.284 3 18 3z"
-            />
-            <path
-              fill="#FFFFFF"
-              d="m10.65 21.02 4.41-7.01a2.25 2.25 0 0 1 3.255-.6l3.505 2.628a.9.9 0 0 0 1.085-.004l4.735-3.595c.632-.48 1.458.277 1.033.95l-4.41 7.01a2.25 2.25 0 0 1-3.255.6l-3.505-2.628a.9.9 0 0 0-1.085.004l-4.735 3.595c-.632.48-1.458-.277-1.033-.95z"
-            />
-          </svg>
-          {!messengerConfigured && (
-            <span
+            Chat Messenger Yến Sào Hà Mi
+          </span>
+          <button
+            type="button"
+            onClick={handleMessengerClick}
+            data-testid="rail-btn-messenger"
+            aria-label="Chat Messenger Yến Sào Hà Mi"
+            title="Chat Messenger Yến Sào Hà Mi"
+            className="relative flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-[#0084FF] border border-[#155132]/25 shadow-md hover:border-[#0084FF] transition-colors cursor-pointer"
+          >
+            <svg
+              viewBox="0 0 36 36"
+              className="w-6 h-6"
               aria-hidden="true"
-              className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#BD9342] border border-white flex items-center justify-center text-[9px] font-bold text-white"
+              focusable="false"
             >
-              !
-            </span>
-          )}
-        </button>
-      </div>
+              <path
+                fill="#0084FF"
+                d="M18 3C9.716 3 3 9.216 3 16.884c0 4.37 2.183 8.268 5.596 10.816.29.217.466.56.476.925l.097 2.893a1.2 1.2 0 0 0 1.683 1.06l3.228-1.425a1.2 1.2 0 0 1 .802-.063c1.002.275 2.059.424 3.118.424 8.284 0 15-6.216 15-13.884S26.284 3 18 3z"
+              />
+              <path
+                fill="#FFFFFF"
+                d="m10.65 21.02 4.41-7.01a2.25 2.25 0 0 1 3.255-.6l3.505 2.628a.9.9 0 0 0 1.085-.004l4.735-3.595c.632-.48 1.458.277 1.033.95l-4.41 7.01a2.25 2.25 0 0 1-3.255.6l-3.505-2.628a.9.9 0 0 0-1.085.004l-4.735 3.595c-.632.48-1.458-.277-1.033-.95z"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

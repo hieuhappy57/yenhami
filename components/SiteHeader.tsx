@@ -83,11 +83,9 @@ export function SiteHeader() {
             </span>
           </div>
 
-          {BRAND_CONFIG.isDemoMode && (
-            <span className="shrink-0 text-[#FFFCF4]/95 font-medium">
-              Bản thử nghiệm • Đặt từ 2 thố Free Ship
-            </span>
-          )}
+          <span className="shrink-0 text-[#FFFCF4]/95 font-medium">
+            Yến Tươi Chưng Nóng Mỗi Ngày • Đặt từ 2 thố Free Ship
+          </span>
         </div>
       </div>
 

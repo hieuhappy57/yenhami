@@ -42,6 +42,7 @@ export function OrderRequestClient({
   const {
     items,
     totalBowls,
+    estimatedSubtotalVnd,
     orderPurpose,
     setOrderPurpose,
     updateQuantity,
@@ -365,7 +366,7 @@ export function OrderRequestClient({
                                   e.target.value
                                 )
                               }
-                              className="max-w-[130px] sm:max-w-[220px] truncate rounded border border-[#155132]/25 bg-[#FFFCF4] px-1.5 py-0.5 text-[11px] font-medium text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                              className="max-w-[150px] sm:max-w-[220px] truncate rounded border border-[#155132]/25 bg-[#FFFCF4] px-1.5 py-0.5 text-base sm:text-xs font-medium text-[#2B433A] focus:border-[#155132] focus:outline-none"
                             >
                               {supportedOptions.map((opt) => (
                                 <option key={opt} value={opt}>
@@ -492,13 +493,15 @@ export function OrderRequestClient({
                 </label>
                 <input
                   id="buyerName"
+                  name="buyerName"
+                  autoComplete="name"
                   data-testid="buyer-name-input"
                   type="text"
                   required
                   value={buyerName}
                   onChange={(e) => setBuyerName(e.target.value)}
                   placeholder="Ví dụ: Chị Minh Anh"
-                  className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                  className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                 />
                 {fieldErrors.buyerName && (
                   <p className="mt-1 text-xs text-red-700">{fieldErrors.buyerName}</p>
@@ -514,13 +517,16 @@ export function OrderRequestClient({
                 </label>
                 <input
                   id="buyerPhone"
+                  name="buyerPhone"
+                  autoComplete="tel"
+                  inputMode="tel"
                   data-testid="buyer-phone-input"
                   type="tel"
                   required
                   value={buyerPhone}
                   onChange={(e) => setBuyerPhone(e.target.value)}
                   placeholder="Ví dụ: 0905123456"
-                  className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                  className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                 />
                 {fieldErrors.buyerPhone && (
                   <p className="mt-1 text-xs text-red-700">{fieldErrors.buyerPhone}</p>
@@ -538,13 +544,15 @@ export function OrderRequestClient({
               </label>
               <input
                 id="addressDetail"
+                name="addressDetail"
+                autoComplete="street-address"
                 data-testid="address-detail-input"
                 type="text"
                 required
                 value={addressDetail}
                 onChange={(e) => setAddressDetail(e.target.value)}
                 placeholder="Số nhà, tên đường, phường/quận tại Đà Nẵng..."
-                className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
               />
               {fieldErrors.addressDetail && (
                 <p className="mt-1 text-xs text-red-700">
@@ -564,12 +572,13 @@ export function OrderRequestClient({
                 </label>
                 <input
                   id="requestedDate"
+                  name="requestedDate"
                   data-testid="requested-date-input"
                   type="date"
                   value={requestedDate}
                   onChange={(e) => setRequestedDate(e.target.value)}
                   required
-                  className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-[#FFFCF4] px-3 py-2 text-xs sm:text-sm font-medium text-[#2B433A] focus:border-[#155132] focus:bg-white focus:outline-none"
+                  className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-[#FFFCF4] px-3 py-2 text-base sm:text-sm font-medium text-[#2B433A] focus:border-[#155132] focus:bg-white focus:outline-none"
                 />
                 {fieldErrors.requestedDate && (
                   <p className="mt-1 text-xs text-red-700">
@@ -587,11 +596,12 @@ export function OrderRequestClient({
                 </label>
                 <select
                   id="slotSelect"
+                  name="slotSelect"
                   data-testid="slot-select"
                   value={slotId}
                   onChange={(e) => setSlotId(e.target.value)}
                   required
-                  className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-[#FFFCF4] px-2.5 py-2 text-xs sm:text-sm font-medium text-[#2B433A] focus:border-[#155132] focus:bg-white focus:outline-none"
+                  className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-[#FFFCF4] px-2.5 py-2 text-base sm:text-sm font-medium text-[#2B433A] focus:border-[#155132] focus:bg-white focus:outline-none"
                 >
                   {slots.map((slot) => {
                     const isAvailable =
@@ -630,12 +640,13 @@ export function OrderRequestClient({
               </label>
               <input
                 id="buyerNote"
+                name="buyerNote"
                 data-testid="buyer-note-input"
                 type="text"
                 value={buyerNote}
                 onChange={(e) => setBuyerNote(e.target.value)}
                 placeholder="Ít gừng, gọi trước khi giao..."
-                className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
               />
             </div>
 
@@ -670,13 +681,14 @@ export function OrderRequestClient({
                       </label>
                       <input
                         id="recipientName"
+                        name="recipientName"
                         data-testid="recipient-name-input"
                         type="text"
                         required={isGift}
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
                         placeholder="Ví dụ: Cô Thu Hà"
-                        className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                        className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                       {fieldErrors.recipientName && (
                         <p className="mt-1 text-xs text-red-700">
@@ -694,13 +706,15 @@ export function OrderRequestClient({
                       </label>
                       <input
                         id="recipientPhone"
+                        name="recipientPhone"
+                        inputMode="tel"
                         data-testid="recipient-phone-input"
                         type="tel"
                         required={isGift}
                         value={recipientPhone}
                         onChange={(e) => setRecipientPhone(e.target.value)}
                         placeholder="Ví dụ: 0914123456"
-                        className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                        className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                       {fieldErrors.recipientPhone && (
                         <p className="mt-1 text-xs text-red-700">
@@ -720,12 +734,13 @@ export function OrderRequestClient({
                       </label>
                       <input
                         id="giftMessage"
+                        name="giftMessage"
                         data-testid="gift-message-input"
                         type="text"
                         value={giftMessage}
                         onChange={(e) => setGiftMessage(e.target.value)}
                         placeholder="Chúc Mẹ nhiều sức khỏe..."
-                        className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                        className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                     </div>
 
@@ -738,12 +753,13 @@ export function OrderRequestClient({
                       </label>
                       <input
                         id="giftSenderName"
+                        name="giftSenderName"
                         data-testid="gift-sender-input"
                         type="text"
                         value={giftSenderName}
                         onChange={(e) => setGiftSenderName(e.target.value)}
                         placeholder="Mặc định dùng tên người mua"
-                        className="mt-1 w-full min-h-[40px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                        className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -772,7 +788,7 @@ export function OrderRequestClient({
               <div className="flex justify-between text-[#2B433A]">
                 <span>Tạm tính ({serverQuote?.totalBowls ?? totalBowls} thố):</span>
                 <span className="font-semibold text-[#155132]">
-                  {formatVnd(serverQuote?.subtotalVnd ?? 0)}
+                  {formatVnd(serverQuote?.subtotalVnd ?? estimatedSubtotalVnd)}
                 </span>
               </div>
               <div className="flex justify-between gap-2 text-[#2B433A]">
@@ -793,7 +809,7 @@ export function OrderRequestClient({
                   data-testid="quote-total-vnd"
                   className="font-serif-display text-lg sm:text-xl font-bold text-[#155132]"
                 >
-                  {formatVnd(serverQuote?.totalVnd ?? 0)}
+                  {formatVnd(serverQuote?.totalVnd ?? estimatedSubtotalVnd)}
                 </span>
               </div>
             </div>

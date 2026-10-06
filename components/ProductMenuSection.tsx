@@ -70,7 +70,7 @@ export function ProductMenuSection({
               {title}
             </h2>
             <span className="text-[11px] sm:text-xs font-medium text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/35 px-2 py-0.5 rounded">
-              Thố 200ml • Giá và ảnh minh họa
+              Thố sứ 200ml • Chưng mới theo ca
             </span>
             <span className="text-[11px] sm:text-xs font-semibold text-[#155132] bg-[#155132]/10 border border-[#155132]/25 px-2 py-0.5 rounded">
               Đặt từ 2 thố • Free Ship
@@ -167,8 +167,8 @@ export function ProductMenuSection({
                 )}
               </div>
 
-              {/* Compact Card Body: 2-line stable name, desktop-only ingredients, price + Plus */}
-              <div className="p-2 sm:p-3.5 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
+              {/* Compact Card Body: 2-line stable name, 1-line ingredients on mobile & desktop, price + Plus */}
+              <div className="p-2.5 sm:p-3.5 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
                 <div className="min-w-0">
                   <h3 className="font-serif-display text-[13px] sm:text-lg font-semibold text-[#155132] leading-tight sm:leading-snug line-clamp-2 min-h-[2.05rem] sm:min-h-[2.75rem]">
                     <Link
@@ -180,7 +180,7 @@ export function ProductMenuSection({
                   </h3>
                   <p
                     title={product.ingredients.join(", ")}
-                    className="hidden sm:block text-xs text-[#2B433A]/80 mt-1 truncate"
+                    className="block text-[11px] sm:text-xs text-[#2B433A]/80 mt-0.5 line-clamp-1"
                   >
                     {visibleIngredientsText}
                   </p>

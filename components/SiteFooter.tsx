@@ -78,11 +78,6 @@ export function SiteFooter() {
                 Tuyển dụng
               </Link>
             </li>
-            <li>
-              <Link href="/quan-tri" className="hover:text-[#155132] hover:underline font-medium text-[#8A6632]">
-                Quản trị Website (Admin)
-              </Link>
-            </li>
           </ul>
         </div>
 

@@ -30,8 +30,9 @@ export function MobileStickyCartBar() {
             <ShoppingBag className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-xs text-[#FFFCF4]/85">
-              Đã chọn <strong>{totalBowls} thố</strong> [Giá DEMO]
+            <p className="text-xs text-[#FFFCF4]/90">
+              Đã chọn <strong>{totalBowls} thố</strong>{" "}
+              {totalBowls >= 2 ? "• Miễn phí giao hàng" : "• Đặt 2 thố Free Ship"}
             </p>
             <p className="text-sm font-bold text-[#FFFCF4]">
               Tạm tính: {estimatedSubtotalVnd.toLocaleString("vi-VN")}đ

@@ -216,7 +216,7 @@ export default async function YeuCauDaNhanPage({
               <span className="font-bold text-[#155132]">
                 {!order.isTotalFinal
                   ? "Tổng tạm tính (chưa gồm phí giao):"
-                  : "Tổng tạm tính (Giá mẫu):"}
+                  : "Tổng cộng:"}
               </span>
               <span className="font-serif-display text-lg font-bold text-[#155132]">
                 {formatVnd(order.totalVnd)}
@@ -227,12 +227,13 @@ export default async function YeuCauDaNhanPage({
           {/* Token reminder for safe self-lookup */}
           <div className="mt-5 rounded-xl border border-[#155132]/15 bg-white p-3.5 text-xs text-[#2B433A]">
             <span className="font-semibold text-[#155132]">
-              Mã bảo mật tra cứu đơn của bạn:
+              Tra cứu lại đơn hàng bất cứ lúc nào:
             </span>{" "}
-            <code className="rounded bg-[#FFFCF4] border border-[#BD9342]/30 px-1.5 py-0.5 font-mono text-[#155132]">
-              {token}
+            Nhập Mã đơn{" "}
+            <code className="rounded bg-[#FFFCF4] border border-[#BD9342]/30 px-1.5 py-0.5 font-mono font-bold text-[#155132]">
+              {order.referenceCode}
             </code>{" "}
-            (Lưu lại đường dẫn này nếu bạn muốn xem lại tiến độ xác nhận đơn).
+            kèm Số điện thoại đặt hàng của bạn tại mục Tra cứu đơn.
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

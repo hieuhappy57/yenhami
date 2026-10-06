@@ -132,6 +132,30 @@ export function OrderConfirmationClientFallback({
       });
   }, [refCode, token]);
 
+  const [recentOrders, setRecentOrders] = useState<OrderConfirmationSnapshot[]>([]);
+
+  useEffect(() => {
+    try {
+      const found: OrderConfirmationSnapshot[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key && key.startsWith("hami_order_")) {
+          const val = window.localStorage.getItem(key);
+          if (val) {
+            const parsed = JSON.parse(val) as OrderConfirmationSnapshot;
+            if (parsed && parsed.referenceCode) {
+              found.push(parsed);
+            }
+          }
+        }
+      }
+      found.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      setRecentOrders(found.slice(0, 5));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   if (cachedOrder) {
     return (
       <div
@@ -294,7 +318,7 @@ export function OrderConfirmationClientFallback({
             <span className="font-bold text-[#155132]">
               {!cachedOrder.isTotalFinal
                 ? "Tổng tạm tính (chưa gồm phí giao):"
-                : "Tổng tạm tính (Giá mẫu):"}
+                : "Tổng cộng:"}
             </span>
             <span className="font-serif-display text-lg font-bold text-[#155132]">
               {formatVnd(cachedOrder.totalVnd)}
@@ -305,12 +329,13 @@ export function OrderConfirmationClientFallback({
         {/* Token reminder for safe self-lookup */}
         <div className="mt-5 rounded-xl border border-[#155132]/15 bg-white p-3.5 text-xs text-[#2B433A]">
           <span className="font-semibold text-[#155132]">
-            Mã bảo mật tra cứu đơn của bạn:
+            Tra cứu lại đơn hàng bất cứ lúc nào:
           </span>{" "}
-          <code className="rounded bg-[#FFFCF4] border border-[#BD9342]/30 px-1.5 py-0.5 font-mono text-[#155132]">
-            {token}
+          Nhập Mã đơn{" "}
+          <code className="rounded bg-[#FFFCF4] border border-[#BD9342]/30 px-1.5 py-0.5 font-mono font-bold text-[#155132]">
+            {cachedOrder.referenceCode}
           </code>{" "}
-          (Lưu lại đường dẫn này nếu bạn muốn xem lại tiến độ xác nhận đơn).
+          kèm Số điện thoại đặt hàng của bạn tại mục Tra cứu đơn.
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -343,11 +368,41 @@ export function OrderConfirmationClientFallback({
             Tra cứu Yêu Cầu Đặt Yến Hà Mi
           </h1>
           <p className="text-xs text-[#2B433A]/85">
-            Để bảo mật thông tin người nhận, vui lòng nhập đúng Mã yêu cầu và Mã
-            bảo mật tra cứu đơn.
+            Nhập Mã đơn hàng và Số điện thoại đặt hàng (hoặc mã bảo mật) để xem trạng thái đơn.
           </p>
         </div>
       </div>
+
+      {/* 1-Click Recent Orders on this device */}
+      {recentOrders.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-[#BD9342]/45 bg-[#FFFCF4] p-4">
+          <p className="text-xs font-bold text-[#155132]">
+            Đơn hàng bạn vừa đặt gần đây trên thiết bị này (Bấm để xem ngay):
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {recentOrders.map((ord) => (
+              <button
+                key={ord.referenceCode}
+                type="button"
+                onClick={() => setCachedOrder(ord)}
+                className="flex w-full items-center justify-between rounded-xl border border-[#155132]/15 bg-white px-3.5 py-2.5 text-left text-xs transition hover:border-[#155132] cursor-pointer"
+              >
+                <div>
+                  <span className="font-mono font-bold text-[#155132]">
+                    {ord.referenceCode}
+                  </span>
+                  <span className="ml-2 text-[#2B433A]/80">
+                    • Giao ngày {ord.requestedDate}
+                  </span>
+                </div>
+                <span className="font-bold text-[#8A6632] underline">
+                  {formatVnd(ord.totalVnd)} →
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {checkedStorage && (refCode || token) && (
         <div
@@ -357,8 +412,8 @@ export function OrderConfirmationClientFallback({
         >
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
           <p>
-            Không tìm thấy yêu cầu hoặc mã bảo mật tra cứu không khớp. Vui lòng
-            kiểm tra lại cả hai thông tin bên dưới.
+            Không tìm thấy yêu cầu hoặc số điện thoại / mã tra cứu không khớp. Vui lòng
+            kiểm tra lại hai thông tin bên dưới.
           </p>
         </div>
       )}
@@ -378,7 +433,7 @@ export function OrderConfirmationClientFallback({
             required
             defaultValue={refCode}
             placeholder="HM-..."
-            className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm font-mono text-[#2B433A] focus:border-[#155132] focus:outline-none"
+            className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-base sm:text-sm font-mono text-[#2B433A] focus:border-[#155132] focus:outline-none"
           />
         </div>
 
@@ -387,16 +442,17 @@ export function OrderConfirmationClientFallback({
             htmlFor="lookup-token"
             className="block text-xs font-semibold text-[#155132]"
           >
-            Mã bảo mật tra cứu (cấp khi gửi yêu cầu) *
+            Số điện thoại đặt hàng (hoặc Mã bảo mật tra cứu) *
           </label>
           <input
             id="lookup-token"
             name="token"
             type="text"
+            autoComplete="tel"
             required
             defaultValue={token}
-            placeholder="Nhập mã bảo mật tra cứu..."
-            className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm font-mono text-[#2B433A] focus:border-[#155132] focus:outline-none"
+            placeholder="Nhập số điện thoại đặt đơn (VD: 0905123456)..."
+            className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
           />
         </div>
 

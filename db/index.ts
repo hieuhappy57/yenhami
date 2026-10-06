@@ -1646,11 +1646,21 @@ export function getOrderRequestByReference(params: {
 
   if (!row) return null;
 
+  const inputToken = (params.lookupToken || "").trim();
+  const inputDigits = inputToken.replace(/\D/g, "");
+  const buyerDigits = String(row.buyer_phone || "").replace(/\D/g, "");
+  const recipientDigits = String(row.recipient_phone || "").replace(/\D/g, "");
+  const isPhoneMatch =
+    inputDigits.length >= 9 &&
+    /^[0-9+\s.-]+$/.test(inputToken) &&
+    (inputDigits === buyerDigits || inputDigits === recipientDigits);
+
   const isAuthorizedFullView =
     Boolean(params.isStaff) ||
-    (Boolean(params.lookupToken) && String(row.lookup_token) === params.lookupToken);
+    (Boolean(inputToken) &&
+      (String(row.lookup_token) === inputToken || isPhoneMatch));
 
-  // Strict security requirement: do NOT return order data (even masked) if neither staff nor valid lookupToken
+  // Strict security requirement: do NOT return order data (even masked) if neither staff nor valid lookupToken/phone
   if (!isAuthorizedFullView) {
     return null;
   }
