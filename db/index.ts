@@ -1504,22 +1504,46 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
 
     // Trigger Email & Zalo notifications for the new order (non-blocking)
     try {
-      triggerOrderNotificationsAfterCommit({
+      void triggerOrderNotificationsAfterCommit({
         referenceCode,
         orderPurpose,
         buyerName,
         buyerPhone,
+        buyerNote: (input.buyerNote || "").trim() || undefined,
         recipientName,
         recipientPhone,
+        giftSenderName:
+          orderPurpose === "GIFT"
+            ? (input.giftSenderName || buyerName).trim()
+            : undefined,
+        giftMessage:
+          orderPurpose === "GIFT" ? (input.giftMessage || "").trim() : "",
+        hidePriceOnReceipt:
+          orderPurpose === "GIFT" ? Boolean(input.hidePriceOnReceipt) : false,
         addressDetail,
         requestedDate,
         slotLabel: quote.slot.label,
+        totalBowls: quote.totalBowls,
+        subtotalVnd: quote.subtotalVnd,
+        shippingFeeVnd: quote.shippingFeeVnd,
         totalVnd: quote.totalVnd,
         shippingFeeNote: quote.shippingFeeNote,
-        giftMessage: orderPurpose === "GIFT" ? (input.giftMessage || "").trim() : "",
+        items: quote.items.map((it) => ({
+          productName: it.productName,
+          variantName: it.variantName,
+          volumeMl: it.volumeMl,
+          selectedOption: it.selectedOption,
+          ingredientsText: it.ingredientsText,
+          quantity: it.quantity,
+          unitPriceVnd: it.unitPriceVnd,
+          lineTotalVnd: it.lineTotalVnd,
+        })),
         itemsSummary: quote.items
-          .map((it) => `${it.productName} x${it.quantity}`)
-          .join(", "),
+          .map(
+            (it) =>
+              `${it.productName} (${it.variantName}, ${it.selectedOption}) x${it.quantity}: ${it.lineTotalVnd.toLocaleString("vi-VN")}đ`
+          )
+          .join(" | "),
       });
     } catch {
       // Never block order creation if notification logging/sending fails
@@ -2260,19 +2284,37 @@ export function getNotificationLogs(limit = 30): NotificationLogRecord[] {
   }));
 }
 
+export interface OrderNotificationItem {
+  productName: string;
+  variantName: string;
+  volumeMl: number;
+  selectedOption: string;
+  ingredientsText?: string;
+  quantity: number;
+  unitPriceVnd: number;
+  lineTotalVnd: number;
+}
+
 export interface OrderNotificationPayload {
   referenceCode: string;
   orderPurpose: "SELF" | "GIFT";
   buyerName: string;
   buyerPhone: string;
+  buyerNote?: string;
   recipientName: string;
   recipientPhone: string;
+  giftSenderName?: string;
+  giftMessage?: string;
+  hidePriceOnReceipt?: boolean;
   addressDetail: string;
   requestedDate: string;
   slotLabel: string;
+  totalBowls?: number;
+  subtotalVnd?: number;
+  shippingFeeVnd?: number | null;
   totalVnd: number;
   shippingFeeNote: string;
-  giftMessage?: string;
+  items?: OrderNotificationItem[];
   itemsSummary: string;
 }
 
@@ -2283,28 +2325,130 @@ export async function triggerOrderNotificationsAfterCommit(
   const config = getNotificationSettings();
   const nowIso = new Date().toISOString();
 
-  const textSummary = `[ĐƠN MỚI ${payload.referenceCode}] Khách: ${payload.buyerName} (${payload.buyerPhone}) • Món: ${payload.itemsSummary} • Tổng: ${payload.totalVnd.toLocaleString("vi-VN")}đ • Giao: ${payload.requestedDate} (${payload.slotLabel}) • Đ/c: ${payload.addressDetail}`;
+  // Support 1, 2 or multiple email addresses separated by comma or semicolon
+  const emailList = (config.notificationEmailTo || "")
+    .split(/[,;]+/)
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const emailToJoined = emailList.join(", ");
 
-  const emailSubject = `[Yến Sào Hà Mi] Đơn đặt món mới #${payload.referenceCode} — ${payload.buyerName}`;
+  const itemizedLines =
+    payload.items && payload.items.length > 0
+      ? payload.items.map(
+          (it, idx) =>
+            `${idx + 1}. ${it.productName} (${it.variantName} • ${it.selectedOption}) x${it.quantity} = ${it.lineTotalVnd.toLocaleString("vi-VN")}đ`
+        )
+      : [payload.itemsSummary];
+
+  const textSummary = `[ĐƠN MỚI #${payload.referenceCode}] Khách: ${payload.buyerName} (${payload.buyerPhone}) • Giao: ${payload.requestedDate} (${payload.slotLabel}) • Đ/c: ${payload.addressDetail} • Chi tiết món: ${itemizedLines.join(" ; ")} • Tổng: ${payload.totalVnd.toLocaleString("vi-VN")}đ`;
+
+  const itemsTableRowsHtml =
+    payload.items && payload.items.length > 0
+      ? payload.items
+          .map(
+            (it, idx) => `
+          <tr>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e0d0; text-align: center; font-size: 13px;">${idx + 1}</td>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e0d0; font-size: 13px;">
+              <strong style="color: #155132;">${it.productName}</strong><br/>
+              <span style="font-size: 12px; color: #50575e;">Quy cách: ${it.variantName} (${it.volumeMl}ml) • Vị: <strong>${it.selectedOption}</strong></span>
+              ${it.ingredientsText ? `<br/><span style="font-size: 11px; color: #8A6632;">Thành phần: ${it.ingredientsText}</span>` : ""}
+            </td>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e0d0; text-align: center; font-weight: bold; font-size: 13px;">x${it.quantity}</td>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e0d0; text-align: right; font-size: 13px;">${it.unitPriceVnd.toLocaleString("vi-VN")}đ</td>
+            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e0d0; text-align: right; font-weight: bold; color: #155132; font-size: 13px;">${it.lineTotalVnd.toLocaleString("vi-VN")}đ</td>
+          </tr>`
+          )
+          .join("")
+      : `<tr><td colspan="5" style="padding: 12px; font-size: 13px;">${payload.itemsSummary}</td></tr>`;
+
+  const subtotalVnd = payload.subtotalVnd ?? payload.totalVnd;
+  const shippingDisplay =
+    payload.shippingFeeVnd === 0
+      ? "0đ (Miễn phí giao hàng)"
+      : payload.shippingFeeVnd
+        ? `${payload.shippingFeeVnd.toLocaleString("vi-VN")}đ`
+        : payload.shippingFeeNote;
+
+  const emailSubject = `[Yến Sào Hà Mi] Đơn đặt món mới #${payload.referenceCode} — ${payload.buyerName} (${payload.totalVnd.toLocaleString("vi-VN")}đ)`;
   const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #BD9342; border-radius: 12px; overflow: hidden;">
+    <div style="font-family: Arial, sans-serif; max-width: 660px; margin: 0 auto; border: 1px solid #BD9342; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: #155132; color: #FFFCF4; padding: 18px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #BD9342; text-transform: uppercase; letter-spacing: 1px;">YẾN SÀO HÀ MI — THÔNG BÁO ĐƠN ĐẶT MÓN MỚI</p>
-        <h2 style="margin: 6px 0 0 0; font-size: 20px;">Mã đơn: #${payload.referenceCode}</h2>
+        <p style="margin: 0; font-size: 11px; color: #BD9342; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">YẾN SÀO HÀ MI — THÔNG BÁO ĐƠN ĐẶT MÓN MỚI</p>
+        <h2 style="margin: 6px 0 0 0; font-size: 20px;">Mã đơn hàng: #${payload.referenceCode}</h2>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #DBF1EE;">Loại đơn: <strong>${payload.orderPurpose === "GIFT" ? "🎁 Gửi Quà Biếu Tặng" : "🥣 Mua Dùng Gia Đình"}</strong> • Lịch giao: <strong>${payload.requestedDate} (${payload.slotLabel})</strong></p>
       </div>
+
       <div style="padding: 20px 24px; background-color: #FFFCF4; color: #1d2327; font-size: 14px; line-height: 1.6;">
-        <p><strong>Khách đặt:</strong> ${payload.buyerName} — <a href="tel:${payload.buyerPhone}">${payload.buyerPhone}</a></p>
-        <p><strong>Người nhận:</strong> ${payload.recipientName} (${payload.recipientPhone})</p>
-        <p><strong>Loại đơn:</strong> ${payload.orderPurpose === "GIFT" ? "Gửi quà biếu tặng" : "Mua dùng"}</p>
-        <p><strong>Địa chỉ giao:</strong> ${payload.addressDetail}</p>
-        <p><strong>Thời gian giao:</strong> ${payload.requestedDate} — ${payload.slotLabel}</p>
-        <hr style="border: none; border-top: 1px dashed #BD9342; margin: 14px 0;" />
-        <p><strong>Danh sách món đã đặt:</strong><br/>${payload.itemsSummary}</p>
-        ${payload.giftMessage ? `<p style="background: #fff; padding: 10px; border-left: 3px solid #BD9342;"><strong>Lời chúc trên thiệp:</strong> “${payload.giftMessage}”</p>` : ""}
-        <p style="font-size: 16px; color: #155132;"><strong>Tổng thanh toán: ${payload.totalVnd.toLocaleString("vi-VN")}đ</strong> (${payload.shippingFeeNote})</p>
+        <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #155132; border-bottom: 1px solid #BD9342; padding-bottom: 6px;">1. THÔNG TIN KHÁCH ĐẶT & GIAO NHẬN</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px;">
+          <tr>
+            <td style="padding: 4px 0; width: 150px; color: #50575e;">Người đặt món:</td>
+            <td style="padding: 4px 0;"><strong>${payload.buyerName}</strong> — SĐT: <a href="tel:${payload.buyerPhone}" style="color: #155132; font-weight: bold;">${payload.buyerPhone}</a></td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; color: #50575e;">Người nhận hàng:</td>
+            <td style="padding: 4px 0;"><strong>${payload.recipientName}</strong> — SĐT: <a href="tel:${payload.recipientPhone}" style="color: #155132; font-weight: bold;">${payload.recipientPhone}</a></td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; color: #50575e;">Địa chỉ giao hàng:</td>
+            <td style="padding: 4px 0;"><strong>${payload.addressDetail}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; color: #50575e;">Khung giờ giao:</td>
+            <td style="padding: 4px 0;"><strong style="color: #8A6632;">Ngày ${payload.requestedDate} • ${payload.slotLabel}</strong></td>
+          </tr>
+          ${
+            payload.buyerNote
+              ? `<tr><td style="padding: 4px 0; color: #50575e;">Ghi chú của khách:</td><td style="padding: 4px 0; color: #8A6632;"><strong>“${payload.buyerNote}”</strong></td></tr>`
+              : ""
+          }
+        </table>
+
+        ${
+          payload.orderPurpose === "GIFT" || payload.giftMessage
+            ? `<div style="background: #ffffff; padding: 12px 14px; border: 1px solid #BD9342; border-left: 4px solid #155132; border-radius: 6px; margin-bottom: 16px; font-size: 13px;">
+                <strong style="color: #155132;">🎁 THÔNG TIN QUÀ BIẾU TẶNG:</strong><br/>
+                ${payload.giftSenderName ? `• Người gửi ghi trên thiệp: <strong>${payload.giftSenderName}</strong><br/>` : ""}
+                ${payload.giftMessage ? `• Lời chúc trên thiệp: <em>“${payload.giftMessage}”</em><br/>` : ""}
+                • Phiếu giao hàng: <strong>${payload.hidePriceOnReceipt ? "Ẩn giá tiền trên phiếu giao" : "Hiển thị bình thường"}</strong>
+              </div>`
+            : ""
+        }
+
+        <h3 style="margin: 16px 0 10px 0; font-size: 15px; color: #155132; border-bottom: 1px solid #BD9342; padding-bottom: 6px;">2. CHI TIẾT ĐƠN HÀNG GỒM NHỮNG MÓN ĐÃ ĐẶT</h3>
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e5e0d0; border-radius: 6px; overflow: hidden;">
+          <thead>
+            <tr style="background-color: #155132; color: #FFFCF4; font-size: 12px;">
+              <th style="padding: 8px; text-align: center; width: 36px;">#</th>
+              <th style="padding: 8px; text-align: left;">Tên món / Sản phẩm & Tùy chọn</th>
+              <th style="padding: 8px; text-align: center; width: 55px;">SL</th>
+              <th style="padding: 8px; text-align: right; width: 95px;">Đơn giá</th>
+              <th style="padding: 8px; text-align: right; width: 105px;">Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsTableRowsHtml}
+          </tbody>
+          <tfoot>
+            <tr style="background-color: #faf6eb; font-size: 13px;">
+              <td colspan="4" style="padding: 8px 12px; text-align: right; color: #50575e;">Tạm tính tiền món:</td>
+              <td style="padding: 8px 12px; text-align: right; font-weight: bold;">${subtotalVnd.toLocaleString("vi-VN")}đ</td>
+            </tr>
+            <tr style="background-color: #faf6eb; font-size: 13px;">
+              <td colspan="4" style="padding: 6px 12px; text-align: right; color: #50575e;">Phí giao hàng:</td>
+              <td style="padding: 6px 12px; text-align: right; font-weight: bold; color: #155132;">${shippingDisplay}</td>
+            </tr>
+            <tr style="background-color: #f3ead3; font-size: 15px;">
+              <td colspan="4" style="padding: 10px 12px; text-align: right; font-weight: bold; color: #155132;">TỔNG CỘNG THANH TOÁN:</td>
+              <td style="padding: 10px 12px; text-align: right; font-weight: bold; color: #155132; font-size: 16px;">${payload.totalVnd.toLocaleString("vi-VN")}đ</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
-      <div style="background-color: #f6f7f7; padding: 12px 24px; font-size: 12px; color: #50575e; text-align: center;">
-        Quản lý đơn hàng tại: <a href="https://yenhami.vercel.app/quan-tri" style="color: #155132; font-weight: bold;">https://yenhami.vercel.app/quan-tri</a>
+
+      <div style="background-color: #f6f7f7; padding: 14px 24px; font-size: 12px; color: #50575e; text-align: center; border-top: 1px solid #e5e0d0;">
+        Mở trang Quản trị để xác nhận đơn hàng: <a href="https://yenhami.vercel.app/quan-tri" style="color: #155132; font-weight: bold;">https://yenhami.vercel.app/quan-tri</a>
       </div>
     </div>
   `;
@@ -2323,8 +2467,8 @@ export async function triggerOrderNotificationsAfterCommit(
   let zaloSent = false;
   let detailMsg = "";
 
-  // 1. EMAIL NOTIFICATION (Google Apps Script Webhook or Resend API)
-  if (config.enableEmail && config.notificationEmailTo) {
+  // 1. EMAIL NOTIFICATION (Google Apps Script Webhook or Resend API — supports 2+ emails)
+  if (config.enableEmail && emailList.length > 0) {
     const emailLogId = `notif-email-${crypto.randomUUID()}`;
     const hasProvider = Boolean(config.emailWebhookUrl || config.resendApiKey);
 
@@ -2332,13 +2476,13 @@ export async function triggerOrderNotificationsAfterCommit(
       emailLogId,
       payload.referenceCode,
       "EMAIL",
-      config.notificationEmailTo,
+      emailToJoined,
       hasProvider ? "SENT" : "CONFIG_READY",
       textSummary,
       config.emailWebhookUrl
-        ? "Đang gửi Email qua Google Apps Script Webhook..."
+        ? `Đang gửi Email chi tiết đơn hàng tới (${emailToJoined}) qua Google Apps Script...`
         : config.resendApiKey
-          ? "Đang gửi Email qua Resend API..."
+          ? `Đang gửi Email tới (${emailToJoined}) qua Resend API...`
           : "Đã ghi nhận đơn (Hãy dán link Google Apps Script Web App vào mục Cài đặt Email để tự động gửi Gmail)",
       nowIso
     );
@@ -2351,17 +2495,21 @@ export async function triggerOrderNotificationsAfterCommit(
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             channel: "EMAIL",
-            to: config.notificationEmailTo,
+            to: emailList.join(","),
+            recipients: emailList,
             subject: emailSubject,
             text: textSummary,
             html: emailHtml,
-            payload,
+            payload: {
+              ...payload,
+              itemsTextMultiLine: itemizedLines.join("\n"),
+            },
           }),
         });
         const respText = await res.text().catch(() => "");
         if (res.ok) {
           emailSent = true;
-          detailMsg = `Đã gửi Email thành công qua Google Apps Script tới ${config.notificationEmailTo}`;
+          detailMsg = `Đã gửi Email chi tiết đơn hàng thành công qua Google Apps Script tới: ${emailToJoined}`;
           updateLog.run("SENT", detailMsg, emailLogId);
         } else {
           detailMsg = `Google Apps Script trả về HTTP ${res.status}: ${respText.slice(0, 120)}`;
@@ -2381,14 +2529,14 @@ export async function triggerOrderNotificationsAfterCommit(
           },
           body: JSON.stringify({
             from: "Yến Sào Hà Mi <onboarding@resend.dev>",
-            to: [config.notificationEmailTo],
+            to: emailList,
             subject: emailSubject,
             html: emailHtml,
           }),
         });
         if (res.ok) {
           emailSent = true;
-          detailMsg = `Đã gửi Email qua Resend tới ${config.notificationEmailTo}`;
+          detailMsg = `Đã gửi Email qua Resend tới: ${emailToJoined}`;
           updateLog.run("SENT", detailMsg, emailLogId);
         } else {
           detailMsg = `Resend HTTP ${res.status}`;

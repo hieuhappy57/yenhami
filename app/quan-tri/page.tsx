@@ -3265,24 +3265,71 @@ export default function QuanTriPage() {
                       </label>
                     </div>
                     <div className="p-4 space-y-3.5 text-xs">
-                      <div>
-                        <label className="block font-bold mb-1">
-                          Địa chỉ Email nhận thông báo đơn mới *
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          value={notificationSettings.notificationEmailTo}
-                          onChange={(e) =>
-                            setNotificationSettings({
-                              ...notificationSettings,
-                              notificationEmailTo: e.target.value,
-                            })
-                          }
-                          placeholder="VD: gmail của anh (có thể nhập nhiều email cách nhau dấu phẩy)"
-                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
-                        />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="block font-bold mb-1 text-[#1d2327]">
+                            Địa chỉ Email nhận thông báo 1 (Chính) *
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={
+                              (
+                                (notificationSettings.notificationEmailTo || "").split(
+                                  ","
+                                )[0] || ""
+                              ).trim()
+                            }
+                            onChange={(e) => {
+                              const parts = (
+                                notificationSettings.notificationEmailTo || ""
+                              ).split(",");
+                              const second = parts.slice(1).join(",").trim();
+                              setNotificationSettings({
+                                ...notificationSettings,
+                                notificationEmailTo: second
+                                  ? `${e.target.value.trim()}, ${second}`
+                                  : e.target.value.trim(),
+                              });
+                            }}
+                            placeholder="VD: email1@gmail.com"
+                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1 text-[#155132]">
+                            Địa chỉ Email nhận thông báo 2 (Đồng nhận — tùy chọn)
+                          </label>
+                          <input
+                            type="text"
+                            value={(notificationSettings.notificationEmailTo || "")
+                              .split(",")
+                              .slice(1)
+                              .join(", ")
+                              .trim()}
+                            onChange={(e) => {
+                              const first = (
+                                (notificationSettings.notificationEmailTo || "").split(
+                                  ","
+                                )[0] || ""
+                              ).trim();
+                              const secondVal = e.target.value.trim();
+                              setNotificationSettings({
+                                ...notificationSettings,
+                                notificationEmailTo: secondVal
+                                  ? `${first}, ${secondVal}`
+                                  : first,
+                              });
+                            }}
+                            placeholder="VD: email2@gmail.com (hoặc thêm nhiều email cách dấu phẩy)"
+                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                          />
+                        </div>
                       </div>
+                      <p className="text-[11px] text-[#50575e]">
+                        Hệ thống sẽ tự động gửi thông báo đơn hàng mới <strong>cùng lúc đến cả 2 địa chỉ email</strong> (kèm bảng chi tiết từng món, quy cách ml, vị chưng, đơn giá, thành tiền và thông tin người nhận).
+                      </p>
 
                       <div>
                         <label className="block font-bold mb-1 text-[#155132]">
@@ -3309,7 +3356,7 @@ export default function QuanTriPage() {
                       <details className="rounded-xs border border-[#BD9342]/60 bg-[#FFFCF4] p-3">
                         <summary className="cursor-pointer font-bold text-[#155132] flex items-center justify-between">
                           <span>
-                            📋 Lấy mã Google Apps Script (`Code.gs`) & Hướng dẫn cài đặt 2 phút (Bấm để mở)
+                            📋 Lấy mã Google Apps Script (`Code.gs`) có Bảng chi tiết đơn hàng & Gửi 2 Email (Bấm để mở)
                           </span>
                           <span className="text-[11px] underline text-[#8A6632]">
                             Xem mã & Copy
@@ -3341,17 +3388,52 @@ export default function QuanTriPage() {
                             <button
                               type="button"
                               onClick={async () => {
-                                const gsCode = `function doPost(e) {
+                                const gsCode = `function formatVnd(n) {
+  return Number(n || 0).toLocaleString("vi-VN") + "đ";
+}
+
+function buildOrderItemsHtml(p) {
+  var items = Array.isArray(p.items) ? p.items : [];
+  var rows = "";
+  if (items.length > 0) {
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      rows += "<tr>" +
+        "<td style='padding:8px;border:1px solid #d7d0c0;text-align:center;font-weight:bold;'>" + (i + 1) + "</td>" +
+        "<td style='padding:8px;border:1px solid #d7d0c0;'><strong>" + (it.productName || "") + "</strong><br/><span style='font-size:12px;color:#50575e;'>Quy cách: " + (it.variantLabel || "") + (it.volumeMl ? " (" + it.volumeMl + "ml)" : "") + " | Vị: " + (it.flavorOptionLabel || "Nguyên bản") + "</span></td>" +
+        "<td style='padding:8px;border:1px solid #d7d0c0;text-align:center;font-weight:bold;'>" + (it.quantity || 1) + "</td>" +
+        "<td style='padding:8px;border:1px solid #d7d0c0;text-align:right;'>" + formatVnd(it.unitPriceVnd) + "</td>" +
+        "<td style='padding:8px;border:1px solid #d7d0c0;text-align:right;font-weight:bold;color:#155132;'>" + formatVnd(it.lineTotalVnd) + "</td>" +
+        "</tr>";
+    }
+  } else {
+    rows = "<tr><td colspan='5' style='padding:10px;border:1px solid #d7d0c0;'>" + (p.itemsSummary || "") + "</td></tr>";
+  }
+  return "<div style='font-family:Arial,sans-serif;max-width:680px;margin:0 auto;border:1px solid #d7d0c0;border-radius:10px;overflow:hidden;'>" +
+    "<div style='background:#155132;color:#FFFCF4;padding:16px 20px;'><h2 style='margin:0;font-size:18px;'>BẾP YẾN SÀO HÀ MI — ĐƠN ĐẶT MÓN MỚI #" + (p.referenceCode || "") + "</h2></div>" +
+    "<div style='padding:18px 20px;color:#1d2327;font-size:14px;line-height:1.6;'>" +
+    "<p><strong>1. Người đặt & Người nhận:</strong><br/>• Khách đặt: <strong>" + (p.buyerName || "") + "</strong> (" + (p.buyerPhone || "") + ")<br/>• Người nhận: <strong>" + (p.recipientName || "") + "</strong> (" + (p.recipientPhone || "") + ")<br/>• Địa chỉ giao: <strong>" + (p.addressDetail || "") + "</strong><br/>• Lịch hẹn giao: <strong>" + (p.requestedDate || "") + " | " + (p.slotLabel || "") + "</strong></p>" +
+    "<p><strong>2. Chi tiết các món trong đơn hàng:</strong></p>" +
+    "<table style='width:100%;border-collapse:collapse;font-size:13px;'><thead><tr style='background:#155132;color:#FFFCF4;'><th style='padding:8px;border:1px solid #155132;'>#</th><th style='padding:8px;border:1px solid #155132;text-align:left;'>Tên món & Tùy chọn</th><th style='padding:8px;border:1px solid #155132;'>SL</th><th style='padding:8px;border:1px solid #155132;text-align:right;'>Đơn giá</th><th style='padding:8px;border:1px solid #155132;text-align:right;'>Thành tiền</th></tr></thead><tbody>" + rows + "</tbody><tfoot>" +
+    "<tr style='background:#FFFCF4;'><td colspan='4' style='padding:10px;border:1px solid #d7d0c0;text-align:right;font-weight:bold;color:#155132;'>TỔNG CỘNG THANH TOÁN:</td><td style='padding:10px;border:1px solid #d7d0c0;text-align:right;font-weight:bold;font-size:16px;color:#8E2A22;'>" + formatVnd(p.totalVnd) + "</td></tr></tfoot></table>" +
+    (p.buyerNote ? "<p style='margin-top:12px;'><strong>Ghi chú:</strong> " + p.buyerNote + "</p>" : "") +
+    (p.giftMessage ? "<p style='margin-top:8px;'><strong>Thiệp quà tặng:</strong> " + p.giftMessage + "</p>" : "") +
+    "</div></div>";
+}
+
+function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents || "{}");
     var p = data.payload || {};
-    var toEmail = data.to || Session.getActiveUser().getEmail();
+    var rawTo = String(data.to || p.to || Session.getActiveUser().getEmail());
+    var toEmails = rawTo.split(/[,;]+/).map(function(s){ return s.trim(); }).filter(Boolean).join(",");
     var subject = data.subject || ("[Yến Sào Hà Mi] Đơn mới #" + (p.referenceCode || ""));
+    var htmlBody = data.html || buildOrderItemsHtml(p);
     MailApp.sendEmail({
-      to: toEmail,
+      to: toEmails,
       subject: subject,
       body: data.text || subject,
-      htmlBody: data.html || ("<p>" + (data.text || "") + "</p>"),
+      htmlBody: htmlBody,
       name: "Bếp Yến Sào Hà Mi"
     });
     try {
@@ -3359,19 +3441,19 @@ export default function QuanTriPage() {
       if (ss) {
         var sheet = ss.getSheetByName("DonHangHaMi") || ss.insertSheet("DonHangHaMi");
         if (sheet.getLastRow() === 0) {
-          sheet.appendRow(["Thời gian", "Mã đơn", "Loại", "Khách đặt", "SĐT đặt", "Người nhận", "SĐT nhận", "Địa chỉ", "Ngày giao", "Khung giờ", "Món đặt", "Tổng tiền"]);
+          sheet.appendRow(["Thời gian", "Mã đơn", "Loại", "Khách đặt", "SĐT đặt", "Người nhận", "SĐT nhận", "Địa chỉ", "Ngày giao", "Khung giờ", "Chi tiết các món", "Tạm tính", "Phí ship", "Tổng tiền", "Ghi chú", "Thiệp quà", "Email nhận"]);
         }
-        sheet.appendRow([new Date(), p.referenceCode, p.orderPurpose, p.buyerName, p.buyerPhone, p.recipientName, p.recipientPhone, p.addressDetail, p.requestedDate, p.slotLabel, p.itemsSummary, p.totalVnd]);
+        sheet.appendRow([new Date(), p.referenceCode, p.orderPurpose, p.buyerName, p.buyerPhone, p.recipientName, p.recipientPhone, p.addressDetail, p.requestedDate, p.slotLabel, p.itemsSummary, p.subtotalVnd || p.totalVnd, p.shippingFeeVnd || 0, p.totalVnd, p.buyerNote || "", p.giftMessage || "", toEmails]);
       }
     } catch (ignore) {}
-    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, sentTo: toEmails })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
   }
 }`;
                                 await navigator.clipboard.writeText(gsCode);
                                 setFeedbackMsg(
-                                  "Đã sao chép mã Google Apps Script (Code.gs) vào bộ nhớ tạm!"
+                                  "Đã sao chép mã Google Apps Script (Code.gs) có bảng chi tiết đơn & gửi 2 email vào bộ nhớ tạm!"
                                 );
                               }}
                               className="rounded-xs bg-[#155132] px-3 py-1.5 font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
