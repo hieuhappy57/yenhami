@@ -5,6 +5,7 @@ import {
   getDeliverySlots,
   getServiceZones,
   getTomorrowHoChiMinhDateStr,
+  syncDbFromCloud,
 } from "@/db";
 import { OrderRequestClient } from "@/components/OrderRequestClient";
 
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
     "Chọn món yến tươi chưng nóng, khu vực giao hàng, khung giờ nhận món và thiệp quà tặng. Hà Mi sẽ liên hệ xác nhận lịch chưng nóng.",
 };
 
-export default function DatHangPage() {
+export default async function DatHangPage() {
+  await syncDbFromCloud();
   const products = getAllProducts();
   const zones = getServiceZones();
   const defaultDate = getTomorrowHoChiMinhDateStr();

@@ -8,6 +8,8 @@ import {
   getNotificationLogs,
   getNotificationSettings,
   getSiteContentSettings,
+  syncDbFromCloud,
+  syncDbToCloud,
   triggerOrderNotificationsAfterCommit,
   updateNotificationSettings,
   updateSiteContentSettings,
@@ -26,6 +28,8 @@ export async function GET() {
       { status: 401 }
     );
   }
+
+  await syncDbFromCloud(true);
 
   return NextResponse.json({
     ok: true,
@@ -47,11 +51,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    await syncDbFromCloud(true);
+
     const body = await request.json();
     const action = String(body.action || "");
 
     if (action === "save_site_settings") {
       const updated = updateSiteContentSettings(body.settings || {});
+      await syncDbToCloud();
       return NextResponse.json({ ok: true, siteSettings: updated });
     }
 
@@ -90,11 +97,13 @@ export async function POST(request: Request) {
         cautionNote: String(p.cautionNote || ""),
         supportedOptions,
       });
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
     if (action === "delete_product") {
       const res = deleteProductByStaff(String(body.productId || ""));
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
@@ -110,11 +119,13 @@ export async function POST(request: Request) {
         coverImageUrl: String(post.coverImageUrl || "/brand/hero-editorial-clean.jpg"),
         isPublished: Boolean(post.isPublished ?? true),
       });
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
     if (action === "delete_post") {
       const res = deletePostByStaff(String(body.postId || ""));
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
@@ -132,16 +143,19 @@ export async function POST(request: Request) {
         contactInfo: String(job.contactInfo || "Hotline/Zalo: 0935 052 959"),
         isOpen: Boolean(job.isOpen ?? true),
       });
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
     if (action === "delete_job") {
       const res = deleteJobPostingByStaff(String(body.jobId || ""));
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
     if (action === "save_notification_settings") {
       const updated = updateNotificationSettings(body.settings || {});
+      await syncDbToCloud();
       return NextResponse.json({ ok: true, notificationSettings: updated });
     }
 
@@ -190,6 +204,7 @@ export async function POST(request: Request) {
         itemsSummary:
           "1. Thố Yến Tươi Chưng Nóng — Thanh Nguyên (Thố sứ 200ml • Ít ngọt) x2 = 290.000đ | 2. Set Quà Yến Sào Thượng Hạng 6 Vị (Hộp 6 hũ 75ml • Nguyên vị 6 hũ) x1 = 260.000đ",
       });
+      await syncDbToCloud();
       return NextResponse.json({
         ok: true,
         message: result.detail,

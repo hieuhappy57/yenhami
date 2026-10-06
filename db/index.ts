@@ -1190,6 +1190,16 @@ export interface SubmitOrderRequestOutput {
     id: string;
     referenceCode: string;
     lookupToken: string;
+    orderPurpose?: "SELF" | "GIFT";
+    buyerName?: string;
+    buyerPhone?: string;
+    buyerNote?: string | null;
+    recipientName?: string;
+    recipientPhone?: string;
+    giftSenderName?: string | null;
+    giftMessage?: string | null;
+    hidePriceOnReceipt?: boolean;
+    addressDetail?: string;
     orderStatus: OrderStatus;
     paymentStatus: PaymentStatus;
     subtotalVnd: number;
@@ -1201,6 +1211,19 @@ export interface SubmitOrderRequestOutput {
     slotLabelSnapshot: string;
     zoneNameSnapshot: string;
     createdAt: string;
+    items?: {
+      id: string;
+      productId: string;
+      variantId: string;
+      productNameSnapshot: string;
+      variantNameSnapshot: string;
+      volumeMlSnapshot: number;
+      ingredientsSnapshot: string;
+      selectedOptionSnapshot: string;
+      unitPriceSnapshot: number;
+      quantity: number;
+      lineTotalSnapshot: number;
+    }[];
   };
 }
 
@@ -1502,9 +1525,9 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
 
     db.exec("COMMIT;");
 
-    // Trigger Email & Zalo notifications for the new order (non-blocking)
+    // Trigger Email & Zalo notifications for the new order
     try {
-      void triggerOrderNotificationsAfterCommit({
+      pendingNotificationPromise = triggerOrderNotificationsAfterCommit({
         referenceCode,
         orderPurpose,
         buyerName,
@@ -1544,7 +1567,11 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
               `${it.productName} (${it.variantName}, ${it.selectedOption}) x${it.quantity}: ${it.lineTotalVnd.toLocaleString("vi-VN")}đ`
           )
           .join(" | "),
-      });
+      }).catch(() => ({
+        emailSent: false,
+        zaloSent: false,
+        detail: "Notification error ignored",
+      }));
     } catch {
       // Never block order creation if notification logging/sending fails
     }
@@ -1556,6 +1583,21 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
         id: orderId,
         referenceCode,
         lookupToken,
+        orderPurpose,
+        buyerName,
+        buyerPhone,
+        buyerNote: (input.buyerNote || "").trim() || null,
+        recipientName,
+        recipientPhone,
+        giftSenderName:
+          orderPurpose === "GIFT"
+            ? (input.giftSenderName || buyerName).trim()
+            : null,
+        giftMessage:
+          orderPurpose === "GIFT" ? (input.giftMessage || "").trim() || null : null,
+        hidePriceOnReceipt:
+          orderPurpose === "GIFT" ? Boolean(input.hidePriceOnReceipt) : false,
+        addressDetail,
         orderStatus: "PENDING_CONFIRMATION",
         paymentStatus: "UNPAID",
         subtotalVnd: quote.subtotalVnd,
@@ -1567,6 +1609,19 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
         slotLabelSnapshot: quote.slot.label,
         zoneNameSnapshot,
         createdAt: nowIso,
+        items: quote.items.map((it, idx) => ({
+          id: `${orderId}-item-${idx + 1}`,
+          productId: it.productId,
+          variantId: it.variantId,
+          productNameSnapshot: it.productName,
+          variantNameSnapshot: it.variantName,
+          volumeMlSnapshot: it.volumeMl,
+          ingredientsSnapshot: it.ingredientsText,
+          selectedOptionSnapshot: it.selectedOption,
+          unitPriceSnapshot: it.unitPriceVnd,
+          quantity: it.quantity,
+          lineTotalSnapshot: it.lineTotalVnd,
+        })),
       },
     };
   } catch (err) {
@@ -2594,5 +2649,170 @@ export async function triggerOrderNotificationsAfterCommit(
       detailMsg ||
       "Đã ghi nhận thông báo vào Nhật ký (Hãy dán URL Google Apps Script để gửi Gmail tự động).",
   };
+}
+
+let pendingNotificationPromise: Promise<unknown> | null = null;
+
+export async function flushPendingOrderNotifications(): Promise<void> {
+  if (!pendingNotificationPromise) return;
+  const p = pendingNotificationPromise;
+  pendingNotificationPromise = null;
+  try {
+    await p;
+  } catch {
+    // ignore
+  }
+}
+
+const CLOUD_TABLES = [
+  "products",
+  "product_variants",
+  "slot_date_reservations",
+  "order_requests",
+  "order_items",
+  "order_status_history",
+  "site_settings",
+  "posts",
+  "job_postings",
+  "notification_logs",
+] as const;
+
+let lastCloudSyncAtMs = 0;
+
+function isCloudSyncEnabled(): boolean {
+  if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
+  return Boolean(process.env.HAMI_GIST_ID && process.env.HAMI_GITHUB_TOKEN);
+}
+
+export async function syncDbToCloud(): Promise<void> {
+  if (!isCloudSyncEnabled()) return;
+  const gistId = process.env.HAMI_GIST_ID!;
+  const token = process.env.HAMI_GITHUB_TOKEN!;
+
+  try {
+    const db = getSqliteDb();
+    const tables: Record<string, Record<string, unknown>[]> = {};
+    for (const table of CLOUD_TABLES) {
+      tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
+        string,
+        unknown
+      >[];
+    }
+
+    const payload = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      tables,
+    };
+
+    await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "User-Agent": "ha-mi-website-cloud-sync",
+      },
+      body: JSON.stringify({
+        files: {
+          "ha-mi-db-state.json": {
+            content: JSON.stringify(payload),
+          },
+        },
+      }),
+    });
+    lastCloudSyncAtMs = Date.now();
+  } catch {
+    // Ignore transient network errors
+  }
+}
+
+export async function syncDbFromCloud(force = false): Promise<void> {
+  if (!isCloudSyncEnabled()) return;
+  const now = Date.now();
+  if (!force && now - lastCloudSyncAtMs < 1500) {
+    return;
+  }
+  const gistId = process.env.HAMI_GIST_ID!;
+  const token = process.env.HAMI_GITHUB_TOKEN!;
+
+  try {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "ha-mi-website-cloud-sync",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      files?: Record<string, { content?: string; raw_url?: string; truncated?: boolean }>;
+    };
+    const fileObj = data.files?.["ha-mi-db-state.json"];
+    if (!fileObj) return;
+
+    let rawJson = fileObj.content || "";
+    if (fileObj.truncated && fileObj.raw_url) {
+      const rawRes = await fetch(fileObj.raw_url, { cache: "no-store" });
+      if (rawRes.ok) {
+        rawJson = await rawRes.text();
+      }
+    }
+    if (!rawJson) return;
+
+    const parsed = JSON.parse(rawJson) as {
+      version?: number;
+      tables?: Record<string, Record<string, unknown>[]>;
+    };
+    if (!parsed.tables) {
+      lastCloudSyncAtMs = Date.now();
+      return;
+    }
+
+    const db = getSqliteDb();
+    db.exec("BEGIN IMMEDIATE TRANSACTION;");
+    try {
+      for (const table of CLOUD_TABLES) {
+        const rows = parsed.tables[table];
+        if (!Array.isArray(rows) || rows.length === 0) continue;
+
+        if (
+          table === "products" ||
+          table === "product_variants" ||
+          table === "posts" ||
+          table === "job_postings"
+        ) {
+          db.exec(`DELETE FROM ${table};`);
+        }
+
+        const cols = Object.keys(rows[0]);
+        if (cols.length === 0) continue;
+        const placeholders = cols.map(() => "?").join(", ");
+        const colList = cols.join(", ");
+        const stmt = db.prepare(
+          `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
+        );
+        for (const r of rows) {
+          const vals = cols.map((c) => {
+            const v = r[c];
+            return v === undefined ? null : (v as string | number | null);
+          });
+          stmt.run(...vals);
+        }
+      }
+      db.exec("COMMIT;");
+      lastCloudSyncAtMs = Date.now();
+    } catch {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // Ignore transient network errors
+  }
 }
 

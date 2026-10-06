@@ -6,12 +6,11 @@ import {
   Clock,
   Gift,
   MapPin,
-  Search,
-  ShieldAlert,
   Sparkles,
 } from "lucide-react";
-import { getOrderRequestByReference } from "@/db";
+import { getOrderRequestByReference, syncDbFromCloud } from "@/db";
 import type { OrderStatus, PaymentStatus } from "@/db/schema";
+import { OrderConfirmationClientFallback } from "@/components/OrderConfirmationClientFallback";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +50,10 @@ export default async function YeuCauDaNhanPage({
   const params = await searchParams;
   const refCode = (params.ref || "").trim().toUpperCase();
   const token = (params.token || "").trim();
+
+  if (refCode && token) {
+    await syncDbFromCloud(true);
+  }
 
   const order =
     refCode && token
@@ -249,81 +252,7 @@ export default async function YeuCauDaNhanPage({
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl border border-[#155132]/20 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFFCF4] border border-[#BD9342]/40 text-[#155132]">
-              <Search className="h-5 w-5 text-[#BD9342]" />
-            </div>
-            <div>
-              <h1 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Tra cứu Yêu Cầu Đặt Yến Hà Mi
-              </h1>
-              <p className="text-xs text-[#2B433A]/85">
-                Để bảo mật thông tin người nhận, vui lòng nhập đúng Mã yêu cầu và Mã
-                bảo mật tra cứu đơn.
-              </p>
-            </div>
-          </div>
-
-          {(refCode || token) && (
-            <div
-              role="alert"
-              data-testid="lookup-denied-alert"
-              className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-950"
-            >
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-              <p>
-                Không tìm thấy yêu cầu hoặc mã bảo mật tra cứu không khớp. Vui lòng
-                kiểm tra lại cả hai thông tin bên dưới.
-              </p>
-            </div>
-          )}
-
-          <form method="GET" action="/yeu-cau-da-nhan" className="mt-5 space-y-4">
-            <div>
-              <label
-                htmlFor="lookup-ref"
-                className="block text-xs font-semibold text-[#155132]"
-              >
-                Mã yêu cầu (Ví dụ: HM-261006-A1B2C3D4) *
-              </label>
-              <input
-                id="lookup-ref"
-                name="ref"
-                type="text"
-                required
-                defaultValue={refCode}
-                placeholder="HM-..."
-                className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm font-mono text-[#2B433A] focus:border-[#155132] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="lookup-token"
-                className="block text-xs font-semibold text-[#155132]"
-              >
-                Mã bảo mật tra cứu (cấp khi gửi yêu cầu) *
-              </label>
-              <input
-                id="lookup-token"
-                name="token"
-                type="text"
-                required
-                defaultValue={token}
-                placeholder="Nhập mã bảo mật tra cứu..."
-                className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm font-mono text-[#2B433A] focus:border-[#155132] focus:outline-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full min-h-[48px] rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-3 text-sm font-bold text-[#FFFCF4] transition hover:bg-[#0e3b23] cursor-pointer"
-            >
-              Xem trạng thái yêu cầu
-            </button>
-          </form>
-        </div>
+        <OrderConfirmationClientFallback refCode={refCode} token={token} />
       )}
     </div>
   );

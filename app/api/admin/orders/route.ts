@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { listAllOrderRequestsForStaff, updateOrderStatusByStaff } from "@/db";
+import {
+  listAllOrderRequestsForStaff,
+  syncDbFromCloud,
+  syncDbToCloud,
+  updateOrderStatusByStaff,
+} from "@/db";
 import type { OrderStatus, PaymentStatus } from "@/db/schema";
 import { getAuthenticatedStaff } from "@/lib/staff-auth";
 
@@ -22,6 +27,7 @@ export async function GET() {
       { status: 401 }
     );
   }
+  await syncDbFromCloud(true);
   const orders = listAllOrderRequestsForStaff();
   return NextResponse.json({ ok: true, staff, orders });
 }
@@ -36,6 +42,8 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    await syncDbFromCloud(true);
+
     const body = await request.json();
     const referenceCode = String(body.referenceCode || "").trim();
     const newOrderStatus = String(body.newOrderStatus || "") as OrderStatus;
@@ -69,6 +77,10 @@ export async function PATCH(request: Request) {
       note,
       confirmedShippingFeeVnd,
     });
+
+    if (updated.ok) {
+      await syncDbToCloud();
+    }
 
     return NextResponse.json(updated, { status: updated.ok ? 200 : 400 });
   } catch {

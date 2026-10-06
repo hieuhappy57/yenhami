@@ -13,6 +13,7 @@ import {
   getAllPosts,
   getAllProducts,
   getSiteContentSettings,
+  syncDbFromCloud,
 } from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
@@ -52,7 +53,8 @@ const FAQ_ITEMS = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  await syncDbFromCloud();
   const allProducts = getAllProducts();
   const freshBowlProducts = allProducts.filter((p) => !p.id.startsWith("cat-"));
   const siteSettings = getSiteContentSettings();

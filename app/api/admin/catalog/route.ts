@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { updateDeliverySlotByStaff, updateProductStatusByStaff } from "@/db";
+import {
+  syncDbFromCloud,
+  syncDbToCloud,
+  updateDeliverySlotByStaff,
+  updateProductStatusByStaff,
+} from "@/db";
 import type { ProductStatus } from "@/db/schema";
 import { getAuthenticatedStaff } from "@/lib/staff-auth";
 
@@ -13,6 +18,8 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    await syncDbFromCloud(true);
+
     const body = await request.json();
     if (body.type === "product") {
       const productId = String(body.productId || "");
@@ -23,6 +30,7 @@ export async function PATCH(request: Request) {
           : Number(body.priceVnd);
 
       const res = updateProductStatusByStaff({ productId, status, priceVnd });
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 
@@ -38,6 +46,7 @@ export async function PATCH(request: Request) {
         reservedBowls,
         isActive,
       });
+      await syncDbToCloud();
       return NextResponse.json(res);
     }
 

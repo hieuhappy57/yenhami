@@ -264,6 +264,14 @@ export function OrderRequestClient({
       clearCart();
       const refCode = data.order.referenceCode;
       const token = data.order.lookupToken;
+      try {
+        const storageKey = `hami_order_${refCode.trim().toUpperCase()}`;
+        const serialized = JSON.stringify(data.order);
+        window.sessionStorage.setItem(storageKey, serialized);
+        window.localStorage.setItem(storageKey, serialized);
+      } catch {
+        // ignore storage quota errors
+      }
       router.push(
         `/yeu-cau-da-nhan?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(token)}`
       );

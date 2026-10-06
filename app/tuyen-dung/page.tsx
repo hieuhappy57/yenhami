@@ -8,11 +8,16 @@ import {
   Phone,
   Sparkles,
 } from "lucide-react";
-import { getAllJobPostings, getSiteContentSettings } from "@/db";
+import {
+  getAllJobPostings,
+  getSiteContentSettings,
+  syncDbFromCloud,
+} from "@/db";
 
 export const dynamic = "force-dynamic";
 
-export default function TuyenDungPage() {
+export default async function TuyenDungPage() {
+  await syncDbFromCloud();
   const jobs = getAllJobPostings(true);
   const site = getSiteContentSettings();
 

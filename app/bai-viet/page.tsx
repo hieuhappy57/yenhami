@@ -1,11 +1,12 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Calendar, Sparkles } from "lucide-react";
-import { getAllPosts } from "@/db";
+import { getAllPosts, syncDbFromCloud } from "@/db";
 
 export const dynamic = "force-dynamic";
 
-export default function BaiVietPage() {
+export default async function BaiVietPage() {
+  await syncDbFromCloud();
   const posts = getAllPosts(true);
 
   return (

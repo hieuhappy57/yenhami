@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAllProducts, getDeliverySlots, getServiceZones } from "@/db";
+import {
+  getAllProducts,
+  getDeliverySlots,
+  getServiceZones,
+  syncDbFromCloud,
+} from "@/db";
 
 export async function GET(request: Request) {
+  await syncDbFromCloud();
+
   const url = new URL(request.url);
   const requestedDate = url.searchParams.get("date") || undefined;
   const zoneId = url.searchParams.get("zoneId") || undefined;

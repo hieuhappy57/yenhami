@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { calculateServerQuote } from "@/db";
+import { calculateServerQuote, syncDbFromCloud } from "@/db";
 
 export async function POST(request: Request) {
   try {
+    await syncDbFromCloud();
     const body = await request.json();
     const quote = calculateServerQuote({
       items: body.items || [],

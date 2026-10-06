@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Sparkles } from "lucide-react";
-import { getAllPosts, getPostBySlug } from "@/db";
+import { getAllPosts, getPostBySlug, syncDbFromCloud } from "@/db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,7 @@ export default async function BaiVietDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  await syncDbFromCloud();
   const { slug } = await params;
   const post = getPostBySlug(slug);
 

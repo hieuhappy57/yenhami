@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getOrderRequestByReference, submitOrderRequest } from "@/db";
+import {
+  flushPendingOrderNotifications,
+  getOrderRequestByReference,
+  submitOrderRequest,
+  syncDbFromCloud,
+  syncDbToCloud,
+} from "@/db";
 import { getAuthenticatedStaff } from "@/lib/staff-auth";
 
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -29,6 +35,8 @@ export async function GET(request: Request) {
       { status: 400 }
     );
   }
+
+  await syncDbFromCloud(true);
 
   const staff = await getAuthenticatedStaff();
   const order = getOrderRequestByReference({
@@ -61,8 +69,16 @@ export async function POST(request: Request) {
       );
     }
 
+    await syncDbFromCloud(true);
+
     const body = await request.json();
     const res = submitOrderRequest(body);
+
+    if (res.ok) {
+      await flushPendingOrderNotifications();
+      await syncDbToCloud();
+    }
+
     return NextResponse.json(res, { status: res.ok ? 200 : 400 });
   } catch {
     return NextResponse.json(
