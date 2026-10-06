@@ -53,6 +53,10 @@ export function SiteHeader() {
 
   const cartHref = totalBowls > 0 ? "/dat-hang" : "/gio-hang";
 
+  if (pathname?.startsWith("/quan-tri") || pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur shadow-xs border-b border-[#155132]/12">
       {/* Top Bar */}

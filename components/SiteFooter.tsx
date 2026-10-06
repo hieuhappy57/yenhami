@@ -1,8 +1,16 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { BRAND_CONFIG } from "@/config/brand";
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/quan-tri") || pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <footer className="bg-[#FFFCF4] border-t border-[#BD9342]/30 text-[#2B433A] mt-12 pb-24 md:pb-10">
       <div className="max-w-[1200px] mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">

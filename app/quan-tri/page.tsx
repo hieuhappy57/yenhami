@@ -1,28 +1,40 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Bell,
   Briefcase,
   CheckCircle2,
+  ChevronRight,
   ClipboardList,
   Clock,
   Edit3,
   ExternalLink,
+  Eye,
   FileText,
+  Filter,
   Globe,
+  Home,
   Image as ImageIcon,
+  LayoutDashboard,
   Lock,
   LogOut,
   Mail,
+  Menu,
   MessageCircle,
   Package,
+  Palette,
   Plus,
   RefreshCw,
+  Search,
   Send,
+  Settings,
   ShieldCheck,
+  ShoppingBag,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import type {
   DeliverySlotRecord,
@@ -103,21 +115,51 @@ interface AdminOrderRecord {
   history: AdminOrderHistory[];
 }
 
-type AdminTab =
+type AdminSection =
+  | "dashboard"
   | "orders"
   | "catalog"
-  | "site"
+  | "slots"
   | "posts"
   | "jobs"
+  | "site"
   | "notifications";
 
-const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
-  { value: "PENDING_CONFIRMATION", label: "Chờ Hà Mi xác nhận" },
-  { value: "CONFIRMED", label: "Đã xác nhận lịch chưng" },
-  { value: "PREPARING", label: "Bếp đang chưng nóng" },
-  { value: "DELIVERING", label: "Đang giao nóng" },
-  { value: "COMPLETED", label: "Đã giao hoàn tất" },
-  { value: "CANCELLED", label: "Đã hủy (Trả lại chỗ ca bếp)" },
+const ORDER_STATUS_OPTIONS: {
+  value: OrderStatus;
+  label: string;
+  badgeClass: string;
+}[] = [
+  {
+    value: "PENDING_CONFIRMATION",
+    label: "Chờ Hà Mi xác nhận",
+    badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+  },
+  {
+    value: "CONFIRMED",
+    label: "Đã xác nhận lịch chưng",
+    badgeClass: "bg-sky-100 text-sky-900 border-sky-300",
+  },
+  {
+    value: "PREPARING",
+    label: "Bếp đang chưng nóng",
+    badgeClass: "bg-indigo-100 text-indigo-900 border-indigo-300",
+  },
+  {
+    value: "DELIVERING",
+    label: "Đang giao nóng",
+    badgeClass: "bg-purple-100 text-purple-900 border-purple-300",
+  },
+  {
+    value: "COMPLETED",
+    label: "Đã giao hoàn tất",
+    badgeClass: "bg-emerald-100 text-emerald-900 border-emerald-300",
+  },
+  {
+    value: "CANCELLED",
+    label: "Đã hủy (Trả chỗ ca bếp)",
+    badgeClass: "bg-rose-100 text-rose-900 border-rose-300",
+  },
 ];
 
 const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
@@ -127,18 +169,18 @@ const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
 ];
 
 const PRODUCT_STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
-  { value: "AVAILABLE", label: "Đang phục vụ (AVAILABLE)" },
-  { value: "OUT_OF_STOCK", label: "Tạm hết ca này (OUT_OF_STOCK)" },
+  { value: "AVAILABLE", label: "Đang bán (AVAILABLE)" },
+  { value: "OUT_OF_STOCK", label: "Tạm hết hàng (OUT_OF_STOCK)" },
   {
     value: "PENDING_DATA_APPROVAL",
-    label: "Chờ duyệt giá/định lượng (PENDING_DATA_APPROVAL)",
+    label: "Bản nháp / Chờ duyệt giá",
   },
 ];
 
 const PRODUCT_CATEGORY_OPTIONS: { value: ProductCategory; label: string }[] = [
-  { value: "nguyen-ban", label: "Nguyên bản thanh khiết (nguyen-ban)" },
-  { value: "ngot-diu", label: "Ngọt dịu thảo mộc (ngot-diu)" },
-  { value: "nhieu-tang", label: "Bồi bổ nhiều tầng vị (nhieu-tang)" },
+  { value: "nguyen-ban", label: "Nguyên bản thanh khiết" },
+  { value: "ngot-diu", label: "Ngọt dịu thảo mộc" },
+  { value: "nhieu-tang", label: "Bồi bổ nhiều tầng vị / Set quà" },
 ];
 
 function formatVnd(amount: number | null | undefined): string {
@@ -186,7 +228,11 @@ export default function QuanTriPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<AdminTab>("orders");
+  // WordPress-style navigation state
+  const [activeSection, setActiveSection] = useState<AdminSection>("orders");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Data state
   const [orders, setOrders] = useState<AdminOrderRecord[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [slots, setSlots] = useState<DeliverySlotRecord[]>([]);
@@ -204,6 +250,13 @@ export default function QuanTriPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  // Filters & Search (WP List Table style)
+  const [orderFilterStatus, setOrderFilterStatus] = useState<string>("ALL");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] =
+    useState<string>("ALL");
+
   // Per-order draft state for status updates
   const [draftOrderStatus, setDraftOrderStatus] = useState<
     Record<string, OrderStatus>
@@ -216,7 +269,7 @@ export default function QuanTriPage() {
   >({});
   const [draftNote, setDraftNote] = useState<Record<string, string>>({});
 
-  // Product Editor state
+  // WordPress 2-Column Editor states
   const [editingProduct, setEditingProduct] = useState<{
     id?: string;
     slug: string;
@@ -230,7 +283,6 @@ export default function QuanTriPage() {
     status: ProductStatus;
   } | null>(null);
 
-  // Post Editor state
   const [editingPost, setEditingPost] = useState<{
     id?: string;
     slug: string;
@@ -242,7 +294,6 @@ export default function QuanTriPage() {
     isPublished: boolean;
   } | null>(null);
 
-  // Job Editor state
   const [editingJob, setEditingJob] = useState<{
     id?: string;
     title: string;
@@ -437,13 +488,13 @@ export default function QuanTriPage() {
       setFeedbackMsg(data.errorMessage || "Không thể lưu món.");
       return;
     }
-    setFeedbackMsg(data.message || "Đã lưu thông tin món thành công.");
+    setFeedbackMsg(data.message || "Đã lưu thông tin sản phẩm thành công.");
     setEditingProduct(null);
     loadDashboardData();
   };
 
   const handleDeleteProduct = async (productId: string, name: string) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa món "${name}"?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn xóa sản phẩm "${name}"?`)) return;
     const res = await fetch("/api/admin/cms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -451,7 +502,7 @@ export default function QuanTriPage() {
     });
     const data = (await res.json()) as { ok?: boolean; message?: string };
     if (res.ok && data.ok) {
-      setFeedbackMsg(data.message || "Đã xóa món.");
+      setFeedbackMsg(data.message || "Đã xóa sản phẩm.");
       loadDashboardData();
     }
   };
@@ -478,7 +529,7 @@ export default function QuanTriPage() {
       return;
     }
     setFeedbackMsg(
-      data.message || "Đã lưu nội dung Trang chủ & Thông tin Web thành công."
+      data.message || "Đã cập nhật Giao diện & Nội dung Trang chủ thành công."
     );
     loadDashboardData();
   };
@@ -504,7 +555,7 @@ export default function QuanTriPage() {
       setFeedbackMsg(data.errorMessage || "Lưu bài viết thất bại.");
       return;
     }
-    setFeedbackMsg(data.message || "Đã lưu bài viết thành công.");
+    setFeedbackMsg(data.message || "Đã xuất bản / lưu bài viết thành công.");
     setEditingPost(null);
     loadDashboardData();
   };
@@ -632,7 +683,7 @@ export default function QuanTriPage() {
     }
     const targetPhone =
       notificationSettings?.zaloRecipientPhone?.replace(/\D/g, "") ||
-      "0909123456";
+      "0935052959";
     window.open(`https://zalo.me/${targetPhone}`, "_blank", "noopener");
   };
 
@@ -646,48 +697,150 @@ export default function QuanTriPage() {
     window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
   };
 
+  // Computed stats & filtered lists
+  const pendingOrdersCount = useMemo(
+    () =>
+      orders.filter((o) => o.orderStatus === "PENDING_CONFIRMATION").length,
+    [orders]
+  );
+
+  const totalRevenueVnd = useMemo(
+    () =>
+      orders
+        .filter((o) => o.orderStatus !== "CANCELLED")
+        .reduce((acc, o) => acc + (o.totalVnd || 0), 0),
+    [orders]
+  );
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (orderFilterStatus !== "ALL" && o.orderStatus !== orderFilterStatus) {
+        return false;
+      }
+      if (orderSearch.trim()) {
+        const q = orderSearch.toLowerCase();
+        const matchCode = o.referenceCode.toLowerCase().includes(q);
+        const matchBuyer = o.buyerName.toLowerCase().includes(q);
+        const matchPhone =
+          o.buyerPhone.includes(q) || o.recipientPhone.includes(q);
+        return matchCode || matchBuyer || matchPhone;
+      }
+      return true;
+    });
+  }, [orders, orderFilterStatus, orderSearch]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (
+        productCategoryFilter !== "ALL" &&
+        p.category !== productCategoryFilter
+      ) {
+        return false;
+      }
+      if (productSearch.trim()) {
+        const q = productSearch.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.shortDescription.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [products, productCategoryFilter, productSearch]);
+
+  const openNewProductForm = () => {
+    setActiveSection("catalog");
+    setEditingProduct({
+      slug: "",
+      name: "",
+      category: "nguyen-ban",
+      volumeMl: 100,
+      ingredientsText: "Tổ yến nguyên chất, đường phèn kết tinh",
+      shortDescription: "",
+      imageUrl: "/brand/catalog/yen-hu-75ml-100ml-cam-tay.jpg",
+      priceVnd: "145000",
+      status: "AVAILABLE",
+    });
+  };
+
+  const openNewPostForm = () => {
+    setActiveSection("posts");
+    setEditingPost({
+      slug: "",
+      title: "",
+      excerpt: "",
+      content: "",
+      category: "Cẩm nang yến sào",
+      coverImageUrl: "/brand/catalog/set-qua-hop-sen-en.jpg",
+      isPublished: true,
+    });
+  };
+
+  const openNewJobForm = () => {
+    setActiveSection("jobs");
+    setEditingJob({
+      title: "",
+      department: "Bếp Chưng Thủ Công",
+      location: "Đà Nẵng / TP.HCM",
+      employmentType: "Toàn thời gian",
+      salaryRange: "8.000.000đ - 12.000.000đ/tháng",
+      description: "",
+      requirements: "",
+      contactInfo: "Hotline/Zalo: 0935 052 959",
+      isOpen: true,
+    });
+  };
+
   if (checkingAuth) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center text-sm text-[#2B433A]">
-        Đang kiểm tra phiên đăng nhập nhân viên Hà Mi...
+      <div className="min-h-screen bg-[#f0f0f1] flex items-center justify-center p-4 text-sm text-[#1d2327]">
+        Đang tải trình quản trị Yến Sào Hà Mi...
       </div>
     );
   }
 
+  // WordPress-style Login Screen (wp-login.php look & feel)
   if (!staff) {
     return (
-      <div className="mx-auto max-w-md px-4 py-12 pr-16 md:pr-4">
-        <div className="rounded-3xl border border-[#155132]/20 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#155132] text-[#FFFCF4]">
-              <Lock className="h-5 w-5 text-[#BD9342]" />
-            </div>
-            <div>
-              <h1 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Quản Trị Website & Bếp Hà Mi
-              </h1>
-              <p className="text-xs text-[#2B433A]/80">
-                Đăng nhập để quản lý đơn hàng, món ăn, trang chủ, bài viết, tuyển dụng & thông báo Zalo/Email
-              </p>
-            </div>
+      <div className="min-h-screen bg-[#f0f0f1] flex flex-col items-center justify-center px-4 py-12">
+        <div className="mb-5 flex flex-col items-center text-center">
+          <Link href="/" className="group flex flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/ha-mi-logo-web-640.png"
+              alt="Yến Sào Hà Mi"
+              className="h-20 w-20 object-contain drop-shadow-xs"
+            />
+            <span className="mt-2 font-serif-display text-xl font-bold text-[#155132]">
+              YẾN SÀO HÀ MI — WP ADMIN
+            </span>
+          </Link>
+        </div>
+
+        <div className="w-full max-w-[380px] rounded-md border border-[#c3c4c7] bg-white p-6 shadow-xs">
+          <div className="flex items-center gap-2 border-b border-[#dcdcde] pb-3 mb-4">
+            <Lock className="h-4 w-4 text-[#155132]" />
+            <h1 className="text-sm font-bold text-[#1d2327]">
+              Đăng nhập Quản trị Website
+            </h1>
           </div>
 
           {authError && (
             <div
               role="alert"
-              className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+              className="mb-4 border-l-4 border-red-600 bg-red-50 p-3 text-xs text-red-900"
             >
               {authError}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="mt-5 space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label
                 htmlFor="admin-username"
-                className="block text-xs font-semibold text-[#155132]"
+                className="block text-xs font-semibold text-[#1d2327] mb-1"
               >
-                Tài khoản quản trị
+                Tên người dùng hoặc Địa chỉ Email
               </label>
               <input
                 id="admin-username"
@@ -696,14 +849,14 @@ export default function QuanTriPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm text-[#2B433A]"
+                className="w-full min-h-[40px] rounded-xs border border-[#8c8f94] px-3 py-2 text-sm text-[#1d2327] focus:border-[#155132] focus:outline-none"
               />
             </div>
 
             <div>
               <label
                 htmlFor="admin-password"
-                className="block text-xs font-semibold text-[#155132]"
+                className="block text-xs font-semibold text-[#1d2327] mb-1"
               >
                 Mật khẩu
               </label>
@@ -714,1935 +867,2585 @@ export default function QuanTriPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (mặc định: hami2026)..."
-                className="mt-1.5 w-full min-h-[44px] rounded-xl border border-[#155132]/25 px-3.5 py-2.5 text-sm text-[#2B433A]"
+                placeholder="Mặc định: hami2026"
+                className="w-full min-h-[40px] rounded-xs border border-[#8c8f94] px-3 py-2 text-sm text-[#1d2327] focus:border-[#155132] focus:outline-none"
               />
             </div>
 
             <button
               type="submit"
               data-testid="admin-login-btn"
-              className="w-full min-h-[48px] rounded-xl bg-[#155132] border border-[#BD9342] px-4 py-3 text-sm font-bold text-[#FFFCF4] hover:bg-[#0e3b23] cursor-pointer"
+              className="w-full min-h-[40px] rounded-xs bg-[#155132] px-4 py-2 text-xs font-bold text-white hover:bg-[#0e3b23] transition cursor-pointer"
             >
-              Đăng nhập Quản trị
+              Đăng nhập
             </button>
           </form>
         </div>
+
+        <p className="mt-4 text-xs text-[#50575e]">
+          <Link href="/" className="hover:text-[#155132] hover:underline">
+            ← Quay lại trang chủ Yến Sào Hà Mi
+          </Link>
+        </p>
       </div>
     );
   }
 
+  // Sidebar Menu Definition (WordPress wp-admin style)
+  const navGroups: {
+    id: AdminSection;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+    subItems?: { label: string; onClick: () => void; active?: boolean }[];
+  }[] = [
+    {
+      id: "dashboard",
+      label: "Bảng tin (Dashboard)",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "orders",
+      label: "Đơn đặt hàng",
+      icon: ShoppingBag,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : orders.length,
+    },
+    {
+      id: "catalog",
+      label: "Sản phẩm / Món ăn",
+      icon: Package,
+      subItems: [
+        {
+          label: `Tất cả sản phẩm (${products.length})`,
+          onClick: () => {
+            setActiveSection("catalog");
+            setEditingProduct(null);
+          },
+          active: activeSection === "catalog" && !editingProduct,
+        },
+        {
+          label: "+ Thêm sản phẩm mới",
+          onClick: openNewProductForm,
+          active: activeSection === "catalog" && Boolean(editingProduct),
+        },
+        {
+          label: "Khung giờ Ca bếp",
+          onClick: () => setActiveSection("slots"),
+          active: activeSection === "slots",
+        },
+      ],
+    },
+    {
+      id: "posts",
+      label: "Bài viết (Blog)",
+      icon: FileText,
+      subItems: [
+        {
+          label: `Tất cả bài viết (${posts.length})`,
+          onClick: () => {
+            setActiveSection("posts");
+            setEditingPost(null);
+          },
+          active: activeSection === "posts" && !editingPost,
+        },
+        {
+          label: "+ Viết bài mới",
+          onClick: openNewPostForm,
+          active: activeSection === "posts" && Boolean(editingPost),
+        },
+      ],
+    },
+    {
+      id: "jobs",
+      label: "Tuyển dụng",
+      icon: Briefcase,
+      subItems: [
+        {
+          label: `Vị trí tuyển dụng (${jobs.length})`,
+          onClick: () => {
+            setActiveSection("jobs");
+            setEditingJob(null);
+          },
+          active: activeSection === "jobs" && !editingJob,
+        },
+        {
+          label: "+ Đăng tin mới",
+          onClick: openNewJobForm,
+          active: activeSection === "jobs" && Boolean(editingJob),
+        },
+      ],
+    },
+    {
+      id: "site",
+      label: "Giao diện & Trang chủ",
+      icon: Palette,
+    },
+    {
+      id: "notifications",
+      label: "Cài đặt Email & Zalo",
+      icon: Settings,
+    },
+  ];
+
   return (
-    <div className="mx-auto max-w-[1240px] px-4 py-8 pr-16 md:pr-6">
-      {/* Top Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#155132]/15 pb-5">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFCF4] border border-[#BD9342]/45 px-3 py-1 text-xs font-semibold text-[#155132]">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#BD9342]" />
-            Quản trị viên: {staff.displayName} ({staff.username})
-          </span>
-          <h1 className="mt-2 font-serif-display text-2xl font-semibold text-[#155132]">
-            Hệ Thống Quản Trị Nội Dung (CMS) & Điều Phối Đơn Yến Sào Hà Mi
-          </h1>
+    <div className="min-h-screen bg-[#f0f0f1] text-[#1d2327] flex flex-col">
+      {/* ===================================================================== */}
+      {/* 1. WORDPRESS TOP ADMIN BAR (#wpadminbar)                              */}
+      {/* ===================================================================== */}
+      <header className="sticky top-0 z-50 h-11 bg-[#1d2327] text-[#f0f0f1] px-3 flex items-center justify-between text-xs select-none shadow-xs">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden p-1.5 rounded hover:bg-[#2c3338] text-white cursor-pointer"
+            aria-label="Mở menu quản trị"
+          >
+            {mobileSidebarOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Menu className="h-4 w-4" />
+            )}
+          </button>
+
+          <Link
+            href="/"
+            target="_blank"
+            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#2c3338] hover:text-[#72aee6] transition"
+            title="Mở trang chủ Yến Sào Hà Mi trong tab mới"
+          >
+            <Home className="h-4 w-4 text-[#BD9342]" />
+            <span className="font-semibold tracking-wide">Yến Sào Hà Mi</span>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-[#a7aaad]">
+              (Xem trang web <ExternalLink className="h-3 w-3" />)
+            </span>
+          </Link>
+
+          {/* Quick "+ Tạo mới (New)" actions like WordPress */}
+          <div className="hidden md:flex items-center gap-1 border-l border-[#3c434a] pl-3">
+            <button
+              type="button"
+              onClick={openNewProductForm}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <span>Thêm Món</span>
+            </button>
+            <button
+              type="button"
+              onClick={openNewPostForm}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <span>Viết Bài</span>
+            </button>
+            <button
+              type="button"
+              onClick={openNewJobForm}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <span>Tuyển Dụng</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={loadDashboardData}
-            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-[#155132]/25 bg-white px-3.5 py-2 text-xs font-semibold text-[#155132] hover:bg-[#FFFCF4] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded bg-[#2c3338] px-2.5 py-1 text-[11px] font-medium text-[#f0f0f1] hover:bg-[#3c434a] cursor-pointer"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Làm mới dữ liệu
+            <RefreshCw
+              className={`h-3 w-3 ${loadingData ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">Làm mới</span>
           </button>
+
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#c3c4c7]">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#BD9342]" />
+            <span>
+              Xin chào, <strong className="text-white">{staff.displayName}</strong>
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 cursor-pointer"
+            className="inline-flex items-center gap-1 rounded bg-rose-700/80 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-600 cursor-pointer"
           >
-            <LogOut className="h-3.5 w-3.5" />
-            Đăng xuất
+            <LogOut className="h-3 w-3" />
+            <span>Đăng xuất</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {feedbackMsg && (
-        <div
-          role="status"
-          data-testid="admin-feedback-banner"
-          className="mt-4 flex items-center justify-between rounded-xl border border-[#155132]/25 bg-[#155132] px-4 py-3 text-xs font-semibold text-[#FFFCF4]"
+      {/* ===================================================================== */}
+      {/* 2. BODY: LEFT SIDEBAR (#adminmenuwrap) + MAIN WORKSPACE (#wpbody)     */}
+      {/* ===================================================================== */}
+      <div className="flex flex-1 relative">
+        {/* Left Sidebar Navigation */}
+        <aside
+          className={`${
+            mobileSidebarOpen ? "fixed inset-y-11 left-0 z-40 flex" : "hidden"
+          } lg:flex w-60 shrink-0 flex-col bg-[#1d2327] text-[#f0f0f1] border-r border-[#2c3338] select-none`}
         >
-          <span>{feedbackMsg}</span>
-          <button
-            type="button"
-            onClick={() => setFeedbackMsg(null)}
-            className="underline ml-4"
-          >
-            Đóng
-          </button>
-        </div>
-      )}
-
-      {/* Navigation Tabs */}
-      <div className="mt-6 flex flex-wrap gap-2 border-b border-[#155132]/15 pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("orders")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "orders"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <ClipboardList className="h-4 w-4 text-[#BD9342]" />
-          1. Đơn đặt món ({orders.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("catalog")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "catalog"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <Package className="h-4 w-4 text-[#BD9342]" />
-          2. Cập nhật Món & Hình ảnh ({products.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("site")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "site"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <Globe className="h-4 w-4 text-[#BD9342]" />
-          3. Nội dung Trang chủ & Web
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("posts")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "posts"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <FileText className="h-4 w-4 text-[#BD9342]" />
-          4. Bài viết / Cẩm nang ({posts.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("jobs")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "jobs"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <Briefcase className="h-4 w-4 text-[#BD9342]" />
-          5. Tuyển dụng ({jobs.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("notifications")}
-          className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "notifications"
-              ? "bg-[#155132] text-[#FFFCF4]"
-              : "bg-white text-[#2B433A] border border-[#155132]/20"
-          }`}
-        >
-          <Bell className="h-4 w-4 text-[#BD9342]" />
-          6. Thông báo Email & Zalo
-        </button>
-      </div>
-
-      {loadingData && (
-        <p className="mt-4 text-xs text-[#2B433A]">Đang tải dữ liệu...</p>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 1: ORDERS */}
-      {/* ================================================================= */}
-      {activeTab === "orders" && (
-        <div className="mt-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#BD9342]/35 bg-[#FFFCF4] p-4 text-xs text-[#2B433A]">
+          <div className="p-3 border-b border-[#2c3338] flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/ha-mi-logo-web-640.png"
+              alt="Logo Hà Mi"
+              className="h-9 w-9 rounded bg-white p-0.5 object-contain"
+            />
             <div>
-              <strong className="text-[#155132]">
-                Cơ chế thông báo tự động khi có khách đặt món:
-              </strong>{" "}
-              Mỗi khi khách gửi đơn mới, hệ thống tự động kích hoạt thông báo
-              về Email ({notificationSettings?.notificationEmailTo || "chưa cấu hình"}) và
-              Zalo ({notificationSettings?.zaloRecipientPhone || "chưa cấu hình"}). Bạn
-              cũng có thể bấm nút <strong>Báo qua Zalo</strong> hoặc{" "}
-              <strong>Gửi Email</strong> trực tiếp trên từng đơn bên dưới.
+              <p className="text-xs font-bold text-white leading-tight">
+                QUẢN TRỊ HÀ MI
+              </p>
+              <p className="text-[10px] text-[#a7aaad]">
+                CMS & Điều phối Đơn hàng
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab("notifications")}
-              className="rounded-xl bg-[#155132] px-3 py-2 font-bold text-[#FFFCF4] cursor-pointer"
-            >
-              Cài đặt Email & Zalo nhận đơn →
-            </button>
           </div>
 
-          {orders.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#155132]/25 bg-white p-8 text-center text-sm text-[#2B433A]">
-              Hiện chưa có yêu cầu đặt món nào trong hệ thống.
-            </div>
-          ) : (
-            orders.map((order) => (
-              <div
-                key={order.id}
-                data-testid={`admin-order-card-${order.referenceCode}`}
-                className="rounded-2xl border border-[#155132]/20 bg-white p-5 shadow-xs"
+          <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
+            {navGroups.map((group) => {
+              const Icon = group.icon;
+              const isGroupActive =
+                activeSection === group.id ||
+                (group.id === "catalog" && activeSection === "slots");
+
+              return (
+                <div key={group.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection(group.id);
+                      setMobileSidebarOpen(false);
+                      if (group.id === "catalog") setEditingProduct(null);
+                      if (group.id === "posts") setEditingPost(null);
+                      if (group.id === "jobs") setEditingJob(null);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-medium transition cursor-pointer border-l-4 ${
+                      isGroupActive
+                        ? "bg-[#155132] text-white border-[#BD9342] font-semibold"
+                        : "border-transparent text-[#c3c4c7] hover:bg-[#2c3338] hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Icon
+                        className={`h-4 w-4 ${
+                          isGroupActive ? "text-[#BD9342]" : "text-[#a7aaad]"
+                        }`}
+                      />
+                      <span>{group.label}</span>
+                    </span>
+                    {group.badge !== undefined && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          pendingOrdersCount > 0 && group.id === "orders"
+                            ? "bg-[#d63638] text-white"
+                            : "bg-[#2c3338] text-[#f0f0f1]"
+                        }`}
+                      >
+                        {group.badge}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* WordPress-style Submenu */}
+                  {group.subItems && isGroupActive && (
+                    <div className="bg-[#2c3338] py-1.5 space-y-0.5">
+                      {group.subItems.map((sub) => (
+                        <button
+                          key={sub.label}
+                          type="button"
+                          onClick={() => {
+                            sub.onClick();
+                            setMobileSidebarOpen(false);
+                          }}
+                          className={`w-full text-left pl-10 pr-3 py-1.5 text-[11px] transition cursor-pointer flex items-center gap-1.5 ${
+                            sub.active
+                              ? "text-white font-bold"
+                              : "text-[#c3c4c7] hover:text-white"
+                          }`}
+                        >
+                          <ChevronRight className="h-3 w-3 text-[#BD9342]" />
+                          <span>{sub.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          <div className="p-3 border-t border-[#2c3338] text-[11px] text-[#a7aaad] space-y-1">
+            <p className="flex items-center justify-between">
+              <span>Trạng thái Email:</span>
+              <span
+                className={
+                  notificationSettings?.enableEmail
+                    ? "text-emerald-400 font-semibold"
+                    : "text-amber-400"
+                }
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#155132]/10 pb-3">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="font-mono text-sm font-bold text-[#155132]">
-                      {order.referenceCode}
+                {notificationSettings?.enableEmail ? "Đang bật" : "Đang tắt"}
+              </span>
+            </p>
+            <p className="flex items-center justify-between">
+              <span>Trạng thái Zalo:</span>
+              <span
+                className={
+                  notificationSettings?.enableZalo
+                    ? "text-emerald-400 font-semibold"
+                    : "text-amber-400"
+                }
+              >
+                {notificationSettings?.enableZalo ? "Đang bật" : "Đang tắt"}
+              </span>
+            </p>
+          </div>
+        </aside>
+
+        {/* Main Content Area (#wpbody-content) */}
+        <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-[1440px]">
+          {/* WordPress Notice Banner */}
+          {feedbackMsg && (
+            <div
+              role="status"
+              data-testid="admin-feedback-banner"
+              className="mb-5 flex items-center justify-between rounded-xs border border-[#c3c4c7] border-l-4 border-l-[#155132] bg-white px-4 py-3 text-xs font-medium text-[#1d2327] shadow-2xs"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[#155132] shrink-0" />
+                <span>{feedbackMsg}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackMsg(null)}
+                className="text-xs font-semibold text-[#50575e] hover:text-[#1d2327] underline ml-4 cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 0: BẢNG TIN (WORDPRESS DASHBOARD AT A GLANCE)             */}
+          {/* ================================================================= */}
+          {activeSection === "dashboard" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div>
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    Bảng tin Quản trị (Dashboard)
+                  </h1>
+                  <p className="text-xs text-[#50575e] mt-0.5">
+                    Tổng quan hoạt động kinh doanh, đơn hàng, món ăn, bài viết và thông báo tự động.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={openNewProductForm}
+                    className="inline-flex items-center gap-1.5 rounded-xs bg-[#155132] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#0e3b23] cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+                    Thêm sản phẩm mới
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openNewPostForm}
+                    className="inline-flex items-center gap-1.5 rounded-xs border border-[#155132] bg-white px-3.5 py-2 text-xs font-semibold text-[#155132] hover:bg-[#f6f7f7] cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Viết bài mới
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Metaboxes */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("orders")}
+                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#50575e]">
+                      Tổng đơn đặt hàng
                     </span>
-                    <span className="rounded-full bg-[#FFFCF4] border border-[#BD9342]/45 px-2.5 py-0.5 text-[11px] font-semibold text-[#8A6632]">
-                      {order.orderPurpose === "GIFT"
-                        ? "Gửi quà biếu"
-                        : "Mua dùng"}
-                    </span>
-                    <span className="text-xs text-[#2B433A]/75">
-                      Ngày nhận: <strong>{order.requestedDate}</strong> •{" "}
-                      {order.slotLabelSnapshot}
-                    </span>
+                    <ShoppingBag className="h-4 w-4 text-[#155132]" />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickShareZalo(order)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#155132]/25 bg-[#FFFCF4] px-2.5 py-1 text-[11px] font-bold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5 text-[#BD9342]" />
-                      Báo qua Zalo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickShareEmail(order)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#155132]/25 bg-[#FFFCF4] px-2.5 py-1 text-[11px] font-bold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
-                    >
-                      <Mail className="h-3.5 w-3.5 text-[#BD9342]" />
-                      Gửi Email
-                    </button>
-                    <span className="text-right text-xs font-bold text-[#155132]">
-                      Tổng: {formatVnd(order.totalVnd)}{" "}
-                      {!order.isTotalFinal && "(Chưa chốt phí giao)"}
+                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
+                    {orders.length} đơn
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#50575e]">
+                    Doanh thu tạm tính:{" "}
+                    <strong className="text-[#155132]">
+                      {formatVnd(totalRevenueVnd)}
+                    </strong>
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("catalog")}
+                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#50575e]">
+                      Sản phẩm & Món ăn
                     </span>
+                    <Package className="h-4 w-4 text-[#155132]" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
+                    {products.length} món
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#50575e]">
+                    Đang mở bán:{" "}
+                    <strong className="text-emerald-700">
+                      {products.filter((p) => p.status === "AVAILABLE").length}{" "}
+                      món
+                    </strong>
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("posts")}
+                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#50575e]">
+                      Bài viết & Cẩm nang
+                    </span>
+                    <FileText className="h-4 w-4 text-[#155132]" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
+                    {posts.length} bài
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#50575e]">
+                    Đã xuất bản:{" "}
+                    <strong className="text-[#155132]">
+                      {posts.filter((p) => p.isPublished).length} bài viết
+                    </strong>
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("jobs")}
+                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#50575e]">
+                      Tin tuyển dụng
+                    </span>
+                    <Briefcase className="h-4 w-4 text-[#155132]" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
+                    {jobs.length} vị trí
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#50575e]">
+                    Đang nhận hồ sơ:{" "}
+                    <strong className="text-emerald-700">
+                      {jobs.filter((j) => j.isOpen).length} vị trí
+                    </strong>
+                  </p>
+                </button>
+              </div>
+
+              {/* 2-Column WordPress Dashboard Metaboxes */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* Recent Orders Metabox */}
+                <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs lg:col-span-7">
+                  <div className="flex items-center justify-between border-b border-[#c3c4c7] px-4 py-3">
+                    <h2 className="text-sm font-bold text-[#1d2327]">
+                      Đơn đặt hàng gần đây
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection("orders")}
+                      className="text-xs font-semibold text-[#155132] hover:underline cursor-pointer"
+                    >
+                      Xem tất cả ({orders.length}) →
+                    </button>
+                  </div>
+                  <div className="divide-y divide-[#f0f0f1]">
+                    {orders.slice(0, 5).map((ord) => (
+                      <div
+                        key={ord.id}
+                        className="flex items-center justify-between gap-3 px-4 py-3 text-xs"
+                      >
+                        <div>
+                          <span className="font-mono font-bold text-[#155132]">
+                            {ord.referenceCode}
+                          </span>{" "}
+                          — <strong>{ord.buyerName}</strong> ({ord.buyerPhone})
+                          <p className="text-[11px] text-[#50575e] mt-0.5">
+                            Giao: {ord.requestedDate} • {ord.slotLabelSnapshot}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-[#1d2327]">
+                            {formatVnd(ord.totalVnd)}
+                          </span>
+                          <span className="block text-[10px] text-[#50575e]">
+                            {ord.orderStatus}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-1 gap-4 text-xs md:grid-cols-3">
-                  <div>
-                    <p className="font-bold text-[#155132]">
-                      Người đặt & Liên hệ xác nhận:
-                    </p>
-                    <p className="mt-1 text-[#2B433A]">
-                      {order.buyerName} — <strong>{order.buyerPhone}</strong>
-                    </p>
-                    <p className="mt-1 text-[#2B433A]">
-                      Người nhận: {order.recipientName} ({order.recipientPhone})
-                    </p>
-                    <p className="mt-1 text-[#2B433A]">
-                      Địa chỉ: {order.addressDetail} ({order.zoneNameSnapshot})
-                    </p>
-                    {order.giftMessage && (
-                      <p className="mt-1 italic text-[#8A6632]">
-                        Thiệp: “{order.giftMessage}”
+                {/* Quick Notification Status & Shortcuts Metabox */}
+                <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs lg:col-span-5">
+                  <div className="flex items-center justify-between border-b border-[#c3c4c7] px-4 py-3">
+                    <h2 className="text-sm font-bold text-[#1d2327]">
+                      Trạng thái Thông báo Đơn hàng (Email & Zalo)
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection("notifications")}
+                      className="text-xs font-semibold text-[#155132] hover:underline cursor-pointer"
+                    >
+                      Cấu hình →
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-3 text-xs">
+                    <div className="rounded-xs border border-[#dcdcde] bg-[#f6f7f7] p-3 space-y-1.5">
+                      <p className="flex items-center justify-between">
+                        <span className="font-semibold">Email nhận đơn:</span>
+                        <span className="font-mono text-[#155132]">
+                          {notificationSettings?.notificationEmailTo ||
+                            "Chưa cài đặt"}
+                        </span>
                       </p>
-                    )}
-                  </div>
+                      <p className="flex items-center justify-between">
+                        <span className="font-semibold">Zalo nhận đơn:</span>
+                        <span className="font-mono text-[#155132]">
+                          {notificationSettings?.zaloRecipientPhone ||
+                            "Chưa cài đặt"}
+                        </span>
+                      </p>
+                    </div>
 
-                  <div>
-                    <p className="font-bold text-[#155132]">Danh sách món yến:</p>
-                    <ul className="mt-1 space-y-1 text-[#2B433A]">
-                      {order.items.map((it) => (
-                        <li key={it.id}>
-                          • <strong>{it.productNameSnapshot}</strong> ×{" "}
-                          {it.quantity} ({it.variantNameSnapshot},{" "}
-                          {it.selectedOptionSnapshot}) —{" "}
-                          {formatVnd(it.lineTotalSnapshot)}
-                        </li>
+                    <p className="font-semibold text-[#1d2327]">
+                      Nhật ký gửi thông báo gần nhất:
+                    </p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {notificationLogs.slice(0, 4).map((log) => (
+                        <div
+                          key={log.id}
+                          className="border-l-2 border-[#155132] pl-2.5 py-1 text-[11px]"
+                        >
+                          <strong>
+                            [{log.channel}] Đơn {log.orderReferenceCode}
+                          </strong>{" "}
+                          → {log.recipient} ({log.status})
+                        </div>
                       ))}
-                    </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 1: ĐƠN ĐẶT HÀNG (WOOCOMMERCE ORDERS LAYOUT)               */}
+          {/* ================================================================= */}
+          {activeSection === "orders" && (
+            <div className="space-y-5">
+              {/* WP Page Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div>
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    Quản lý Đơn đặt hàng
+                  </h1>
+                  <p className="text-xs text-[#50575e] mt-0.5">
+                    Xác nhận lịch chưng yến, cập nhật trạng thái thanh toán và gửi thông báo nhanh qua Zalo / Email.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("notifications")}
+                  className="inline-flex items-center gap-1.5 rounded-xs border border-[#155132] bg-white px-3 py-1.5 text-xs font-semibold text-[#155132] hover:bg-[#f6f7f7] cursor-pointer"
+                >
+                  <Bell className="h-3.5 w-3.5 text-[#BD9342]" />
+                  Cài đặt tự động báo Email ({notificationSettings?.notificationEmailTo}) & Zalo ({notificationSettings?.zaloRecipientPhone})
+                </button>
+              </div>
+
+              {/* WP Subsubsub Filter Bar + Search Box */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xs border border-[#c3c4c7]">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  {[
+                    { code: "ALL", label: `Tất cả (${orders.length})` },
+                    {
+                      code: "PENDING_CONFIRMATION",
+                      label: `Chờ xác nhận (${
+                        orders.filter(
+                          (o) => o.orderStatus === "PENDING_CONFIRMATION"
+                        ).length
+                      })`,
+                    },
+                    {
+                      code: "CONFIRMED",
+                      label: `Đã xác nhận (${
+                        orders.filter((o) => o.orderStatus === "CONFIRMED")
+                          .length
+                      })`,
+                    },
+                    {
+                      code: "PREPARING",
+                      label: `Đang chưng (${
+                        orders.filter((o) => o.orderStatus === "PREPARING")
+                          .length
+                      })`,
+                    },
+                    {
+                      code: "COMPLETED",
+                      label: `Hoàn tất (${
+                        orders.filter((o) => o.orderStatus === "COMPLETED")
+                          .length
+                      })`,
+                    },
+                    {
+                      code: "CANCELLED",
+                      label: `Đã hủy (${
+                        orders.filter((o) => o.orderStatus === "CANCELLED")
+                          .length
+                      })`,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.code}
+                      type="button"
+                      onClick={() => setOrderFilterStatus(tab.code)}
+                      className={`px-2.5 py-1 rounded-xs font-medium cursor-pointer ${
+                        orderFilterStatus === tab.code
+                          ? "bg-[#155132] text-white font-semibold"
+                          : "text-[#2271b1] hover:bg-[#f0f0f1]"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px]">
+                  <Search className="h-3.5 w-3.5 text-[#50575e] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="search"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    placeholder="Tìm mã đơn, tên khách, SĐT..."
+                    className="w-full rounded-xs border border-[#8c8f94] bg-white pl-8 pr-3 py-1.5 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Orders List */}
+              {filteredOrders.length === 0 ? (
+                <div className="rounded-xs border border-[#c3c4c7] bg-white p-10 text-center text-sm text-[#50575e]">
+                  Không tìm thấy đơn hàng nào khớp bộ lọc.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredOrders.map((order) => {
+                    const statusMeta =
+                      ORDER_STATUS_OPTIONS.find(
+                        (s) => s.value === order.orderStatus
+                      ) || ORDER_STATUS_OPTIONS[0];
+
+                    return (
+                      <div
+                        key={order.id}
+                        data-testid={`admin-order-card-${order.referenceCode}`}
+                        className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs overflow-hidden"
+                      >
+                        {/* Order Card Header Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f6f7f7] border-b border-[#c3c4c7] px-4 py-2.5">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span className="font-mono text-sm font-bold text-[#155132]">
+                              #{order.referenceCode}
+                            </span>
+                            <span
+                              className={`rounded-xs border px-2 py-0.5 text-[11px] font-semibold ${statusMeta.badgeClass}`}
+                            >
+                              {statusMeta.label}
+                            </span>
+                            <span className="rounded-xs bg-[#FFFCF4] border border-[#BD9342]/50 px-2 py-0.5 text-[11px] font-semibold text-[#8A6632]">
+                              {order.orderPurpose === "GIFT"
+                                ? "Quà biếu tặng"
+                                : "Mua dùng"}
+                            </span>
+                            <span className="text-xs text-[#50575e]">
+                              Lịch giao:{" "}
+                              <strong className="text-[#1d2327]">
+                                {order.requestedDate}
+                              </strong>{" "}
+                              ({order.slotLabelSnapshot})
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleQuickShareZalo(order)}
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#155132]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 text-[#BD9342]" />
+                              Báo qua Zalo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickShareEmail(order)}
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#155132]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
+                            >
+                              <Mail className="h-3.5 w-3.5 text-[#BD9342]" />
+                              Gửi Email
+                            </button>
+                            <span className="text-xs font-bold text-[#155132] pl-1">
+                              Tổng: {formatVnd(order.totalVnd)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Order Card 3-Column Body */}
+                        <div className="p-4 grid grid-cols-1 gap-4 text-xs md:grid-cols-12">
+                          <div className="md:col-span-4 space-y-1">
+                            <p className="font-bold text-[#1d2327] uppercase text-[11px] tracking-wider text-[#50575e]">
+                              Thông tin khách & Địa chỉ giao
+                            </p>
+                            <p className="text-[#1d2327]">
+                              Người đặt: <strong>{order.buyerName}</strong> —{" "}
+                              <a
+                                href={`tel:${order.buyerPhone}`}
+                                className="font-bold text-[#155132] underline"
+                              >
+                                {order.buyerPhone}
+                              </a>
+                            </p>
+                            <p className="text-[#1d2327]">
+                              Người nhận: <strong>{order.recipientName}</strong>{" "}
+                              ({order.recipientPhone})
+                            </p>
+                            <p className="text-[#50575e]">
+                              Địa chỉ: {order.addressDetail}
+                            </p>
+                            {order.buyerNote && (
+                              <p className="text-[#8A6632]">
+                                Ghi chú khách: “{order.buyerNote}”
+                              </p>
+                            )}
+                            {order.giftMessage && (
+                              <p className="italic text-[#8A6632] bg-[#FFFCF4] p-2 rounded border border-[#BD9342]/30 mt-1">
+                                Thiệp quà tặng: “{order.giftMessage}”
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="md:col-span-4 space-y-1">
+                            <p className="font-bold uppercase text-[11px] tracking-wider text-[#50575e]">
+                              Chi tiết món đặt ({order.items.length} dòng)
+                            </p>
+                            <ul className="space-y-1.5 text-[#1d2327]">
+                              {order.items.map((it) => (
+                                <li
+                                  key={it.id}
+                                  className="flex items-start justify-between gap-2 border-b border-dashed border-[#dcdcde] pb-1"
+                                >
+                                  <span>
+                                    <strong>{it.productNameSnapshot}</strong> ×{" "}
+                                    {it.quantity}
+                                    <span className="block text-[11px] text-[#50575e]">
+                                      {it.variantNameSnapshot} •{" "}
+                                      {it.selectedOptionSnapshot}
+                                    </span>
+                                  </span>
+                                  <span className="font-semibold shrink-0">
+                                    {formatVnd(it.lineTotalSnapshot)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Order Action Metabox */}
+                          <div className="md:col-span-4 space-y-2.5 rounded-xs bg-[#f6f7f7] border border-[#dcdcde] p-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-[#1d2327]">
+                                Trạng thái xử lý đơn:
+                              </label>
+                              <select
+                                data-testid={`admin-status-select-${order.referenceCode}`}
+                                value={
+                                  draftOrderStatus[order.referenceCode] ||
+                                  order.orderStatus
+                                }
+                                onChange={(e) =>
+                                  setDraftOrderStatus((prev) => ({
+                                    ...prev,
+                                    [order.referenceCode]: e.target
+                                      .value as OrderStatus,
+                                  }))
+                                }
+                                className="mt-1 w-full rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#1d2327]"
+                              >
+                                {ORDER_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[11px] font-bold text-[#1d2327]">
+                                  Thanh toán:
+                                </label>
+                                <select
+                                  value={
+                                    draftPaymentStatus[order.referenceCode] ||
+                                    order.paymentStatus
+                                  }
+                                  onChange={(e) =>
+                                    setDraftPaymentStatus((prev) => ({
+                                      ...prev,
+                                      [order.referenceCode]: e.target
+                                        .value as PaymentStatus,
+                                    }))
+                                  }
+                                  className="mt-1 w-full rounded-xs border border-[#8c8f94] bg-white px-2 py-1.5 text-xs"
+                                >
+                                  {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold text-[#1d2327]">
+                                  Phí giao (VNĐ):
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={5000}
+                                  value={
+                                    draftShippingFee[order.referenceCode] ?? ""
+                                  }
+                                  onChange={(e) =>
+                                    setDraftShippingFee((prev) => ({
+                                      ...prev,
+                                      [order.referenceCode]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="0 (Free Ship)"
+                                  className="mt-1 w-full rounded-xs border border-[#8c8f94] bg-white px-2 py-1.5 text-xs"
+                                />
+                              </div>
+                            </div>
+
+                            <input
+                              type="text"
+                              value={draftNote[order.referenceCode] || ""}
+                              onChange={(e) =>
+                                setDraftNote((prev) => ({
+                                  ...prev,
+                                  [order.referenceCode]: e.target.value,
+                                }))
+                              }
+                              placeholder="Ghi chú nội bộ (VD: Đã gọi xác nhận giao 9h)..."
+                              className="w-full rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 text-xs"
+                            />
+
+                            <button
+                              type="button"
+                              data-testid={`admin-save-order-${order.referenceCode}`}
+                              onClick={() =>
+                                handleUpdateOrder(order.referenceCode)
+                              }
+                              className="flex w-full items-center justify-center gap-1.5 rounded-xs bg-[#155132] px-3 py-2 text-xs font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 text-[#BD9342]" />
+                              Lưu cập nhật đơn
+                            </button>
+                          </div>
+                        </div>
+
+                        {order.history.length > 0 && (
+                          <div className="bg-[#f6f7f7] border-t border-[#dcdcde] px-4 py-2 text-[11px] text-[#50575e]">
+                            <strong>Lịch sử mới nhất:</strong>{" "}
+                            {order.history[0].toStatus} (
+                            {order.history[0].toPaymentStatus}) —{" "}
+                            {order.history[0].note} (bởi{" "}
+                            {order.history[0].changedByStaffName})
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 2: SẢN PHẨM / MÓN ĂN (WP LIST TABLE + 2-COL EDITOR)       */}
+          {/* ================================================================= */}
+          {activeSection === "catalog" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    {editingProduct
+                      ? editingProduct.id
+                        ? "Chỉnh sửa Sản phẩm / Món ăn"
+                        : "Thêm Sản phẩm / Món mới"
+                      : "Sản phẩm & Thực đơn Yến Sào"}
+                  </h1>
+                  {!editingProduct && (
+                    <button
+                      type="button"
+                      onClick={openNewProductForm}
+                      className="rounded-xs border border-[#155132] bg-white px-3 py-1 text-xs font-semibold text-[#155132] hover:bg-[#155132] hover:text-white transition cursor-pointer"
+                    >
+                      + Thêm sản phẩm mới
+                    </button>
+                  )}
+                </div>
+
+                {editingProduct && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(null)}
+                    className="rounded-xs border border-[#8c8f94] bg-white px-3 py-1.5 text-xs font-semibold text-[#1d2327] hover:bg-[#f6f7f7] cursor-pointer"
+                  >
+                    ← Quay lại danh sách sản phẩm
+                  </button>
+                )}
+              </div>
+
+              {/* WORDPRESS 2-COLUMN PRODUCT EDITOR */}
+              {editingProduct ? (
+                <form
+                  onSubmit={handleSaveProductFull}
+                  className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start"
+                >
+                  {/* Left Column (8/12): Title, Description, Product Data Metabox */}
+                  <div className="space-y-5 lg:col-span-8">
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                          Tên món / Tên sản phẩm *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editingProduct.name}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              name: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tên món yến hoặc set quà tặng..."
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-base font-semibold text-[#1d2327]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                          Mô tả ngắn & Công dụng sản phẩm
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={editingProduct.shortDescription}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              shortDescription: e.target.value,
+                            })
+                          }
+                          placeholder="Mô tả hương vị, định lượng tổ yến và công dụng bồi bổ..."
+                          className="w-full rounded-xs border border-[#8c8f94] p-3 text-xs leading-relaxed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* WooCommerce-style Product Data Metabox */}
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h2 className="text-xs font-bold uppercase tracking-wider text-[#1d2327]">
+                          Dữ liệu Sản phẩm (Giá bán, Dung tích & Thành phần)
+                        </h2>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-xs font-bold text-[#1d2327]">
+                              Giá bán niêm yết (VNĐ)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              step={1000}
+                              value={editingProduct.priceVnd}
+                              onChange={(e) =>
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  priceVnd: e.target.value,
+                                })
+                              }
+                              placeholder="VD: 145000"
+                              className="mt-1 w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-xs font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-[#1d2327]">
+                              Dung tích / Định lượng (ml hoặc gram)
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={editingProduct.volumeMl}
+                              onChange={(e) =>
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  volumeMl: Number(e.target.value) || 100,
+                                })
+                              }
+                              className="mt-1 w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-xs font-semibold"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-[#1d2327]">
+                            Nguyên liệu chưng cùng (cách nhau bằng dấu phẩy)
+                          </label>
+                          <input
+                            type="text"
+                            value={editingProduct.ingredientsText}
+                            onChange={(e) =>
+                              setEditingProduct({
+                                ...editingProduct,
+                                ingredientsText: e.target.value,
+                              })
+                            }
+                            placeholder="VD: Tổ yến nguyên chất, táo đỏ, hạt sen, đường phèn"
+                            className="mt-1 w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2.5 rounded-xl bg-[#FFFCF4] border border-[#BD9342]/35 p-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-[#155132]">
-                        Trạng thái xử lý đơn:
-                      </label>
+                  {/* Right Column (4/12): Publish Box, Category Box, Featured Image Box */}
+                  <div className="space-y-5 lg:col-span-4">
+                    {/* Publish Metabox */}
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h3 className="text-xs font-bold text-[#1d2327]">
+                          Đăng / Cập nhật sản phẩm
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-3 text-xs">
+                        <div>
+                          <label className="block font-semibold text-[#1d2327] mb-1">
+                            Trạng thái hiển thị:
+                          </label>
+                          <select
+                            value={editingProduct.status}
+                            onChange={(e) =>
+                              setEditingProduct({
+                                ...editingProduct,
+                                status: e.target.value as ProductStatus,
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 text-xs font-semibold"
+                          >
+                            {PRODUCT_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-[#dcdcde]">
+                          <button
+                            type="button"
+                            onClick={() => setEditingProduct(null)}
+                            className="text-xs text-rose-700 hover:underline cursor-pointer"
+                          >
+                            Hủy bỏ
+                          </button>
+                          <button
+                            type="submit"
+                            className="rounded-xs bg-[#155132] px-4 py-2 text-xs font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                          >
+                            {editingProduct.id
+                              ? "Cập nhật sản phẩm"
+                              : "Đăng sản phẩm mới"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Category Metabox */}
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h3 className="text-xs font-bold text-[#1d2327]">
+                          Danh mục sản phẩm
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-2 text-xs">
+                        {PRODUCT_CATEGORY_OPTIONS.map((cat) => (
+                          <label
+                            key={cat.value}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <input
+                              type="radio"
+                              name="product-category"
+                              checked={editingProduct.category === cat.value}
+                              onChange={() =>
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  category: cat.value,
+                                })
+                              }
+                              className="accent-[#155132]"
+                            />
+                            <span>{cat.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Featured Image Metabox */}
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h3 className="text-xs font-bold text-[#1d2327]">
+                          Ảnh đại diện sản phẩm (Product Image)
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-3 text-xs">
+                        <div className="aspect-square w-full overflow-hidden rounded-xs border border-[#dcdcde] bg-[#f6f7f7]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={
+                              editingProduct.imageUrl ||
+                              "/brand/catalog/yen-hu-75ml-100ml-cam-tay.jpg"
+                            }
+                            alt={editingProduct.name || "Product preview"}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+
+                        <label className="flex w-full items-center justify-center gap-1.5 rounded-xs border border-[#155132] bg-[#f6f7f7] px-3 py-2 text-xs font-bold text-[#155132] hover:bg-[#155132] hover:text-white transition cursor-pointer">
+                          <Upload className="h-3.5 w-3.5" />
+                          Tải ảnh mới từ máy tính
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const dataUrl = await readAndCompressImageFile(
+                                file,
+                                900
+                              );
+                              setEditingProduct((prev) =>
+                                prev ? { ...prev, imageUrl: dataUrl } : prev
+                              );
+                            }}
+                          />
+                        </label>
+
+                        <div>
+                          <label className="block text-[11px] text-[#50575e] mb-1">
+                            Hoặc nhập URL ảnh:
+                          </label>
+                          <input
+                            type="text"
+                            value={editingProduct.imageUrl}
+                            onChange={(e) =>
+                              setEditingProduct({
+                                ...editingProduct,
+                                imageUrl: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                /* WORDPRESS WP_LIST_TABLE FOR PRODUCTS */
+                <div className="space-y-3">
+                  {/* Filter Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xs border border-[#c3c4c7]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <Filter className="h-3.5 w-3.5 text-[#50575e]" />
                       <select
-                        data-testid={`admin-status-select-${order.referenceCode}`}
-                        value={
-                          draftOrderStatus[order.referenceCode] ||
-                          order.orderStatus
-                        }
+                        value={productCategoryFilter}
                         onChange={(e) =>
-                          setDraftOrderStatus((prev) => ({
-                            ...prev,
-                            [order.referenceCode]: e.target
-                              .value as OrderStatus,
-                          }))
+                          setProductCategoryFilter(e.target.value)
                         }
-                        className="mt-1 w-full rounded-lg border border-[#155132]/25 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#155132]"
+                        className="rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 text-xs"
                       >
-                        {ORDER_STATUS_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
+                        <option value="ALL">
+                          Tất cả danh mục ({products.length})
+                        </option>
+                        {PRODUCT_CATEGORY_OPTIONS.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {c.label}
                           </option>
                         ))}
                       </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#155132]">
-                          Thanh toán:
-                        </label>
-                        <select
-                          value={
-                            draftPaymentStatus[order.referenceCode] ||
-                            order.paymentStatus
-                          }
-                          onChange={(e) =>
-                            setDraftPaymentStatus((prev) => ({
-                              ...prev,
-                              [order.referenceCode]: e.target
-                                .value as PaymentStatus,
-                            }))
-                          }
-                          className="mt-1 w-full rounded-lg border border-[#155132]/25 bg-white px-2 py-1.5 text-xs text-[#2B433A]"
-                        >
-                          {PAYMENT_STATUS_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#155132]">
-                          Phí giao (VNĐ):
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          step={5000}
-                          value={draftShippingFee[order.referenceCode] ?? ""}
-                          onChange={(e) =>
-                            setDraftShippingFee((prev) => ({
-                              ...prev,
-                              [order.referenceCode]: e.target.value,
-                            }))
-                          }
-                          placeholder="VD: 25000"
-                          className="mt-1 w-full rounded-lg border border-[#155132]/25 bg-white px-2 py-1.5 text-xs text-[#2B433A]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
+                    <div className="relative min-w-[240px]">
+                      <Search className="h-3.5 w-3.5 text-[#50575e] absolute left-2.5 top-1/2 -translate-y-1/2" />
                       <input
-                        type="text"
-                        value={draftNote[order.referenceCode] || ""}
-                        onChange={(e) =>
-                          setDraftNote((prev) => ({
-                            ...prev,
-                            [order.referenceCode]: e.target.value,
-                          }))
-                        }
-                        placeholder="Ghi chú xác nhận (VD: Đã gọi chốt giao 9h30)..."
-                        className="w-full rounded-lg border border-[#155132]/25 bg-white px-2.5 py-1.5 text-xs text-[#2B433A]"
+                        type="search"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Tìm kiếm tên món..."
+                        className="w-full rounded-xs border border-[#8c8f94] bg-white pl-8 pr-3 py-1.5 text-xs"
                       />
                     </div>
+                  </div>
 
-                    <button
-                      type="button"
-                      data-testid={`admin-save-order-${order.referenceCode}`}
-                      onClick={() => handleUpdateOrder(order.referenceCode)}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#155132] px-3 py-2 text-xs font-bold text-[#FFFCF4] hover:bg-[#0e3b23] cursor-pointer"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#BD9342]" />
-                      Lưu cập nhật đơn
-                    </button>
+                  {/* WP Table */}
+                  <div className="overflow-x-auto rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#c3c4c7] bg-[#f6f7f7] text-[#1d2327] font-bold">
+                          <th className="py-2.5 px-3 w-16">Ảnh</th>
+                          <th className="py-2.5 px-3">Tên món / Sản phẩm</th>
+                          <th className="py-2.5 px-3">Danh mục</th>
+                          <th className="py-2.5 px-3">Định lượng</th>
+                          <th className="py-2.5 px-3">Giá bán</th>
+                          <th className="py-2.5 px-3">Trạng thái</th>
+                          <th className="py-2.5 px-3 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#dcdcde]">
+                        {filteredProducts.map((prod) => (
+                          <tr
+                            key={prod.id}
+                            className="hover:bg-[#f6f7f7] transition"
+                          >
+                            <td className="py-2.5 px-3">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={prod.imageUrl}
+                                alt={prod.name}
+                                className="h-12 w-12 rounded-xs object-cover border border-[#c3c4c7]"
+                              />
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingProduct({
+                                    id: prod.id,
+                                    slug: prod.slug,
+                                    name: prod.name,
+                                    category: prod.category,
+                                    volumeMl: prod.volumeMl,
+                                    ingredientsText:
+                                      prod.ingredients.join(", "),
+                                    shortDescription: prod.shortDescription,
+                                    imageUrl: prod.imageUrl,
+                                    priceVnd:
+                                      prod.priceVnd !== null
+                                        ? String(prod.priceVnd)
+                                        : "",
+                                    status: prod.status,
+                                  })
+                                }
+                                className="font-bold text-sm text-[#155132] hover:underline text-left cursor-pointer"
+                              >
+                                {prod.name}
+                              </button>
+                              <p className="text-[11px] text-[#50575e] line-clamp-1 mt-0.5">
+                                {prod.ingredients.join(", ")}
+                              </p>
+                            </td>
+                            <td className="py-2.5 px-3 text-[#50575e]">
+                              {prod.categoryLabel}
+                            </td>
+                            <td className="py-2.5 px-3 font-medium">
+                              {prod.volumeMl}ml
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-[#155132]">
+                              {formatVnd(prod.priceVnd)}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <select
+                                value={prod.status}
+                                onChange={(e) =>
+                                  handleUpdateProductStatus(
+                                    prod,
+                                    e.target.value as ProductStatus
+                                  )
+                                }
+                                className="rounded-xs border border-[#8c8f94] bg-white px-2 py-1 text-[11px] font-semibold text-[#1d2327]"
+                              >
+                                {PRODUCT_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingProduct({
+                                    id: prod.id,
+                                    slug: prod.slug,
+                                    name: prod.name,
+                                    category: prod.category,
+                                    volumeMl: prod.volumeMl,
+                                    ingredientsText:
+                                      prod.ingredients.join(", "),
+                                    shortDescription: prod.shortDescription,
+                                    imageUrl: prod.imageUrl,
+                                    priceVnd:
+                                      prod.priceVnd !== null
+                                        ? String(prod.priceVnd)
+                                        : "",
+                                    status: prod.status,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 rounded-xs border border-[#155132] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white mr-1.5 cursor-pointer"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                                Sửa & Ảnh
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteProduct(prod.id, prod.name)
+                                }
+                                className="inline-flex items-center gap-1 rounded-xs border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-
-                {/* History Audit Log */}
-                {order.history.length > 0 && (
-                  <div className="mt-3 border-t border-[#155132]/10 pt-2.5 text-[11px] text-[#2B433A]/75">
-                    <span className="font-semibold text-[#155132]">
-                      Lịch sử trạng thái mới nhất:
-                    </span>{" "}
-                    {order.history[0].toStatus} ({order.history[0].toPaymentStatus}
-                    ) — {order.history[0].note} (bởi{" "}
-                    {order.history[0].changedByStaffName})
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 2: CATALOG, DISHES & IMAGES */}
-      {/* ================================================================= */}
-      {activeTab === "catalog" && (
-        <div className="mt-6 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Đăng tải & Cập nhật Món, Giá bán, Hình ảnh món
-              </h2>
-              <p className="text-xs text-[#2B433A]/80">
-                Bấm “Thêm món mới” hoặc “Sửa món & Ảnh” để thay đổi tên, giá, thành phần hoặc tải hình ảnh món trực tiếp từ máy tính.
-              </p>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                setEditingProduct({
-                  slug: "",
-                  name: "",
-                  category: "nguyen-ban",
-                  volumeMl: 100,
-                  ingredientsText: "Tổ yến nguyên chất, đường phèn kết tinh",
-                  shortDescription: "",
-                  imageUrl: "/brand/catalog/yen-hu-75ml-100ml-cam-tay.jpg",
-                  priceVnd: "145000",
-                  status: "AVAILABLE",
-                })
-              }
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#155132] border border-[#BD9342] px-4 py-2.5 text-xs font-bold text-[#FFFCF4] hover:bg-[#0e3b23] cursor-pointer"
-            >
-              <Plus className="h-4 w-4 text-[#BD9342]" />
-              Thêm món / sản phẩm mới
-            </button>
-          </div>
-
-          {editingProduct && (
-            <form
-              onSubmit={handleSaveProductFull}
-              className="rounded-2xl border-2 border-[#BD9342] bg-[#FFFCF4] p-5 shadow-md space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-[#155132]/15 pb-3">
-                <h3 className="font-serif-display text-lg font-bold text-[#155132]">
-                  {editingProduct.id
-                    ? `Chỉnh sửa món: ${editingProduct.name}`
-                    : "Thêm món / sản phẩm mới lên Website"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setEditingProduct(null)}
-                  className="text-xs font-semibold text-red-700 underline"
-                >
-                  Đóng form
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Tên món / sản phẩm *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editingProduct.name}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        name: e.target.value,
-                      })
-                    }
-                    placeholder="VD: Yến chưng Đông Trùng Hạ Thảo"
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Nhóm hương vị / Danh mục *
-                  </label>
-                  <select
-                    value={editingProduct.category}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        category: e.target.value as ProductCategory,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs font-semibold text-[#155132]"
-                  >
-                    {PRODUCT_CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-bold text-[#155132]">
-                      Giá bán (VNĐ)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1000}
-                      value={editingProduct.priceVnd}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          priceVnd: e.target.value,
-                        })
-                      }
-                      placeholder="VD: 145000"
-                      className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-[#155132]">
-                      Dung tích (ml)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={editingProduct.volumeMl}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          volumeMl: Number(e.target.value) || 100,
-                        })
-                      }
-                      className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Nguyên liệu chưng cùng (phân cách bằng dấu phẩy)
-                  </label>
-                  <input
-                    type="text"
-                    value={editingProduct.ingredientsText}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        ingredientsText: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Trạng thái phục vụ
-                  </label>
-                  <select
-                    value={editingProduct.status}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        status: e.target.value as ProductStatus,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs font-semibold text-[#155132]"
-                  >
-                    {PRODUCT_STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Mô tả chi tiết món / công dụng
-                </label>
-                <textarea
-                  rows={2}
-                  value={editingProduct.shortDescription}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      shortDescription: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              {/* Image URL + Direct File Upload */}
-              <div className="rounded-xl border border-[#155132]/20 bg-white p-3.5">
-                <label className="block text-xs font-bold text-[#155132]">
-                  Hình ảnh món (Nhập đường dẫn ảnh hoặc tải ảnh trực tiếp từ máy tính)
-                </label>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={
-                      editingProduct.imageUrl ||
-                      "/brand/catalog/yen-hu-75ml-100ml-cam-tay.jpg"
-                    }
-                    alt={editingProduct.name || "Preview"}
-                    className="h-20 w-20 rounded-xl object-cover border border-[#BD9342]/50"
-                  />
-                  <div className="flex-1 min-w-[240px] space-y-2">
-                    <input
-                      type="text"
-                      value={editingProduct.imageUrl}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          imageUrl: e.target.value,
-                        })
-                      }
-                      placeholder="/brand/catalog/... hoặc https://..."
-                      className="w-full rounded-lg border border-[#155132]/25 px-3 py-1.5 text-xs"
-                    />
-                    <label className="inline-flex items-center gap-1.5 rounded-lg bg-[#155132]/10 px-3 py-1.5 text-xs font-bold text-[#155132] hover:bg-[#155132]/20 cursor-pointer">
-                      <Upload className="h-3.5 w-3.5 text-[#155132]" />
-                      Chọn tải ảnh từ máy tính
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const dataUrl = await readAndCompressImageFile(
-                              file,
-                              900
-                            );
-                            setEditingProduct((prev) =>
-                              prev ? { ...prev, imageUrl: dataUrl } : prev
-                            );
-                          } catch (err) {
-                            alert(
-                              err instanceof Error
-                                ? err.message
-                                : "Lỗi đọc ảnh"
-                            );
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingProduct(null)}
-                  className="rounded-xl border border-[#155132]/25 bg-white px-4 py-2 text-xs font-semibold text-[#2B433A]"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-2 text-xs font-bold text-[#FFFCF4] cursor-pointer"
-                >
-                  Lưu thông tin món & hình ảnh
-                </button>
-              </div>
-            </form>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="space-y-3 lg:col-span-8">
-              <h3 className="font-serif-display text-base font-semibold text-[#155132]">
-                Danh sách tất cả món & sản phẩm trên Web ({products.length} món)
-              </h3>
-              {products.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#155132]/15 bg-white p-3.5 text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={prod.imageUrl}
-                      alt={prod.name}
-                      className="h-14 w-14 rounded-xl object-cover border border-[#155132]/15 shrink-0"
-                    />
-                    <div>
-                      <span className="inline-block rounded-md bg-[#FFFCF4] border border-[#BD9342]/40 px-2 py-0.5 text-[10px] font-semibold text-[#8A6632]">
-                        {prod.categoryLabel}
-                      </span>
-                      <p className="mt-0.5 font-bold text-[#155132] text-sm">
-                        {prod.name}
-                      </p>
-                      <p className="text-[#2B433A]/80">
-                        Dung tích {prod.volumeMl}ml • Giá:{" "}
-                        <strong className="text-[#155132]">
-                          {formatVnd(prod.priceVnd)}
-                        </strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={prod.status}
-                      onChange={(e) =>
-                        handleUpdateProductStatus(
-                          prod,
-                          e.target.value as ProductStatus
-                        )
-                      }
-                      className="rounded-lg border border-[#155132]/25 bg-[#FFFCF4] px-2.5 py-1.5 text-xs font-semibold text-[#155132]"
-                    >
-                      {PRODUCT_STATUS_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditingProduct({
-                          id: prod.id,
-                          slug: prod.slug,
-                          name: prod.name,
-                          category: prod.category,
-                          volumeMl: prod.volumeMl,
-                          ingredientsText: prod.ingredients.join(", "),
-                          shortDescription: prod.shortDescription,
-                          imageUrl: prod.imageUrl,
-                          priceVnd:
-                            prod.priceVnd !== null ? String(prod.priceVnd) : "",
-                          status: prod.status,
-                        })
-                      }
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#155132]/25 bg-white px-2.5 py-1.5 text-xs font-bold text-[#155132] hover:bg-[#FFFCF4] cursor-pointer"
-                    >
-                      <Edit3 className="h-3.5 w-3.5 text-[#BD9342]" />
-                      Sửa món & Ảnh
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteProduct(prod.id, prod.name)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 cursor-pointer"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+          {/* ================================================================= */}
+          {/* SECTION 2B: KHUNG GIỜ CA BẾP (08:00 - 21:00)                      */}
+          {/* ================================================================= */}
+          {activeSection === "slots" && (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-[#c3c4c7] pb-4">
+                <div>
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    Năng lực Khung giờ Giao hàng (08:00 – 21:00)
+                  </h1>
+                  <p className="text-xs text-[#50575e] mt-0.5">
+                    Theo dõi số lượng thố yến đã đặt theo từng khung giờ trong ngày.
+                  </p>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="space-y-3 lg:col-span-4">
-              <h3 className="font-serif-display text-base font-semibold text-[#155132]">
-                Khung giờ Ca bếp (08:00 - 21:00)
-              </h3>
-              <div className="max-h-[540px] space-y-2 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {slots.map((slot) => (
                   <div
                     key={slot.id}
-                    className="rounded-xl border border-[#155132]/15 bg-white p-3 text-xs"
+                    className="rounded-xs border border-[#c3c4c7] bg-white p-4 flex items-center justify-between text-xs shadow-2xs"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-bold text-[#155132]">
-                        <Clock className="h-3.5 w-3.5 text-[#BD9342]" />
-                        {slot.label} ({slot.timeWindow})
-                      </span>
-                      <span className="rounded-full bg-[#FFFCF4] border border-[#BD9342]/40 px-2 py-0.5 text-[11px] font-semibold text-[#155132]">
-                        {slot.reservedBowls}/{slot.maxCapacityBowls} thố
-                      </span>
-                    </div>
+                    <span className="flex items-center gap-2 font-bold text-[#1d2327]">
+                      <Clock className="h-4 w-4 text-[#155132]" />
+                      {slot.label} ({slot.timeWindow})
+                    </span>
+                    <span className="rounded-full bg-[#f0f0f1] px-2.5 py-1 font-semibold text-[#155132]">
+                      {slot.reservedBowls}/{slot.maxCapacityBowls} thố
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 3: SITE CONTENT SETTINGS (TRANG CHỦ, VỀ HÀ MI, LIÊN HỆ) */}
-      {/* ================================================================= */}
-      {activeTab === "site" && siteSettings && (
-        <form
-          onSubmit={handleSaveSiteSettings}
-          className="mt-6 space-y-6 rounded-2xl border border-[#155132]/20 bg-white p-6 shadow-xs"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#155132]/15 pb-4">
-            <div>
-              <h2 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Cập nhật Nội dung Trang Chủ, Quà Biếu, Về Hà Mi & Liên Hệ
-              </h2>
-              <p className="text-xs text-[#2B433A]/80">
-                Mọi thay đổi tại đây sẽ cập nhật trực tiếp lên giao diện Trang chủ và các trang thông tin.
-              </p>
-            </div>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-2.5 text-xs font-bold text-[#FFFCF4] hover:bg-[#0e3b23] cursor-pointer"
-            >
-              <CheckCircle2 className="h-4 w-4 text-[#BD9342]" />
-              Lưu toàn bộ nội dung Website
-            </button>
-          </div>
-
-          {/* Section 1: Hero Trang Chủ */}
-          <div className="space-y-4 rounded-xl bg-[#FFFCF4] p-4 border border-[#BD9342]/30">
-            <h3 className="font-serif-display text-base font-bold text-[#155132]">
-              1. Banner Đầu Trang Chủ (Hero Section)
-            </h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Dòng nhãn nhỏ (Hero Badge)
-                </label>
-                <input
-                  type="text"
-                  value={siteSettings.heroBadge}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      heroBadge: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Chữ trên nút bấm chính (CTA)
-                </label>
-                <input
-                  type="text"
-                  value={siteSettings.heroCta}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      heroCta: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#155132]">
-                Tiêu đề lớn Trang Chủ (H1)
-              </label>
-              <input
-                type="text"
-                value={siteSettings.heroTitle}
-                onChange={(e) =>
-                  setSiteSettings({
-                    ...siteSettings,
-                    heroTitle: e.target.value,
-                  })
-                }
-                className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-sm font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#155132]">
-                Đoạn mô tả mở đầu Trang Chủ
-              </label>
-              <textarea
-                rows={3}
-                value={siteSettings.heroLead}
-                onChange={(e) =>
-                  setSiteSettings({
-                    ...siteSettings,
-                    heroLead: e.target.value,
-                  })
-                }
-                className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-[#155132]/15 bg-white p-3">
-                <label className="block text-xs font-bold text-[#155132]">
-                  Ảnh Hero Desktop Trang Chủ
-                </label>
-                <div className="mt-2 flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={siteSettings.heroDesktopImage}
-                    alt="Hero desktop"
-                    className="h-16 w-16 rounded-lg object-cover border"
-                  />
-                  <div className="flex-1 space-y-1.5">
-                    <input
-                      type="text"
-                      value={siteSettings.heroDesktopImage}
-                      onChange={(e) =>
-                        setSiteSettings({
-                          ...siteSettings,
-                          heroDesktopImage: e.target.value,
-                        })
-                      }
-                      className="w-full rounded-lg border border-[#155132]/25 px-2.5 py-1 text-xs"
-                    />
-                    <label className="inline-flex items-center gap-1 rounded-lg bg-[#155132]/10 px-2.5 py-1 text-[11px] font-bold text-[#155132] cursor-pointer">
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      Tải ảnh mới từ máy
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const dataUrl = await readAndCompressImageFile(file);
-                          setSiteSettings({
-                            ...siteSettings,
-                            heroDesktopImage: dataUrl,
-                          });
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#155132]/15 bg-white p-3">
-                <label className="block text-xs font-bold text-[#155132]">
-                  Ảnh Hero Mobile Trang Chủ
-                </label>
-                <div className="mt-2 flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={siteSettings.heroMobileImage}
-                    alt="Hero mobile"
-                    className="h-16 w-16 rounded-lg object-cover border"
-                  />
-                  <div className="flex-1 space-y-1.5">
-                    <input
-                      type="text"
-                      value={siteSettings.heroMobileImage}
-                      onChange={(e) =>
-                        setSiteSettings({
-                          ...siteSettings,
-                          heroMobileImage: e.target.value,
-                        })
-                      }
-                      className="w-full rounded-lg border border-[#155132]/25 px-2.5 py-1 text-xs"
-                    />
-                    <label className="inline-flex items-center gap-1 rounded-lg bg-[#155132]/10 px-2.5 py-1 text-[11px] font-bold text-[#155132] cursor-pointer">
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      Tải ảnh mới từ máy
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const dataUrl = await readAndCompressImageFile(file);
-                          setSiteSettings({
-                            ...siteSettings,
-                            heroMobileImage: dataUrl,
-                          });
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Gifting & About */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-3 rounded-xl bg-[#FFFCF4] p-4 border border-[#BD9342]/30">
-              <h3 className="font-serif-display text-base font-bold text-[#155132]">
-                2. Khối Quà Biếu Sức Khỏe
-              </h3>
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Tiêu đề khối Quà Biếu
-                </label>
-                <input
-                  type="text"
-                  value={siteSettings.giftingTitle}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      giftingTitle: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Mô tả khối Quà Biếu
-                </label>
-                <textarea
-                  rows={3}
-                  value={siteSettings.giftingDescription}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      giftingDescription: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Ảnh đại diện khối Quà Biếu
-                </label>
-                <div className="mt-1 flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={siteSettings.giftingImage}
-                    alt="Gift section"
-                    className="h-14 w-14 rounded-lg object-cover border"
-                  />
-                  <input
-                    type="text"
-                    value={siteSettings.giftingImage}
-                    onChange={(e) =>
-                      setSiteSettings({
-                        ...siteSettings,
-                        giftingImage: e.target.value,
-                      })
-                    }
-                    className="flex-1 rounded-lg border border-[#155132]/25 bg-white px-2.5 py-1.5 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 rounded-xl bg-[#FFFCF4] p-4 border border-[#BD9342]/30">
-              <h3 className="font-serif-display text-base font-bold text-[#155132]">
-                3. Thông tin Liên Hệ, Hotline, Zalo & Về Hà Mi
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Hotline hiển thị
-                  </label>
-                  <input
-                    type="text"
-                    value={siteSettings.hotlineDisplay}
-                    onChange={(e) =>
-                      setSiteSettings({
-                        ...siteSettings,
-                        hotlineDisplay: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Link Zalo CSKH
-                  </label>
-                  <input
-                    type="text"
-                    value={siteSettings.zaloUrl}
-                    onChange={(e) =>
-                      setSiteSettings({
-                        ...siteSettings,
-                        zaloUrl: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Địa chỉ bếp / Showroom
-                </label>
-                <input
-                  type="text"
-                  value={siteSettings.addressDisplay}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      addressDisplay: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Khung giờ phục vụ
-                </label>
-                <input
-                  type="text"
-                  value={siteSettings.serviceHoursDisplay}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      serviceHoursDisplay: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Giới thiệu ngắn Về Hà Mi
-                </label>
-                <textarea
-                  rows={2}
-                  value={siteSettings.aboutLead}
-                  onChange={(e) =>
-                    setSiteSettings({
-                      ...siteSettings,
-                      aboutLead: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-            </div>
-          </div>
-        </form>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 4: BLOG POSTS / ARTICLES */}
-      {/* ================================================================= */}
-      {activeTab === "posts" && (
-        <div className="mt-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Quản lý Bài viết & Cẩm nang Yến Sào
-              </h2>
-              <p className="text-xs text-[#2B433A]/80">
-                Đăng bài chia sẻ kiến thức yến sào, quà biếu sức khỏe và tin tức thương hiệu (hiển thị tại trang /bai-viet).
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/bai-viet"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#155132]/25 bg-white px-3.5 py-2.5 text-xs font-semibold text-[#155132]"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Xem trang Bài viết
-              </a>
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingPost({
-                    slug: "",
-                    title: "",
-                    excerpt: "",
-                    content: "",
-                    category: "Cẩm nang yến sào",
-                    coverImageUrl: "/brand/catalog/set-qua-hop-sen-en.jpg",
-                    isPublished: true,
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#155132] border border-[#BD9342] px-4 py-2.5 text-xs font-bold text-[#FFFCF4] cursor-pointer"
-              >
-                <Plus className="h-4 w-4 text-[#BD9342]" />
-                Đăng bài viết mới
-              </button>
-            </div>
-          </div>
-
-          {editingPost && (
-            <form
-              onSubmit={handleSavePost}
-              className="rounded-2xl border-2 border-[#BD9342] bg-[#FFFCF4] p-5 space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-[#155132]/15 pb-3">
-                <h3 className="font-serif-display text-lg font-bold text-[#155132]">
-                  {editingPost.id ? "Chỉnh sửa bài viết" : "Đăng bài viết mới"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setEditingPost(null)}
-                  className="text-xs font-semibold text-red-700 underline"
-                >
-                  Đóng
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Tiêu đề bài viết *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editingPost.title}
-                    onChange={(e) =>
-                      setEditingPost({ ...editingPost, title: e.target.value })
-                    }
-                    placeholder="VD: Thời điểm vàng thưởng thức yến chưng nóng..."
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Chuyên mục
-                  </label>
-                  <input
-                    type="text"
-                    value={editingPost.category}
-                    onChange={(e) =>
-                      setEditingPost({
-                        ...editingPost,
-                        category: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Tóm tắt ngắn (hiển thị ở danh sách bài viết)
-                </label>
-                <textarea
-                  rows={2}
-                  value={editingPost.excerpt}
-                  onChange={(e) =>
-                    setEditingPost({ ...editingPost, excerpt: e.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Nội dung chi tiết bài viết *
-                </label>
-                <textarea
-                  rows={6}
-                  required
-                  value={editingPost.content}
-                  onChange={(e) =>
-                    setEditingPost({ ...editingPost, content: e.target.value })
-                  }
-                  placeholder="Nhập nội dung bài viết (các đoạn văn cách nhau bằng dòng trống)..."
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="rounded-xl border border-[#155132]/20 bg-white p-3">
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Ảnh bìa bài viết
-                  </label>
-                  <div className="mt-2 flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={editingPost.coverImageUrl}
-                      alt="Cover"
-                      className="h-16 w-20 rounded-lg object-cover border"
-                    />
-                    <div className="flex-1 space-y-1.5">
-                      <input
-                        type="text"
-                        value={editingPost.coverImageUrl}
-                        onChange={(e) =>
-                          setEditingPost({
-                            ...editingPost,
-                            coverImageUrl: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-[#155132]/25 px-2.5 py-1 text-xs"
-                      />
-                      <label className="inline-flex items-center gap-1 rounded-lg bg-[#155132]/10 px-2.5 py-1 text-[11px] font-bold text-[#155132] cursor-pointer">
-                        <Upload className="h-3.5 w-3.5" />
-                        Tải ảnh bìa từ máy tính
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const dataUrl =
-                              await readAndCompressImageFile(file);
-                            setEditingPost({
-                              ...editingPost,
-                              coverImageUrl: dataUrl,
-                            });
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Trạng thái hiển thị
-                  </label>
-                  <select
-                    value={editingPost.isPublished ? "PUBLISHED" : "DRAFT"}
-                    onChange={(e) =>
-                      setEditingPost({
-                        ...editingPost,
-                        isPublished: e.target.value === "PUBLISHED",
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs font-semibold text-[#155132]"
-                  >
-                    <option value="PUBLISHED">Công khai trên Web</option>
-                    <option value="DRAFT">Bản nháp ẩn</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingPost(null)}
-                  className="rounded-xl border border-[#155132]/25 bg-white px-4 py-2 text-xs font-semibold"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-2 text-xs font-bold text-[#FFFCF4] cursor-pointer"
-                >
-                  Lưu & Đăng bài viết
-                </button>
-              </div>
-            </form>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="flex gap-3.5 rounded-2xl border border-[#155132]/15 bg-white p-4 text-xs shadow-2xs"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={post.coverImageUrl}
-                  alt={post.title}
-                  className="h-24 w-28 rounded-xl object-cover border shrink-0"
-                />
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-[#FFFCF4] border border-[#BD9342]/40 px-2 py-0.5 text-[10px] font-semibold text-[#8A6632]">
-                        {post.category}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold ${
-                          post.isPublished
-                            ? "text-emerald-700"
-                            : "text-amber-700"
-                        }`}
-                      >
-                        {post.isPublished ? "Đang hiển thị" : "Bản nháp"}
-                      </span>
-                    </div>
-                    <h3 className="mt-1 font-bold text-[#155132] text-sm line-clamp-2">
-                      {post.title}
-                    </h3>
-                    <p className="mt-1 text-[#2B433A]/80 line-clamp-2">
-                      {post.excerpt}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-2">
+          {/* ================================================================= */}
+          {/* SECTION 3: BÀI VIẾT / TIN TỨC (WP POSTS TABLE + 2-COL EDITOR)     */}
+          {/* ================================================================= */}
+          {activeSection === "posts" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    {editingPost
+                      ? editingPost.id
+                        ? "Chỉnh sửa Bài viết"
+                        : "Viết Bài mới"
+                      : "Bài viết & Cẩm nang Yến Sào"}
+                  </h1>
+                  {!editingPost && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setEditingPost({
-                          id: post.id,
-                          slug: post.slug,
-                          title: post.title,
-                          excerpt: post.excerpt,
-                          content: post.content,
-                          category: post.category,
-                          coverImageUrl: post.coverImageUrl,
-                          isPublished: post.isPublished,
-                        })
-                      }
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#155132]/25 px-2.5 py-1 font-bold text-[#155132] hover:bg-[#FFFCF4] cursor-pointer"
+                      onClick={openNewPostForm}
+                      className="rounded-xs border border-[#155132] bg-white px-3 py-1 text-xs font-semibold text-[#155132] hover:bg-[#155132] hover:text-white transition cursor-pointer"
                     >
-                      <Edit3 className="h-3 w-3 text-[#BD9342]" />
-                      Sửa bài
+                      + Viết bài mới
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePost(post.id, post.title)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 font-semibold text-red-700 cursor-pointer"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 5: RECRUITMENT / JOB POSTINGS */}
-      {/* ================================================================= */}
-      {activeTab === "jobs" && (
-        <div className="mt-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Đăng thông tin Tuyển dụng Nhân sự Hà Mi
-              </h2>
-              <p className="text-xs text-[#2B433A]/80">
-                Quản lý các vị trí đang tuyển dụng và hiển thị công khai tại trang /tuyen-dung.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/tuyen-dung"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#155132]/25 bg-white px-3.5 py-2.5 text-xs font-semibold text-[#155132]"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Xem trang Tuyển dụng
-              </a>
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingJob({
-                    title: "",
-                    department: "Bếp Chưng Thủ Công",
-                    location: "Đà Nẵng / TP.HCM",
-                    employmentType: "Toàn thời gian",
-                    salaryRange: "8.000.000đ - 12.000.000đ/tháng",
-                    description: "",
-                    requirements: "",
-                    contactInfo: "Hotline/Zalo: 0935 052 959",
-                    isOpen: true,
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#155132] border border-[#BD9342] px-4 py-2.5 text-xs font-bold text-[#FFFCF4] cursor-pointer"
-              >
-                <Plus className="h-4 w-4 text-[#BD9342]" />
-                Đăng tin tuyển dụng mới
-              </button>
-            </div>
-          </div>
-
-          {editingJob && (
-            <form
-              onSubmit={handleSaveJob}
-              className="rounded-2xl border-2 border-[#BD9342] bg-[#FFFCF4] p-5 space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-[#155132]/15 pb-3">
-                <h3 className="font-serif-display text-lg font-bold text-[#155132]">
-                  {editingJob.id
-                    ? "Cập nhật vị trí tuyển dụng"
-                    : "Đăng vị trí tuyển dụng mới"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setEditingJob(null)}
-                  className="text-xs font-semibold text-red-700 underline"
-                >
-                  Đóng
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Vị trí tuyển dụng *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editingJob.title}
-                    onChange={(e) =>
-                      setEditingJob({ ...editingJob, title: e.target.value })
-                    }
-                    placeholder="VD: Nghệ Nhân Sơ Chế & Chưng Yến"
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Bộ phận / Phòng ban
-                  </label>
-                  <input
-                    type="text"
-                    value={editingJob.department}
-                    onChange={(e) =>
-                      setEditingJob({
-                        ...editingJob,
-                        department: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Mức lương & Đãi ngộ
-                  </label>
-                  <input
-                    type="text"
-                    value={editingJob.salaryRange}
-                    onChange={(e) =>
-                      setEditingJob({
-                        ...editingJob,
-                        salaryRange: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Địa điểm làm việc
-                  </label>
-                  <input
-                    type="text"
-                    value={editingJob.location}
-                    onChange={(e) =>
-                      setEditingJob({ ...editingJob, location: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Hình thức làm việc
-                  </label>
-                  <input
-                    type="text"
-                    value={editingJob.employmentType}
-                    onChange={(e) =>
-                      setEditingJob({
-                        ...editingJob,
-                        employmentType: e.target.value,
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#155132]">
-                    Trạng thái nhận hồ sơ
-                  </label>
-                  <select
-                    value={editingJob.isOpen ? "OPEN" : "CLOSED"}
-                    onChange={(e) =>
-                      setEditingJob({
-                        ...editingJob,
-                        isOpen: e.target.value === "OPEN",
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs font-semibold text-[#155132]"
-                  >
-                    <option value="OPEN">Đang tuyển dụng</option>
-                    <option value="CLOSED">Đã đóng nhận hồ sơ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Mô tả công việc *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={editingJob.description}
-                  onChange={(e) =>
-                    setEditingJob({
-                      ...editingJob,
-                      description: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Yêu cầu ứng viên
-                </label>
-                <textarea
-                  rows={3}
-                  value={editingJob.requirements}
-                  onChange={(e) =>
-                    setEditingJob({
-                      ...editingJob,
-                      requirements: e.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingJob(null)}
-                  className="rounded-xl border border-[#155132]/25 bg-white px-4 py-2 text-xs font-semibold"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-2 text-xs font-bold text-[#FFFCF4] cursor-pointer"
-                >
-                  Lưu tin tuyển dụng
-                </button>
-              </div>
-            </form>
-          )}
-
-          <div className="space-y-3">
-            {jobs.map((job) => (
-              <div
-                key={job.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#155132]/15 bg-white p-4 text-xs"
-              >
-                <div className="space-y-1 max-w-2xl">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                        job.isOpen
-                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {job.isOpen ? "Đang tuyển" : "Đã đóng"}
-                    </span>
-                    <span className="font-semibold text-[#8A6632]">
-                      {job.department} • {job.employmentType} • {job.location}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-[#155132]">
-                    {job.title} —{" "}
-                    <span className="text-[#8A6632]">{job.salaryRange}</span>
-                  </h3>
-                  <p className="text-[#2B433A]/85">{job.description}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingJob({
-                        id: job.id,
-                        title: job.title,
-                        department: job.department,
-                        location: job.location,
-                        employmentType: job.employmentType,
-                        salaryRange: job.salaryRange,
-                        description: job.description,
-                        requirements: job.requirements,
-                        contactInfo: job.contactInfo,
-                        isOpen: job.isOpen,
-                      })
-                    }
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#155132]/25 px-3 py-1.5 font-bold text-[#155132] hover:bg-[#FFFCF4] cursor-pointer"
+                  <a
+                    href="/bai-viet"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-xs border border-[#8c8f94] bg-white px-3 py-1.5 text-xs font-medium text-[#1d2327] hover:bg-[#f6f7f7]"
                   >
-                    <Edit3 className="h-3.5 w-3.5 text-[#BD9342]" />
-                    Sửa tin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteJob(job.id, job.title)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 font-semibold text-red-700 cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Xóa
-                  </button>
+                    <Eye className="h-3.5 w-3.5" />
+                    Xem trang /bai-viet
+                  </a>
+                  {editingPost && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingPost(null)}
+                      className="rounded-xs border border-[#8c8f94] bg-white px-3 py-1.5 text-xs font-semibold text-[#1d2327] cursor-pointer"
+                    >
+                      ← Quay lại danh sách bài viết
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* ================================================================= */}
-      {/* TAB 6: ORDER NOTIFICATIONS (EMAIL & ZALO) */}
-      {/* ================================================================= */}
-      {activeTab === "notifications" && notificationSettings && (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <form
-            onSubmit={handleSaveNotificationSettings}
-            className="space-y-5 rounded-2xl border border-[#155132]/20 bg-white p-5 lg:col-span-7"
-          >
-            <div>
-              <h2 className="font-serif-display text-xl font-semibold text-[#155132]">
-                Cơ Chế Gửi Thông Báo Đơn Hàng Về Email & Zalo
-              </h2>
-              <p className="mt-1 text-xs text-[#2B433A]/80">
-                Ngay khi khách hàng bấm “Gửi yêu cầu” tại trang Đặt hàng, hệ thống sẽ tự động gửi thông tin chi tiết đơn hàng về Email và Zalo của chủ thương hiệu.
-              </p>
-            </div>
+              {editingPost ? (
+                <form
+                  onSubmit={handleSavePost}
+                  className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start"
+                >
+                  {/* Left Column (8/12): Title, Excerpt, Content */}
+                  <div className="space-y-4 lg:col-span-8">
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                          Tiêu đề bài viết *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editingPost.title}
+                          onChange={(e) =>
+                            setEditingPost({
+                              ...editingPost,
+                              title: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tiêu đề bài viết tại đây..."
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-base font-semibold"
+                        />
+                      </div>
 
-            {/* Email Config */}
-            <div className="space-y-3 rounded-xl bg-[#FFFCF4] p-4 border border-[#BD9342]/35">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 font-bold text-sm text-[#155132]">
-                  <Mail className="h-4 w-4 text-[#BD9342]" />
-                  1. Kênh Thông Báo Qua Email
-                </span>
-                <label className="inline-flex items-center gap-2 text-xs font-bold text-[#155132] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.enableEmail}
-                    onChange={(e) =>
-                      setNotificationSettings({
-                        ...notificationSettings,
-                        enableEmail: e.target.checked,
-                      })
-                    }
-                    className="h-4 w-4 accent-[#155132]"
-                  />
-                  Bật gửi thông báo Email
-                </label>
-              </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                          Tóm tắt ngắn (Excerpt)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={editingPost.excerpt}
+                          onChange={(e) =>
+                            setEditingPost({
+                              ...editingPost,
+                              excerpt: e.target.value,
+                            })
+                          }
+                          placeholder="Đoạn tóm tắt hiển thị ngoài danh sách bài viết..."
+                          className="w-full rounded-xs border border-[#8c8f94] p-2.5 text-xs"
+                        />
+                      </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Địa chỉ Email nhận thông báo đơn mới *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={notificationSettings.notificationEmailTo}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      notificationEmailTo: e.target.value,
-                    })
-                  }
-                  placeholder="VD: anhchu@yenhami.vn hoặc gmail của anh..."
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#155132]">
-                    Resend API Key (Gửi email tự động trực tiếp)
-                  </label>
-                  <input
-                    type="password"
-                    value={notificationSettings.resendApiKey}
-                    onChange={(e) =>
-                      setNotificationSettings({
-                        ...notificationSettings,
-                        resendApiKey: e.target.value,
-                      })
-                    }
-                    placeholder="re_xxxxxxxxx (Tùy chọn)"
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#155132]">
-                    Email Webhook URL (Google Script / Make / Zapier)
-                  </label>
-                  <input
-                    type="text"
-                    value={notificationSettings.emailWebhookUrl}
-                    onChange={(e) =>
-                      setNotificationSettings({
-                        ...notificationSettings,
-                        emailWebhookUrl: e.target.value,
-                      })
-                    }
-                    placeholder="https://script.google.com/macros/s/..."
-                    className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Zalo Config */}
-            <div className="space-y-3 rounded-xl bg-[#FFFCF4] p-4 border border-[#BD9342]/35">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 font-bold text-sm text-[#155132]">
-                  <MessageCircle className="h-4 w-4 text-[#BD9342]" />
-                  2. Kênh Thông Báo Qua Zalo
-                </span>
-                <label className="inline-flex items-center gap-2 text-xs font-bold text-[#155132] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.enableZalo}
-                    onChange={(e) =>
-                      setNotificationSettings({
-                        ...notificationSettings,
-                        enableZalo: e.target.checked,
-                      })
-                    }
-                    className="h-4 w-4 accent-[#155132]"
-                  />
-                  Bật gửi thông báo Zalo
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#155132]">
-                  Số điện thoại Zalo của Chủ thương hiệu / Quản lý *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={notificationSettings.zaloRecipientPhone}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      zaloRecipientPhone: e.target.value,
-                    })
-                  }
-                  placeholder="VD: 0935052959"
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#155132]">
-                  Zalo OA / ZNS / Webhook URL (Tự động bắn tin nhắn Zalo khi có đơn)
-                </label>
-                <input
-                  type="text"
-                  value={notificationSettings.zaloWebhookUrl}
-                  onChange={(e) =>
-                    setNotificationSettings({
-                      ...notificationSettings,
-                      zaloWebhookUrl: e.target.value,
-                    })
-                  }
-                  placeholder="https://hooks.zapier.com/... hoặc Zalo OA Webhook"
-                  className="mt-1 w-full rounded-xl border border-[#155132]/25 bg-white px-3 py-2 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#155132] border border-[#BD9342] px-5 py-2.5 text-xs font-bold text-[#FFFCF4] hover:bg-[#0e3b23] cursor-pointer"
-              >
-                <CheckCircle2 className="h-4 w-4 text-[#BD9342]" />
-                Lưu cấu hình thông báo
-              </button>
-
-              <button
-                type="button"
-                onClick={handleTestNotification}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#155132] bg-[#FFFCF4] px-4 py-2.5 text-xs font-bold text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
-              >
-                <Send className="h-3.5 w-3.5 text-[#BD9342]" />
-                Gửi thử thông báo ngay
-              </button>
-            </div>
-          </form>
-
-          {/* Notification Logs */}
-          <div className="space-y-3 rounded-2xl border border-[#155132]/20 bg-white p-5 lg:col-span-5">
-            <h3 className="font-serif-display text-lg font-semibold text-[#155132]">
-              Nhật Ký Gửi Thông Báo Đơn Hàng ({notificationLogs.length})
-            </h3>
-            <p className="text-xs text-[#2B433A]/75">
-              Ghi nhận toàn bộ lịch sử thông báo Email & Zalo mỗi khi có khách đặt món.
-            </p>
-            <div className="max-h-[460px] space-y-2.5 overflow-y-auto pr-1">
-              {notificationLogs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#155132]/20 p-6 text-center text-xs text-[#2B433A]/70">
-                  Chưa có nhật ký thông báo nào. Hãy bấm “Gửi thử thông báo ngay” hoặc đặt thử 1 đơn hàng.
-                </div>
-              ) : (
-                notificationLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border border-[#155132]/15 bg-[#FFFCF4] p-3 text-xs space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 font-bold text-[#155132]">
-                        <span className="rounded-md bg-[#155132] px-2 py-0.5 text-[10px] text-[#FFFCF4]">
-                          {log.channel}
-                        </span>
-                        Đơn: {log.orderReferenceCode}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold ${
-                          log.status === "SENT"
-                            ? "text-emerald-700"
-                            : log.status === "CONFIG_READY"
-                              ? "text-[#8A6632]"
-                              : "text-red-700"
-                        }`}
-                      >
-                        {log.status === "SENT"
-                          ? "Đã gửi thành công"
-                          : log.status === "CONFIG_READY"
-                            ? "Đã ghi nhận & sẵn sàng"
-                            : "Lỗi gửi"}
-                      </span>
+                      <div>
+                        <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                          Nội dung bài viết *
+                        </label>
+                        <textarea
+                          rows={12}
+                          required
+                          value={editingPost.content}
+                          onChange={(e) =>
+                            setEditingPost({
+                              ...editingPost,
+                              content: e.target.value,
+                            })
+                          }
+                          placeholder="Soạn thảo nội dung chi tiết bài viết..."
+                          className="w-full rounded-xs border border-[#8c8f94] p-3 text-xs leading-relaxed"
+                        />
+                      </div>
                     </div>
-                    <p className="text-[11px] text-[#2B433A]">
-                      Tới: <strong>{log.recipient}</strong>
-                    </p>
-                    <p className="text-[11px] text-[#2B433A]/85">
-                      {log.messageSummary}
-                    </p>
-                    <p className="text-[10px] text-[#2B433A]/60">
-                      {log.detail} •{" "}
-                      {new Date(log.createdAt).toLocaleString("vi-VN")}
-                    </p>
                   </div>
-                ))
+
+                  {/* Right Column (4/12): Publish, Category, Featured Image */}
+                  <div className="space-y-4 lg:col-span-4">
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h3 className="text-xs font-bold text-[#1d2327]">
+                          Đăng bài viết (Publish)
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-3 text-xs">
+                        <div>
+                          <label className="block font-semibold mb-1">
+                            Trạng thái:
+                          </label>
+                          <select
+                            value={
+                              editingPost.isPublished ? "PUBLISHED" : "DRAFT"
+                            }
+                            onChange={(e) =>
+                              setEditingPost({
+                                ...editingPost,
+                                isPublished: e.target.value === "PUBLISHED",
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 text-xs font-semibold"
+                          >
+                            <option value="PUBLISHED">
+                              Đã xuất bản (Công khai)
+                            </option>
+                            <option value="DRAFT">Bản nháp (Ẩn)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold mb-1">
+                            Chuyên mục:
+                          </label>
+                          <input
+                            type="text"
+                            value={editingPost.category}
+                            onChange={(e) =>
+                              setEditingPost({
+                                ...editingPost,
+                                category: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5 text-xs"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-[#dcdcde]">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPost(null)}
+                            className="text-rose-700 hover:underline cursor-pointer"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className="rounded-xs bg-[#155132] px-4 py-2 font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                          >
+                            {editingPost.id ? "Cập nhật bài viết" : "Đăng bài"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                      <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-2.5">
+                        <h3 className="text-xs font-bold text-[#1d2327]">
+                          Ảnh đại diện bài viết (Featured Image)
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-3 text-xs">
+                        <div className="aspect-[16/10] w-full overflow-hidden rounded-xs border border-[#dcdcde] bg-[#f6f7f7]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={editingPost.coverImageUrl}
+                            alt="Cover"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <label className="flex w-full items-center justify-center gap-1.5 rounded-xs border border-[#155132] bg-[#f6f7f7] px-3 py-2 font-bold text-[#155132] hover:bg-[#155132] hover:text-white transition cursor-pointer">
+                          <Upload className="h-3.5 w-3.5" />
+                          Tải ảnh bìa từ máy tính
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const dataUrl =
+                                await readAndCompressImageFile(file);
+                              setEditingPost({
+                                ...editingPost,
+                                coverImageUrl: dataUrl,
+                              });
+                            }}
+                          />
+                        </label>
+                        <input
+                          type="text"
+                          value={editingPost.coverImageUrl}
+                          onChange={(e) =>
+                            setEditingPost({
+                              ...editingPost,
+                              coverImageUrl: e.target.value,
+                            })
+                          }
+                          placeholder="Hoặc dán link ảnh bìa..."
+                          className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5 text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="overflow-x-auto rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#c3c4c7] bg-[#f6f7f7] font-bold text-[#1d2327]">
+                        <th className="py-2.5 px-3 w-20">Ảnh bìa</th>
+                        <th className="py-2.5 px-3">Tiêu đề bài viết</th>
+                        <th className="py-2.5 px-3">Chuyên mục</th>
+                        <th className="py-2.5 px-3">Trạng thái</th>
+                        <th className="py-2.5 px-3">Cập nhật</th>
+                        <th className="py-2.5 px-3 text-right">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#dcdcde]">
+                      {posts.map((post) => (
+                        <tr
+                          key={post.id}
+                          className="hover:bg-[#f6f7f7] transition"
+                        >
+                          <td className="py-2.5 px-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={post.coverImageUrl}
+                              alt={post.title}
+                              className="h-11 w-16 rounded-xs object-cover border border-[#c3c4c7]"
+                            />
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingPost({
+                                  id: post.id,
+                                  slug: post.slug,
+                                  title: post.title,
+                                  excerpt: post.excerpt,
+                                  content: post.content,
+                                  category: post.category,
+                                  coverImageUrl: post.coverImageUrl,
+                                  isPublished: post.isPublished,
+                                })
+                              }
+                              className="font-bold text-sm text-[#155132] hover:underline text-left cursor-pointer"
+                            >
+                              {post.title}
+                            </button>
+                            <p className="text-[11px] text-[#50575e] line-clamp-1 mt-0.5">
+                              {post.excerpt}
+                            </p>
+                          </td>
+                          <td className="py-2.5 px-3">{post.category}</td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`rounded-xs px-2 py-0.5 text-[10px] font-bold ${
+                                post.isPublished
+                                  ? "bg-emerald-100 text-emerald-900"
+                                  : "bg-amber-100 text-amber-900"
+                              }`}
+                            >
+                              {post.isPublished ? "Đã xuất bản" : "Bản nháp"}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-[#50575e]">
+                            {new Date(post.updatedAt).toLocaleDateString(
+                              "vi-VN"
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingPost({
+                                  id: post.id,
+                                  slug: post.slug,
+                                  title: post.title,
+                                  excerpt: post.excerpt,
+                                  content: post.content,
+                                  category: post.category,
+                                  coverImageUrl: post.coverImageUrl,
+                                  isPublished: post.isPublished,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#155132] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white mr-1.5 cursor-pointer"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeletePost(post.id, post.title)
+                              }
+                              className="inline-flex items-center gap-1 rounded-xs border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 cursor-pointer"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 4: TUYỂN DỤNG (WP JOBS TABLE + EDITOR)                     */}
+          {/* ================================================================= */}
+          {activeSection === "jobs" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    {editingJob
+                      ? editingJob.id
+                        ? "Chỉnh sửa Tin tuyển dụng"
+                        : "Đăng Tin tuyển dụng mới"
+                      : "Quản lý Tuyển dụng Nhân sự"}
+                  </h1>
+                  {!editingJob && (
+                    <button
+                      type="button"
+                      onClick={openNewJobForm}
+                      className="rounded-xs border border-[#155132] bg-white px-3 py-1 text-xs font-semibold text-[#155132] hover:bg-[#155132] hover:text-white transition cursor-pointer"
+                    >
+                      + Đăng tin tuyển dụng
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href="/tuyen-dung"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-xs border border-[#8c8f94] bg-white px-3 py-1.5 text-xs font-medium text-[#1d2327]"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Xem trang /tuyen-dung
+                  </a>
+                  {editingJob && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingJob(null)}
+                      className="rounded-xs border border-[#8c8f94] bg-white px-3 py-1.5 text-xs font-semibold text-[#1d2327] cursor-pointer"
+                    >
+                      ← Quay lại danh sách
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {editingJob ? (
+                <form
+                  onSubmit={handleSaveJob}
+                  className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start"
+                >
+                  <div className="space-y-4 lg:col-span-8 rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs">
+                    <div>
+                      <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                        Vị trí tuyển dụng *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editingJob.title}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            title: e.target.value,
+                          })
+                        }
+                        placeholder="VD: Nghệ Nhân Sơ Chế & Chưng Yến"
+                        className="w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-base font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                        Mô tả công việc *
+                      </label>
+                      <textarea
+                        rows={5}
+                        required
+                        value={editingJob.description}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            description: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] p-3 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#1d2327] mb-1">
+                        Yêu cầu ứng viên
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={editingJob.requirements}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            requirements: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] p-3 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 lg:col-span-4 rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs text-xs">
+                    <h3 className="font-bold text-[#1d2327] border-b border-[#dcdcde] pb-2">
+                      Thông tin & Chế độ đãi ngộ
+                    </h3>
+
+                    <div>
+                      <label className="block font-semibold mb-1">
+                        Trạng thái:
+                      </label>
+                      <select
+                        value={editingJob.isOpen ? "OPEN" : "CLOSED"}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            isOpen: e.target.value === "OPEN",
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] bg-white px-2.5 py-1.5 font-semibold"
+                      >
+                        <option value="OPEN">Đang nhận hồ sơ</option>
+                        <option value="CLOSED">Đã đóng tuyển dụng</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1">
+                        Phòng ban / Bộ phận:
+                      </label>
+                      <input
+                        type="text"
+                        value={editingJob.department}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            department: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1">
+                        Mức lương:
+                      </label>
+                      <input
+                        type="text"
+                        value={editingJob.salaryRange}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            salaryRange: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1">
+                        Địa điểm làm việc:
+                      </label>
+                      <input
+                        type="text"
+                        value={editingJob.location}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            location: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-1">
+                        Hình thức:
+                      </label>
+                      <input
+                        type="text"
+                        value={editingJob.employmentType}
+                        onChange={(e) =>
+                          setEditingJob({
+                            ...editingJob,
+                            employmentType: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-[#dcdcde]">
+                      <button
+                        type="button"
+                        onClick={() => setEditingJob(null)}
+                        className="text-rose-700 hover:underline cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded-xs bg-[#155132] px-4 py-2 font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                      >
+                        Lưu tin tuyển dụng
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="overflow-x-auto rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#c3c4c7] bg-[#f6f7f7] font-bold text-[#1d2327]">
+                        <th className="py-2.5 px-3">Vị trí tuyển dụng</th>
+                        <th className="py-2.5 px-3">Bộ phận</th>
+                        <th className="py-2.5 px-3">Địa điểm & Hình thức</th>
+                        <th className="py-2.5 px-3">Mức lương</th>
+                        <th className="py-2.5 px-3">Trạng thái</th>
+                        <th className="py-2.5 px-3 text-right">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#dcdcde]">
+                      {jobs.map((job) => (
+                        <tr
+                          key={job.id}
+                          className="hover:bg-[#f6f7f7] transition"
+                        >
+                          <td className="py-2.5 px-3 font-bold text-sm text-[#155132]">
+                            {job.title}
+                          </td>
+                          <td className="py-2.5 px-3">{job.department}</td>
+                          <td className="py-2.5 px-3 text-[#50575e]">
+                            {job.location} • {job.employmentType}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-[#8A6632]">
+                            {job.salaryRange}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`rounded-xs px-2 py-0.5 text-[10px] font-bold ${
+                                job.isOpen
+                                  ? "bg-emerald-100 text-emerald-900"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}
+                            >
+                              {job.isOpen ? "Đang tuyển" : "Đã đóng"}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingJob({
+                                  id: job.id,
+                                  title: job.title,
+                                  department: job.department,
+                                  location: job.location,
+                                  employmentType: job.employmentType,
+                                  salaryRange: job.salaryRange,
+                                  description: job.description,
+                                  requirements: job.requirements,
+                                  contactInfo: job.contactInfo,
+                                  isOpen: job.isOpen,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#155132] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white mr-1.5 cursor-pointer"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteJob(job.id, job.title)
+                              }
+                              className="inline-flex items-center gap-1 rounded-xs border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 cursor-pointer"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 5: GIAO DIỆN & TRANG CHỦ (WP CUSTOMIZER METABOXES)        */}
+          {/* ================================================================= */}
+          {activeSection === "site" && siteSettings && (
+            <form onSubmit={handleSaveSiteSettings} className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#c3c4c7] pb-4">
+                <div>
+                  <h1 className="text-2xl font-semibold text-[#1d2327]">
+                    Tùy biến Giao diện & Nội dung Trang chủ
+                  </h1>
+                  <p className="text-xs text-[#50575e] mt-0.5">
+                    Cập nhật Banner Hero, Khối Quà Biếu, Hotline, Zalo, Địa chỉ và câu chuyện Về Hà Mi.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xs bg-[#155132] px-5 py-2 text-xs font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-[#BD9342]" />
+                  Lưu thay đổi Trang chủ
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* Metabox 1: Hero Section */}
+                <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs lg:col-span-7">
+                  <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#1d2327]">
+                      1. Banner Đầu Trang Chủ (Hero Section)
+                    </h2>
+                  </div>
+                  <div className="p-4 space-y-4 text-xs">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Nhãn phụ phía trên (Hero Badge)
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettings.heroBadge}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              heroBadge: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Chữ trên nút bấm (Hero CTA)
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettings.heroCta}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              heroCta: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold mb-1">
+                        Tiêu đề chính Trang chủ (H1)
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettings.heroTitle}
+                        onChange={(e) =>
+                          setSiteSettings({
+                            ...siteSettings,
+                            heroTitle: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-sm font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold mb-1">
+                        Đoạn giới thiệu mở đầu (Hero Lead)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={siteSettings.heroLead}
+                        onChange={(e) =>
+                          setSiteSettings({
+                            ...siteSettings,
+                            heroLead: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xs border border-[#8c8f94] p-2.5"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="rounded-xs border border-[#dcdcde] p-3 space-y-2">
+                        <label className="block font-bold">
+                          Ảnh Banner Desktop
+                        </label>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={siteSettings.heroDesktopImage}
+                          alt="Hero Desktop"
+                          className="h-24 w-full rounded-xs object-cover border"
+                        />
+                        <label className="inline-flex items-center gap-1 rounded-xs border border-[#155132] px-2.5 py-1 text-[11px] font-bold text-[#155132] cursor-pointer">
+                          <ImageIcon className="h-3.5 w-3.5" />
+                          Tải ảnh mới từ máy
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const dataUrl =
+                                await readAndCompressImageFile(file);
+                              setSiteSettings({
+                                ...siteSettings,
+                                heroDesktopImage: dataUrl,
+                              });
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="rounded-xs border border-[#dcdcde] p-3 space-y-2">
+                        <label className="block font-bold">
+                          Ảnh Banner Mobile
+                        </label>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={siteSettings.heroMobileImage}
+                          alt="Hero Mobile"
+                          className="h-24 w-full rounded-xs object-cover border"
+                        />
+                        <label className="inline-flex items-center gap-1 rounded-xs border border-[#155132] px-2.5 py-1 text-[11px] font-bold text-[#155132] cursor-pointer">
+                          <ImageIcon className="h-3.5 w-3.5" />
+                          Tải ảnh mới từ máy
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const dataUrl =
+                                await readAndCompressImageFile(file);
+                              setSiteSettings({
+                                ...siteSettings,
+                                heroMobileImage: dataUrl,
+                              });
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metabox 2 & 3: Contact + Gifting */}
+                <div className="space-y-6 lg:col-span-5">
+                  <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                    <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#1d2327]">
+                        2. Thông tin Liên hệ, Hotline & Zalo
+                      </h2>
+                    </div>
+                    <div className="p-4 space-y-3 text-xs">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-bold mb-1">
+                            Hotline hiển thị
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettings.hotlineDisplay}
+                            onChange={(e) =>
+                              setSiteSettings({
+                                ...siteSettings,
+                                hotlineDisplay: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold mb-1">
+                            Link Zalo OA / CSKH
+                          </label>
+                          <input
+                            type="text"
+                            value={siteSettings.zaloUrl}
+                            onChange={(e) =>
+                              setSiteSettings({
+                                ...siteSettings,
+                                zaloUrl: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Địa chỉ Bếp / Showroom
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettings.addressDisplay}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              addressDisplay: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Khung giờ phục vụ
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettings.serviceHoursDisplay}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              serviceHoursDisplay: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                    <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#1d2327]">
+                        3. Khối Quà Biếu Sức Khỏe
+                      </h2>
+                    </div>
+                    <div className="p-4 space-y-3 text-xs">
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Tiêu đề khối Quà Biếu
+                        </label>
+                        <input
+                          type="text"
+                          value={siteSettings.giftingTitle}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              giftingTitle: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-2.5 py-1.5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Mô tả khối Quà Biếu
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={siteSettings.giftingDescription}
+                          onChange={(e) =>
+                            setSiteSettings({
+                              ...siteSettings,
+                              giftingDescription: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] p-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* ================================================================= */}
+          {/* SECTION 6: CÀI ĐẶT THÔNG BÁO EMAIL & ZALO (WP SETTINGS)           */}
+          {/* ================================================================= */}
+          {activeSection === "notifications" && notificationSettings && (
+            <div className="space-y-6">
+              <div className="border-b border-[#c3c4c7] pb-4">
+                <h1 className="text-2xl font-semibold text-[#1d2327]">
+                  Cài đặt Thông báo Đơn hàng (Email & Zalo)
+                </h1>
+                <p className="text-xs text-[#50575e] mt-0.5">
+                  Tự động bắn thông báo cho chủ thương hiệu ngay khi khách gửi yêu cầu đặt món mới.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                <form
+                  onSubmit={handleSaveNotificationSettings}
+                  className="space-y-5 lg:col-span-7"
+                >
+                  {/* Email Settings Card */}
+                  <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                      <span className="flex items-center gap-2 text-xs font-bold text-[#1d2327]">
+                        <Mail className="h-4 w-4 text-[#155132]" />
+                        1. Thông báo tự động qua Email
+                      </span>
+                      <label className="inline-flex items-center gap-2 text-xs font-bold text-[#155132] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.enableEmail}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              enableEmail: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 accent-[#155132]"
+                        />
+                        Kích hoạt
+                      </label>
+                    </div>
+                    <div className="p-4 space-y-3 text-xs">
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Địa chỉ Email nhận đơn hàng mới *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={notificationSettings.notificationEmailTo}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              notificationEmailTo: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="block font-bold mb-1">
+                            Resend API Key (Tùy chọn)
+                          </label>
+                          <input
+                            type="password"
+                            value={notificationSettings.resendApiKey}
+                            onChange={(e) =>
+                              setNotificationSettings({
+                                ...notificationSettings,
+                                resendApiKey: e.target.value,
+                              })
+                            }
+                            placeholder="re_xxxxxx..."
+                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold mb-1">
+                            Email Webhook URL (Apps Script / Make)
+                          </label>
+                          <input
+                            type="text"
+                            value={notificationSettings.emailWebhookUrl}
+                            onChange={(e) =>
+                              setNotificationSettings({
+                                ...notificationSettings,
+                                emailWebhookUrl: e.target.value,
+                              })
+                            }
+                            placeholder="https://..."
+                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Zalo Settings Card */}
+                  <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                      <span className="flex items-center gap-2 text-xs font-bold text-[#1d2327]">
+                        <MessageCircle className="h-4 w-4 text-[#155132]" />
+                        2. Thông báo tự động qua Zalo
+                      </span>
+                      <label className="inline-flex items-center gap-2 text-xs font-bold text-[#155132] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.enableZalo}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              enableZalo: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 accent-[#155132]"
+                        />
+                        Kích hoạt
+                      </label>
+                    </div>
+                    <div className="p-4 space-y-3 text-xs">
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Số điện thoại Zalo nhận đơn *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={notificationSettings.zaloRecipientPhone}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              zaloRecipientPhone: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold mb-1">
+                          Zalo OA / ZNS / Webhook URL
+                        </label>
+                        <input
+                          type="text"
+                          value={notificationSettings.zaloWebhookUrl}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              zaloWebhookUrl: e.target.value,
+                            })
+                          }
+                          placeholder="https://hooks.zapier.com/... hoặc Zalo Webhook"
+                          className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xs bg-[#155132] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-[#BD9342]" />
+                      Lưu cài đặt thông báo
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleTestNotification}
+                      className="inline-flex items-center gap-2 rounded-xs border border-[#155132] bg-white px-4 py-2.5 text-xs font-bold text-[#155132] hover:bg-[#f6f7f7] cursor-pointer"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Gửi thử thông báo ngay
+                    </button>
+                  </div>
+                </form>
+
+                {/* Notification Logs Metabox */}
+                <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs lg:col-span-5">
+                  <div className="border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-[#1d2327]">
+                      Nhật ký gửi thông báo ({notificationLogs.length})
+                    </h2>
+                  </div>
+                  <div className="p-4 max-h-[500px] overflow-y-auto space-y-2.5 text-xs">
+                    {notificationLogs.length === 0 ? (
+                      <p className="text-center text-[#50575e] py-8">
+                        Chưa có nhật ký thông báo nào.
+                      </p>
+                    ) : (
+                      notificationLogs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="rounded-xs border border-[#dcdcde] bg-[#f6f7f7] p-3 space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#155132]">
+                              [{log.channel}] Đơn #{log.orderReferenceCode}
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#50575e]">
+                              {log.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px]">
+                            Tới: <strong>{log.recipient}</strong>
+                          </p>
+                          <p className="text-[11px] text-[#50575e]">
+                            {log.messageSummary}
+                          </p>
+                          <p className="text-[10px] text-[#50575e]">
+                            {new Date(log.createdAt).toLocaleString("vi-VN")}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
