@@ -2276,14 +2276,38 @@ export interface OrderNotificationPayload {
   itemsSummary: string;
 }
 
-export function triggerOrderNotificationsAfterCommit(
+export async function triggerOrderNotificationsAfterCommit(
   payload: OrderNotificationPayload
-) {
+): Promise<{ emailSent: boolean; zaloSent: boolean; detail: string }> {
   const db = getSqliteDb();
   const config = getNotificationSettings();
   const nowIso = new Date().toISOString();
 
   const textSummary = `[ĐƠN MỚI ${payload.referenceCode}] Khách: ${payload.buyerName} (${payload.buyerPhone}) • Món: ${payload.itemsSummary} • Tổng: ${payload.totalVnd.toLocaleString("vi-VN")}đ • Giao: ${payload.requestedDate} (${payload.slotLabel}) • Đ/c: ${payload.addressDetail}`;
+
+  const emailSubject = `[Yến Sào Hà Mi] Đơn đặt món mới #${payload.referenceCode} — ${payload.buyerName}`;
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #BD9342; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #155132; color: #FFFCF4; padding: 18px 24px;">
+        <p style="margin: 0; font-size: 12px; color: #BD9342; text-transform: uppercase; letter-spacing: 1px;">YẾN SÀO HÀ MI — THÔNG BÁO ĐƠN ĐẶT MÓN MỚI</p>
+        <h2 style="margin: 6px 0 0 0; font-size: 20px;">Mã đơn: #${payload.referenceCode}</h2>
+      </div>
+      <div style="padding: 20px 24px; background-color: #FFFCF4; color: #1d2327; font-size: 14px; line-height: 1.6;">
+        <p><strong>Khách đặt:</strong> ${payload.buyerName} — <a href="tel:${payload.buyerPhone}">${payload.buyerPhone}</a></p>
+        <p><strong>Người nhận:</strong> ${payload.recipientName} (${payload.recipientPhone})</p>
+        <p><strong>Loại đơn:</strong> ${payload.orderPurpose === "GIFT" ? "Gửi quà biếu tặng" : "Mua dùng"}</p>
+        <p><strong>Địa chỉ giao:</strong> ${payload.addressDetail}</p>
+        <p><strong>Thời gian giao:</strong> ${payload.requestedDate} — ${payload.slotLabel}</p>
+        <hr style="border: none; border-top: 1px dashed #BD9342; margin: 14px 0;" />
+        <p><strong>Danh sách món đã đặt:</strong><br/>${payload.itemsSummary}</p>
+        ${payload.giftMessage ? `<p style="background: #fff; padding: 10px; border-left: 3px solid #BD9342;"><strong>Lời chúc trên thiệp:</strong> “${payload.giftMessage}”</p>` : ""}
+        <p style="font-size: 16px; color: #155132;"><strong>Tổng thanh toán: ${payload.totalVnd.toLocaleString("vi-VN")}đ</strong> (${payload.shippingFeeNote})</p>
+      </div>
+      <div style="background-color: #f6f7f7; padding: 12px 24px; font-size: 12px; color: #50575e; text-align: center;">
+        Quản lý đơn hàng tại: <a href="https://yenhami.vercel.app/quan-tri" style="color: #155132; font-weight: bold;">https://yenhami.vercel.app/quan-tri</a>
+      </div>
+    </div>
+  `;
 
   const insertLog = db.prepare(`
     INSERT INTO notification_logs (
@@ -2291,60 +2315,89 @@ export function triggerOrderNotificationsAfterCommit(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  // 1. EMAIL NOTIFICATION
+  const updateLog = db.prepare(`
+    UPDATE notification_logs SET status = ?, detail = ? WHERE id = ?
+  `);
+
+  let emailSent = false;
+  let zaloSent = false;
+  let detailMsg = "";
+
+  // 1. EMAIL NOTIFICATION (Google Apps Script Webhook or Resend API)
   if (config.enableEmail && config.notificationEmailTo) {
     const emailLogId = `notif-email-${crypto.randomUUID()}`;
+    const hasProvider = Boolean(config.emailWebhookUrl || config.resendApiKey);
+
     insertLog.run(
       emailLogId,
       payload.referenceCode,
       "EMAIL",
       config.notificationEmailTo,
-      config.resendApiKey || config.emailWebhookUrl ? "SENT" : "CONFIG_READY",
+      hasProvider ? "SENT" : "CONFIG_READY",
       textSummary,
-      config.resendApiKey
-        ? "Đã gửi tự động qua Resend Email API"
-        : config.emailWebhookUrl
-          ? "Đã gửi tự động qua Email Webhook"
-          : "Đã ghi nhận thông báo Email & gửi qua FormSubmit (Có thể thêm Resend API Key trong Admin)",
+      config.emailWebhookUrl
+        ? "Đang gửi Email qua Google Apps Script Webhook..."
+        : config.resendApiKey
+          ? "Đang gửi Email qua Resend API..."
+          : "Đã ghi nhận đơn (Hãy dán link Google Apps Script Web App vào mục Cài đặt Email để tự động gửi Gmail)",
       nowIso
     );
 
-    // Fire-and-forget external HTTP call if configured
-    if (config.resendApiKey) {
-      void fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "Yến Sào Hà Mi <onboarding@resend.dev>",
-          to: [config.notificationEmailTo],
-          subject: `[Yến Sào Hà Mi] Đơn đặt món mới #${payload.referenceCode} - ${payload.buyerName}`,
-          html: `
-            <h2>Đơn đặt món mới tại Yến Sào Hà Mi (#${payload.referenceCode})</h2>
-            <p><strong>Khách đặt:</strong> ${payload.buyerName} (${payload.buyerPhone})</p>
-            <p><strong>Người nhận:</strong> ${payload.recipientName} (${payload.recipientPhone})</p>
-            <p><strong>Địa chỉ giao:</strong> ${payload.addressDetail}</p>
-            <p><strong>Thời gian giao:</strong> ${payload.requestedDate} — ${payload.slotLabel}</p>
-            <p><strong>Món đã chọn:</strong> ${payload.itemsSummary}</p>
-            <p><strong>Tổng tiền:</strong> ${payload.totalVnd.toLocaleString("vi-VN")}đ (${payload.shippingFeeNote})</p>
-            ${payload.giftMessage ? `<p><strong>Lời chúc thiệp quà:</strong> “${payload.giftMessage}”</p>` : ""}
-          `,
-        }),
-      }).catch(() => {});
-    } else if (config.emailWebhookUrl) {
-      void fetch(config.emailWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channel: "EMAIL",
-          to: config.notificationEmailTo,
-          subject: `[Yến Sào Hà Mi] Đơn mới #${payload.referenceCode}`,
-          text: textSummary,
-          payload,
-        }),
-      }).catch(() => {});
+    if (config.emailWebhookUrl) {
+      try {
+        const res = await fetch(config.emailWebhookUrl, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            channel: "EMAIL",
+            to: config.notificationEmailTo,
+            subject: emailSubject,
+            text: textSummary,
+            html: emailHtml,
+            payload,
+          }),
+        });
+        const respText = await res.text().catch(() => "");
+        if (res.ok) {
+          emailSent = true;
+          detailMsg = `Đã gửi Email thành công qua Google Apps Script tới ${config.notificationEmailTo}`;
+          updateLog.run("SENT", detailMsg, emailLogId);
+        } else {
+          detailMsg = `Google Apps Script trả về HTTP ${res.status}: ${respText.slice(0, 120)}`;
+          updateLog.run("FAILED", detailMsg, emailLogId);
+        }
+      } catch (err) {
+        detailMsg = `Lỗi kết nối Google Apps Script: ${err instanceof Error ? err.message : String(err)}`;
+        updateLog.run("FAILED", detailMsg, emailLogId);
+      }
+    } else if (config.resendApiKey) {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${config.resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Yến Sào Hà Mi <onboarding@resend.dev>",
+            to: [config.notificationEmailTo],
+            subject: emailSubject,
+            html: emailHtml,
+          }),
+        });
+        if (res.ok) {
+          emailSent = true;
+          detailMsg = `Đã gửi Email qua Resend tới ${config.notificationEmailTo}`;
+          updateLog.run("SENT", detailMsg, emailLogId);
+        } else {
+          detailMsg = `Resend HTTP ${res.status}`;
+          updateLog.run("FAILED", detailMsg, emailLogId);
+        }
+      } catch (err) {
+        detailMsg = `Lỗi kết nối Resend: ${err instanceof Error ? err.message : String(err)}`;
+        updateLog.run("FAILED", detailMsg, emailLogId);
+      }
     }
   }
 
@@ -2360,22 +2413,38 @@ export function triggerOrderNotificationsAfterCommit(
       textSummary,
       config.zaloWebhookUrl
         ? "Đã bắn tin nhắn tự động qua Zalo OA / Webhook"
-        : `Sẵn sàng gửi tới Zalo ${config.zaloRecipientPhone} (Hỗ trợ Webhook tự động hoặc 1 chạm Zalo trong Admin)`,
+        : `Sẵn sàng gửi tới Zalo ${config.zaloRecipientPhone} (Hỗ trợ Webhook tự động hoặc bấm nút Báo qua Zalo trên đơn)`,
       nowIso
     );
 
     if (config.zaloWebhookUrl) {
-      void fetch(config.zaloWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channel: "ZALO",
-          phone: config.zaloRecipientPhone,
-          message: textSummary,
-          payload,
-        }),
-      }).catch(() => {});
+      try {
+        const res = await fetch(config.zaloWebhookUrl, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channel: "ZALO",
+            phone: config.zaloRecipientPhone,
+            message: textSummary,
+            payload,
+          }),
+        });
+        if (res.ok) {
+          zaloSent = true;
+        }
+      } catch {
+        // ignore
+      }
     }
   }
+
+  return {
+    emailSent,
+    zaloSent,
+    detail:
+      detailMsg ||
+      "Đã ghi nhận thông báo vào Nhật ký (Hãy dán URL Google Apps Script để gửi Gmail tự động).",
+  };
 }
 

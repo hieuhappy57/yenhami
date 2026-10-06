@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "test_notification") {
-      triggerOrderNotificationsAfterCommit({
+      const result = await triggerOrderNotificationsAfterCommit({
         referenceCode: `TEST-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
         orderPurpose: "SELF",
         buyerName: "Khách thử nghiệm thông báo",
@@ -162,6 +162,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({
         ok: true,
+        message: result.detail,
         notificationLogs: getNotificationLogs(30),
       });
     }

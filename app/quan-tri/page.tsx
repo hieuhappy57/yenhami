@@ -3242,12 +3242,12 @@ export default function QuanTriPage() {
                   onSubmit={handleSaveNotificationSettings}
                   className="space-y-5 lg:col-span-7"
                 >
-                  {/* Email Settings Card */}
+                  {/* Email Settings Card (Google Apps Script Primary) */}
                   <div className="rounded-xs border border-[#c3c4c7] bg-white shadow-2xs">
                     <div className="flex items-center justify-between border-b border-[#c3c4c7] bg-[#f6f7f7] px-4 py-3">
                       <span className="flex items-center gap-2 text-xs font-bold text-[#1d2327]">
                         <Mail className="h-4 w-4 text-[#155132]" />
-                        1. Thông báo tự động qua Email
+                        1. Thông báo Email & Lưu Google Sheets qua Google Apps Script
                       </span>
                       <label className="inline-flex items-center gap-2 text-xs font-bold text-[#155132] cursor-pointer">
                         <input
@@ -3264,10 +3264,10 @@ export default function QuanTriPage() {
                         Kích hoạt
                       </label>
                     </div>
-                    <div className="p-4 space-y-3 text-xs">
+                    <div className="p-4 space-y-3.5 text-xs">
                       <div>
                         <label className="block font-bold mb-1">
-                          Địa chỉ Email nhận đơn hàng mới *
+                          Địa chỉ Email nhận thông báo đơn mới *
                         </label>
                         <input
                           type="email"
@@ -3279,14 +3279,123 @@ export default function QuanTriPage() {
                               notificationEmailTo: e.target.value,
                             })
                           }
+                          placeholder="VD: gmail của anh (có thể nhập nhiều email cách nhau dấu phẩy)"
                           className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
                         />
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="block font-bold mb-1">
-                            Resend API Key (Tùy chọn)
-                          </label>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-[#155132]">
+                          Google Apps Script Web App URL (Khuyên dùng — Gửi Gmail & ghi Google Sheets miễn phí) *
+                        </label>
+                        <input
+                          type="text"
+                          value={notificationSettings.emailWebhookUrl}
+                          onChange={(e) =>
+                            setNotificationSettings({
+                              ...notificationSettings,
+                              emailWebhookUrl: e.target.value,
+                            })
+                          }
+                          placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                          className="w-full rounded-xs border border-[#155132] bg-[#FFFCF4] px-3 py-2 font-mono text-xs"
+                        />
+                        <p className="mt-1 text-[11px] text-[#50575e]">
+                          Dán đường dẫn Web App (`.../exec`) từ Google Apps Script của anh vào ô trên rồi bấm <strong>Lưu cài đặt</strong>.
+                        </p>
+                      </div>
+
+                      {/* Collapsible 1-click Copy Google Apps Script Code & 3-Step Guide */}
+                      <details className="rounded-xs border border-[#BD9342]/60 bg-[#FFFCF4] p-3">
+                        <summary className="cursor-pointer font-bold text-[#155132] flex items-center justify-between">
+                          <span>
+                            📋 Lấy mã Google Apps Script (`Code.gs`) & Hướng dẫn cài đặt 2 phút (Bấm để mở)
+                          </span>
+                          <span className="text-[11px] underline text-[#8A6632]">
+                            Xem mã & Copy
+                          </span>
+                        </summary>
+                        <div className="mt-3 space-y-2.5 border-t border-[#BD9342]/30 pt-3 text-[11px] leading-relaxed text-[#1d2327]">
+                          <ol className="list-decimal pl-4 space-y-1">
+                            <li>
+                              Bấm nút <strong>“Sao chép mã Apps Script”</strong> bên dưới, sau đó mở{" "}
+                              <a
+                                href="https://script.google.com/home/start"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-bold text-[#155132] underline"
+                              >
+                                script.google.com
+                              </a>{" "}
+                              (hoặc mở 1 file Google Sheets → <em>Tiện ích mở rộng → Apps Script</em>) rồi dán đè vào `Code.gs`.
+                            </li>
+                            <li>
+                              Bấm nút <strong>Triển khai (Deploy)</strong> góc phải trên → <strong>Tùy chọn triển khai mới (New deployment)</strong> → Chọn loại <strong>Ứng dụng web (Web app)</strong>.
+                            </li>
+                            <li>
+                              Mục <em>Thực thi dưới dạng</em> chọn <strong>Tôi (Me)</strong>; mục <em>Ai có quyền truy cập</em> chọn <strong>Bất kỳ ai (Anyone)</strong> → Bấm <strong>Triển khai</strong>, cấp quyền Gmail và copy đường dẫn `https://script.google.com/macros/s/.../exec` dán vào ô phía trên.
+                            </li>
+                          </ol>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const gsCode = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents || "{}");
+    var p = data.payload || {};
+    var toEmail = data.to || Session.getActiveUser().getEmail();
+    var subject = data.subject || ("[Yến Sào Hà Mi] Đơn mới #" + (p.referenceCode || ""));
+    MailApp.sendEmail({
+      to: toEmail,
+      subject: subject,
+      body: data.text || subject,
+      htmlBody: data.html || ("<p>" + (data.text || "") + "</p>"),
+      name: "Bếp Yến Sào Hà Mi"
+    });
+    try {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (ss) {
+        var sheet = ss.getSheetByName("DonHangHaMi") || ss.insertSheet("DonHangHaMi");
+        if (sheet.getLastRow() === 0) {
+          sheet.appendRow(["Thời gian", "Mã đơn", "Loại", "Khách đặt", "SĐT đặt", "Người nhận", "SĐT nhận", "Địa chỉ", "Ngày giao", "Khung giờ", "Món đặt", "Tổng tiền"]);
+        }
+        sheet.appendRow([new Date(), p.referenceCode, p.orderPurpose, p.buyerName, p.buyerPhone, p.recipientName, p.recipientPhone, p.addressDetail, p.requestedDate, p.slotLabel, p.itemsSummary, p.totalVnd]);
+      }
+    } catch (ignore) {}
+    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+                                await navigator.clipboard.writeText(gsCode);
+                                setFeedbackMsg(
+                                  "Đã sao chép mã Google Apps Script (Code.gs) vào bộ nhớ tạm!"
+                                );
+                              }}
+                              className="rounded-xs bg-[#155132] px-3 py-1.5 font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                            >
+                              Sao chép mã Google Apps Script (Code.gs)
+                            </button>
+
+                            <a
+                              href="https://script.google.com/home/start"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#155132] bg-white px-3 py-1.5 font-bold text-[#155132]"
+                            >
+                              Mở Google Apps Script <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </div>
+                        </div>
+                      </details>
+
+                      <details className="text-[11px] text-[#50575e]">
+                        <summary className="cursor-pointer hover:text-[#1d2327]">
+                          Tùy chọn nâng cao: Dùng Resend API Key thay cho Google Apps Script
+                        </summary>
+                        <div className="mt-2">
                           <input
                             type="password"
                             value={notificationSettings.resendApiKey}
@@ -3296,28 +3405,11 @@ export default function QuanTriPage() {
                                 resendApiKey: e.target.value,
                               })
                             }
-                            placeholder="re_xxxxxx..."
-                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
+                            placeholder="re_xxxxxx... (Để trống nếu dùng Google Apps Script)"
+                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-1.5 text-xs"
                           />
                         </div>
-                        <div>
-                          <label className="block font-bold mb-1">
-                            Email Webhook URL (Apps Script / Make)
-                          </label>
-                          <input
-                            type="text"
-                            value={notificationSettings.emailWebhookUrl}
-                            onChange={(e) =>
-                              setNotificationSettings({
-                                ...notificationSettings,
-                                emailWebhookUrl: e.target.value,
-                              })
-                            }
-                            placeholder="https://..."
-                            className="w-full rounded-xs border border-[#8c8f94] px-3 py-2"
-                          />
-                        </div>
-                      </div>
+                      </details>
                     </div>
                   </div>
 
