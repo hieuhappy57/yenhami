@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-heading), var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+:root {
+  --canopy-green: #155132;
+  --canopy-green-dark: #0e3b23;
+  --heritage-gold: #bd9342;
+  --dark-gold: #8a6632;
+  --ivory: #fffcf4;
+  --grove-ink: #2b433a;
+  --jade-mist: #dbf1ee;
+}
+
+html,
+body {
+  scroll-behavior: smooth;
+  color: var(--grove-ink);
+  background-color: #ffffff;
+  font-family: var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Modern, clean geometric-humanist sans-serif for headings & navigation */
+.font-serif-display {
+  font-family: var(--font-heading), var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-sans-ui {
+  font-family: var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--canopy-green);
+  outline-offset: 2px;
+}
+
+/* Modern Web Guidance: :user-invalid styling for required fields after interaction */
+input:user-invalid,
+textarea:user-invalid,
+select:user-invalid,
+input.user-invalid-fallback,
+textarea.user-invalid-fallback,
+select.user-invalid-fallback {
+  border-color: #b91c1c !important;
+  background-color: #fef2f2 !important;
+}
+
+/* Safe area utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pr-safe-rail {
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
+}

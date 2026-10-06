@@ -1,0 +1,10 @@
+node_modules
+.next
+.next-build
+.vercel
+out
+dist
+data/*.sqlite*
+.DS_Store
+*.log
+*.tsbuildinfo
