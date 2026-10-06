@@ -19,12 +19,13 @@ const LEFT_NAV_LINKS = [
       { href: "/#danh-muc-set-qua", label: "Set Quà Tặng Sức Khỏe" },
     ],
   },
-  { href: "/#danh-muc-yen-tinh-che", label: "Yến Tinh Chế & Yến Hũ" },
+  { href: "/gui-qua", label: "Set Quà Tặng" },
 ];
 
 const RIGHT_NAV_LINKS = [
-  { href: "/gui-qua", label: "Set Quà Tặng" },
-  { href: "/ve-ha-mi", label: "Câu chuyện Hà Mi" },
+  { href: "/bai-viet", label: "Bài viết" },
+  { href: "/tuyen-dung", label: "Tuyển dụng" },
+  { href: "/ve-ha-mi", label: "Về Hà Mi" },
   { href: "/dat-hang", label: "Đặt món" },
 ];
 
@@ -34,6 +35,8 @@ const MOBILE_NAV_LINKS = [
   { href: "/#danh-muc-yen-hu", label: "Yến Hũ Chưng Sẵn" },
   { href: "/#danh-muc-yen-tinh-che", label: "Yến Tổ Tinh Chế" },
   { href: "/gui-qua", label: "Set Quà Tặng Biếu Tặng" },
+  { href: "/bai-viet", label: "Bài viết & Cẩm nang" },
+  { href: "/tuyen-dung", label: "Tuyển dụng nhân sự" },
   { href: "/ve-ha-mi", label: "Câu chuyện Hà Mi" },
   { href: "/dat-hang", label: "Đặt món (2 thố Free Ship)" },
 ];

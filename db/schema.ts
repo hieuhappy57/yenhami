@@ -202,3 +202,75 @@ export interface DeliverySlotRecord {
   unavailableReason?: string | null;
   sortOrder: number;
 }
+
+export interface SiteContentSettings {
+  heroBadge: string;
+  heroTitle: string;
+  heroLead: string;
+  heroCta: string;
+  heroDesktopImage: string;
+  heroMobileImage: string;
+  giftingBadge: string;
+  giftingTitle: string;
+  giftingDescription: string;
+  giftingImage: string;
+  hotlineDisplay: string;
+  hotlineTel: string;
+  zaloUrl: string;
+  addressDisplay: string;
+  serviceHoursDisplay: string;
+  noticeBanner: string;
+  aboutHeadline: string;
+  aboutLead: string;
+  aboutDiffBanner: string;
+}
+
+export interface PostRecord {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JobPostingRecord {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  employmentType: string;
+  salaryRange: string;
+  description: string;
+  requirements: string;
+  contactInfo: string;
+  isOpen: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationSettings {
+  enableEmail: boolean;
+  notificationEmailTo: string;
+  resendApiKey: string;
+  emailWebhookUrl: string;
+  enableZalo: boolean;
+  zaloRecipientPhone: string;
+  zaloWebhookUrl: string;
+}
+
+export interface NotificationLogRecord {
+  id: string;
+  orderReferenceCode: string;
+  channel: "EMAIL" | "ZALO";
+  recipient: string;
+  status: "SENT" | "CONFIG_READY" | "FAILED";
+  messageSummary: string;
+  detail: string;
+  createdAt: string;
+}
+

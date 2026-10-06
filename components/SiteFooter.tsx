@@ -60,6 +60,21 @@ export function SiteFooter() {
                 Về Hà Mi
               </Link>
             </li>
+            <li>
+              <Link href="/bai-viet" className="hover:text-[#155132] hover:underline">
+                Bài viết & Cẩm nang
+              </Link>
+            </li>
+            <li>
+              <Link href="/tuyen-dung" className="hover:text-[#155132] hover:underline">
+                Tuyển dụng
+              </Link>
+            </li>
+            <li>
+              <Link href="/quan-tri" className="hover:text-[#155132] hover:underline font-medium text-[#8A6632]">
+                Quản trị Website (Admin)
+              </Link>
+            </li>
           </ul>
         </div>
 

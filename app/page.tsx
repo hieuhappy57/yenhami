@@ -3,13 +3,17 @@ import Link from "next/link";
 import {
   ArrowDown,
   ArrowRight,
+  BookOpen,
   ClipboardCheck,
   Flame,
   Gift,
   Utensils,
 } from "lucide-react";
-import { getAllProducts } from "@/db";
-import { BRAND_CONFIG } from "@/config/brand";
+import {
+  getAllPosts,
+  getAllProducts,
+  getSiteContentSettings,
+} from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 
@@ -51,6 +55,8 @@ const FAQ_ITEMS = [
 export default function HomePage() {
   const allProducts = getAllProducts();
   const freshBowlProducts = allProducts.filter((p) => !p.id.startsWith("cat-"));
+  const siteSettings = getSiteContentSettings();
+  const latestPosts = getAllPosts(true).slice(0, 3);
 
   return (
     <div>
@@ -61,9 +67,9 @@ export default function HomePage() {
         className="relative w-full overflow-hidden border-b border-[#BD9342]/25 bg-[#FFFCF4]"
       >
         <picture className="block w-full">
-          <source media="(min-width: 768px)" srcSet="/brand/hero-desktop-clean.jpg" />
+          <source media="(min-width: 768px)" srcSet={siteSettings.heroDesktopImage} />
           <img
-            src="/brand/hero-mobile-clean.jpg"
+            src={siteSettings.heroMobileImage}
             alt="Thố Yến Tươi Chưng Nóng Yến Sào Hà Mi"
             fetchPriority="high"
             width={1640}
@@ -77,15 +83,15 @@ export default function HomePage() {
             <div className="max-w-md md:max-w-[320px] lg:max-w-lg pointer-events-auto">
               <div className="mb-2 lg:mb-3">
                 <p className="text-xs lg:text-sm font-semibold text-[#8A6632] uppercase tracking-wider">
-                  {BRAND_CONFIG.heroCopy.lineBadge}
+                  {siteSettings.heroBadge}
                 </p>
-                <h1 className="mt-0.5 font-serif-display text-[28px] leading-[34px] sm:text-[34px] sm:leading-[40px] md:text-[34px] md:leading-[40px] lg:text-[46px] lg:leading-[52px] font-semibold text-[#155132] whitespace-nowrap">
-                  {BRAND_CONFIG.heroCopy.h1}
+                <h1 className="mt-0.5 font-serif-display text-[28px] leading-[34px] sm:text-[34px] sm:leading-[40px] md:text-[34px] md:leading-[40px] lg:text-[46px] lg:leading-[52px] font-semibold text-[#155132]">
+                  {siteSettings.heroTitle}
                 </h1>
               </div>
 
               <p className="text-xs sm:text-sm lg:text-base text-[#2B433A] leading-snug lg:leading-relaxed mb-3 lg:mb-5 max-w-[300px] sm:max-w-sm lg:max-w-md">
-                {BRAND_CONFIG.heroCopy.lead}
+                {siteSettings.heroLead}
               </p>
 
               <a
@@ -93,7 +99,7 @@ export default function HomePage() {
                 data-testid="hero-cta-choose-dish"
                 className="inline-flex items-center justify-center gap-2 min-h-[42px] sm:min-h-[44px] px-5 py-2 rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] font-semibold text-xs sm:text-sm lg:text-base shadow-xs hover:bg-[#0e3b23] transition-colors"
               >
-                <span>{BRAND_CONFIG.heroCopy.cta}</span>
+                <span>{siteSettings.heroCta}</span>
                 <ArrowDown className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
               </a>
             </div>
@@ -135,7 +141,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. MỘT MỤC GỬI QUÀ GỌN (Ảnh hộp quà thực tế + 1 câu + 1 CTA) */}
+      {/* 4. MỘT MỤC GỬI QUÀ GỌN */}
       <section
         aria-labelledby="gifting-heading"
         className="py-8 md:py-12 px-4 pr-16 xl:pr-4 max-w-[1200px] mx-auto"
@@ -143,7 +149,7 @@ export default function HomePage() {
         <div className="rounded-lg bg-[#FFFCF4] border border-[#BD9342]/35 overflow-hidden grid grid-cols-1 md:grid-cols-12 items-center">
           <div className="md:col-span-5 h-[220px] sm:h-[260px]">
             <img
-              src="/brand/catalog/set-qua-hop-sen-en.jpg"
+              src={siteSettings.giftingImage}
               alt="Hộp quà Yến Sào Thượng Hạng Hà Mi"
               loading="lazy"
               width={560}
@@ -154,16 +160,16 @@ export default function HomePage() {
           <div className="md:col-span-7 p-5 sm:p-8 space-y-3">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
               <Gift className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
-              <span>Món quà của sự an tâm, chạm đến sự bình yên</span>
+              <span>{siteSettings.giftingBadge}</span>
             </div>
             <h2
               id="gifting-heading"
               className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#155132]"
             >
-              Khẽ chạm vào miền an nhiên
+              {siteSettings.giftingTitle}
             </h2>
             <p className="text-sm sm:text-base text-[#2B433A]/90 leading-relaxed max-w-xl">
-              Từ hộp quà Hoa Sen & Đàn Én 6 hũ thượng hạng, thố sứ chưng nóng giữ ấm đến hộp yến tinh chế cao cấp — kèm thiệp viết tay và tùy chọn ẩn giá tinh tế khi biếu tặng người thân, đối tác.
+              {siteSettings.giftingDescription}
             </p>
             <div className="pt-1">
               <Link
@@ -177,6 +183,72 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 4B. CẨM NANG & BÀI VIẾT MỚI TỪ TRANG QUẢN TRỊ */}
+      {latestPosts.length > 0 && (
+        <section
+          aria-labelledby="blog-home-heading"
+          className="py-6 md:py-10 px-4 pr-16 xl:pr-4 max-w-[1200px] mx-auto"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
+                Cẩm nang dinh dưỡng & quà biếu
+              </p>
+              <h2
+                id="blog-home-heading"
+                className="font-serif-display text-xl sm:text-2xl font-semibold text-[#155132]"
+              >
+                Bài viết mới từ Yến Sào Hà Mi
+              </h2>
+            </div>
+            <Link
+              href="/bai-viet"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155132] hover:text-[#8A6632]"
+            >
+              <span>Xem tất cả bài viết</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {latestPosts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/bai-viet/${post.slug}`}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-[#155132]/15 bg-white shadow-2xs transition hover:border-[#BD9342]"
+              >
+                <div className="aspect-[16/9] w-full overflow-hidden bg-[#F5F0E3]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={post.coverImageUrl}
+                    alt={post.title}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-semibold text-[#8A6632]">
+                      {post.category}
+                    </span>
+                    <h3 className="mt-1 font-serif-display text-base font-semibold text-[#155132] group-hover:text-[#8A6632] line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-[#2B433A]/80 line-clamp-2">
+                      {post.excerpt}
+                    </p>
+                  </div>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#155132]">
+                    <BookOpen className="h-3.5 w-3.5 text-[#BD9342]" />
+                    Đọc bài viết →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 5. FAQ 3 CÂU NGẮN (Đóng mặc định) */}
       <section

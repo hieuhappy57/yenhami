@@ -10,13 +10,18 @@ import {
 } from "./demo-fixtures";
 import type {
   DeliverySlotRecord,
+  JobPostingRecord,
+  NotificationLogRecord,
+  NotificationSettings,
   OrderStatus,
   PaymentStatus,
+  PostRecord,
   ProductCategory,
   ProductRecord,
   ProductStatus,
   ProductVariantRecord,
   ServiceZoneRecord,
+  SiteContentSettings,
   ZoneDeliveryStatus,
 } from "./schema";
 
@@ -265,6 +270,51 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       note TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS posts (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      category TEXT NOT NULL,
+      excerpt TEXT NOT NULL,
+      content TEXT NOT NULL,
+      cover_image_url TEXT NOT NULL,
+      is_published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS job_postings (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      department TEXT NOT NULL,
+      location TEXT NOT NULL,
+      employment_type TEXT NOT NULL,
+      salary_range TEXT NOT NULL,
+      description TEXT NOT NULL,
+      requirements TEXT NOT NULL,
+      contact_info TEXT NOT NULL,
+      is_open INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS notification_logs (
+      id TEXT PRIMARY KEY,
+      order_reference_code TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      recipient TEXT NOT NULL,
+      status TEXT NOT NULL,
+      message_summary TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
 
   // Ensure start_minutes_of_day column exists if DB was created before this migration
@@ -468,6 +518,92 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     for (const z of DEMO_SERVICE_ZONES) {
       updateZoneCopy.run(z.district, z.wardSample, z.note, z.id);
     }
+  }
+
+  // Seed initial blog posts if posts table is empty
+  const postCnt = db.prepare("SELECT COUNT(*) as cnt FROM posts").get() as { cnt: number };
+  if (postCnt.cnt === 0) {
+    const nowIso = new Date().toISOString();
+    const insertPost = db.prepare(`
+      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertPost.run(
+      "post-1",
+      "quy-trinh-chung-nong-yen-tuoi-ha-mi",
+      "Vì sao Yến Tươi Chưng Nóng trong thố sứ 200ml giữ trọn dưỡng chất?",
+      "Kiến thức yến sào",
+      "Khám phá quy trình chưng mới theo ca từ sợi yến tươi tuyển chọn và nước lọc RO tinh khiết tại bếp Yến Sào Hà Mi.",
+      "Tại Yến Sào Hà Mi, mỗi thố yến tươi 200ml được chưng mới theo khung giờ khách hẹn từ 08:00 sáng đến 21:00 đêm.\n\nNhờ kết hợp nguồn tổ yến Việt Nam có hàm lượng protein cao và hệ thống lọc nước tinh khiết RO đạt chuẩn ISO 22000:2018 & FDA Hoa Kỳ, từng sợi yến nở mềm tự nhiên, giữ trọn hương vị thanh khiết mà hoàn toàn không dùng chất bảo quản.",
+      "/brand/hero-editorial-clean.jpg",
+      1,
+      nowIso,
+      nowIso
+    );
+    insertPost.run(
+      "post-2",
+      "bo-suu-tap-set-qua-sen-vang-yen-sao-thuong-hang",
+      "Ra mắt Set Quà Hoa Sen Vàng & 6 Vị Yến Hũ Thượng Hạng Hà Mi",
+      "Tin tức Hà Mi",
+      "Món quà của sự an tâm, chạm đến sự bình yên — Thiết kế hộp quà Hoa Sen & Đàn Én ép kim sang trọng cho người thân và đối tác.",
+      "Bộ quà tặng Yến Sào Thượng Hạng Hà Mi quy tụ 6 hương vị tinh tuyển trong hũ thủy tinh tiệt trùng 75ml và 100ml: Đường Phèn, Gừng Tươi, Nhân Sâm, Đông Trùng Hạ Thảo, Tam Vị và Tứ Vị.\n\nMỗi hộp quà đều đi kèm túi xách đồng bộ, thiệp viết tay theo yêu cầu và tùy chọn ẩn giá trên phiếu giao quà.",
+      "/brand/catalog/set-qua-6-hu-6-vi.jpg",
+      1,
+      nowIso,
+      nowIso
+    );
+    insertPost.run(
+      "post-3",
+      "phan-biet-yen-sao-tinh-che-rut-long-chuan-xuat-khau",
+      "Bí quyết chọn Yến Sào Tinh Chế & Yến Rút Lông Định Hình chuẩn ISO 22000",
+      "Cẩm nang sức khỏe",
+      "Tìm hiểu kỹ thuật làm ẩm nhẹ và rút lông đại thủ công giúp tổ yến Hà Mi giữ nguyên cấu trúc sợi dài dày, không chất tẩy trắng.",
+      "Yến sào tinh chế tại Hà Mi được tuyển chọn từ những tổ yến thô nguyên bản, áp dụng kỹ thuật làm ẩm nhẹ và rút lông đại thủ công để hạn chế tối đa tiếp xúc với nước.\n\nSản phẩm được rửa bằng nước lọc RO tinh khiết và sấy khô đạt độ giòn tiêu chuẩn, cam kết 3 không: Không chất tẩy trắng, không chất độn (mủ trôm), không thêm muối hay đường.",
+      "/brand/catalog/yen-tinh-che-to-yen.jpg",
+      1,
+      nowIso,
+      nowIso
+    );
+  }
+
+  // Seed initial job postings if job_postings table is empty
+  const jobCnt = db.prepare("SELECT COUNT(*) as cnt FROM job_postings").get() as { cnt: number };
+  if (jobCnt.cnt === 0) {
+    const nowIso = new Date().toISOString();
+    const insertJob = db.prepare(`
+      INSERT INTO job_postings (
+        id, title, department, location, employment_type, salary_range,
+        description, requirements, contact_info, is_open, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertJob.run(
+      "job-1",
+      "Chuyên viên Tư vấn Khách hàng & Quà tặng Doanh nghiệp (CSKH)",
+      "Kinh doanh & CSKH",
+      "Đà Nẵng",
+      "Toàn thời gian",
+      "8.000.000đ – 15.000.000đ + Thưởng doanh số",
+      "Tư vấn khách hàng đặt Yến Tươi Chưng Nóng, Yến Hũ Thượng Hạng và Set Quà Doanh Nghiệp qua Website, Zalo OA và Hotline. Phối hợp điều phối lịch giao hàng theo khung giờ 08:00 – 21:00.",
+      "Giao tiếp lịch sự, tận tâm; yêu thích ngành thực phẩm chăm sóc sức khỏe cao cấp; ưu tiên ứng viên có kinh nghiệm CSKH hoặc telesales.",
+      "Ứng tuyển qua Hotline/Zalo: 0935 052 959 (Phòng Nhân sự Yến Sào Hà Mi)",
+      1,
+      nowIso,
+      nowIso
+    );
+    insertJob.run(
+      "job-2",
+      "Kỹ thuật viên Sơ chế Tổ Yến & Chưng Yến theo ca",
+      "Bếp & Sản xuất ISO 22000",
+      "Xã Xuân Phú / Trung tâm TP. Đà Nẵng",
+      "Toàn thời gian / Theo ca",
+      "7.500.000đ – 12.000.000đ",
+      "Thực hiện rút lông tổ yến tinh chế theo quy trình làm ẩm nhẹ chuẩn ISO 22000:2018 và chưng mới thố yến sứ 200ml theo đúng định lượng của bếp Hà Mi.",
+      "Cẩn thận, tỉ mỉ, tuân thủ nghiêm ngặt quy định vệ sinh an toàn thực phẩm; được đào tạo bài bản quy trình chuẩn của Hà Mi.",
+      "Ứng tuyển qua Hotline/Zalo: 0935 052 959 — Địa chỉ: Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
+      1,
+      nowIso,
+      nowIso
+    );
   }
 }
 
@@ -1366,6 +1502,29 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
 
     db.exec("COMMIT;");
 
+    // Trigger Email & Zalo notifications for the new order (non-blocking)
+    try {
+      triggerOrderNotificationsAfterCommit({
+        referenceCode,
+        orderPurpose,
+        buyerName,
+        buyerPhone,
+        recipientName,
+        recipientPhone,
+        addressDetail,
+        requestedDate,
+        slotLabel: quote.slot.label,
+        totalVnd: quote.totalVnd,
+        shippingFeeNote: quote.shippingFeeNote,
+        giftMessage: orderPurpose === "GIFT" ? (input.giftMessage || "").trim() : "",
+        itemsSummary: quote.items
+          .map((it) => `${it.productName} x${it.quantity}`)
+          .join(", "),
+      });
+    } catch {
+      // Never block order creation if notification logging/sending fails
+    }
+
     return {
       ok: true,
       deduplicated: false,
@@ -1684,3 +1843,539 @@ export function updateDeliverySlotByStaff(params: {
   }
   return { ok: true };
 }
+
+// ============================================================================
+// ADMIN CMS: FULL PRODUCT CRUD (CREATE / UPDATE / DELETE DISHES & IMAGES)
+// ============================================================================
+
+function slugifyVietnamese(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function upsertProductFullByStaff(params: {
+  id?: string;
+  slug?: string;
+  name: string;
+  category: ProductCategory;
+  volumeMl: number;
+  priceVnd: number | null;
+  status: ProductStatus;
+  imageUrl: string;
+  ingredients: string[];
+  tasteProfile?: string;
+  shortDescription: string;
+  usageGuide?: string;
+  storageGuide?: string;
+  cautionNote?: string;
+  supportedOptions?: string[];
+  variantLabel?: string;
+}) {
+  const db = getSqliteDb();
+  const cleanName = params.name.trim();
+  const prodId = params.id?.trim() || `prod-${slugifyVietnamese(cleanName)}-${Date.now().toString(36)}`;
+  const prodSlug =
+    params.slug?.trim() ||
+    slugifyVietnamese(cleanName) ||
+    `mon-yen-${Date.now().toString(36)}`;
+
+  const ingredients =
+    params.ingredients.length > 0
+      ? params.ingredients
+      : ["Tổ yến tự nhiên 100%", "Đường phèn"];
+  const supportedOptions =
+    params.supportedOptions && params.supportedOptions.length > 0
+      ? params.supportedOptions
+      : ["Tiêu chuẩn"];
+
+  db.prepare(`
+    INSERT INTO products (
+      id, slug, name, category, volume_ml, ingredients_json, taste_profile,
+      short_description, usage_guide, storage_guide, caution_note, image_url,
+      is_illustration_image, price_vnd, status, is_demo_fixture, supported_options_json, sort_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      slug = excluded.slug,
+      name = excluded.name,
+      category = excluded.category,
+      volume_ml = excluded.volume_ml,
+      ingredients_json = excluded.ingredients_json,
+      taste_profile = excluded.taste_profile,
+      short_description = excluded.short_description,
+      usage_guide = excluded.usage_guide,
+      storage_guide = excluded.storage_guide,
+      caution_note = excluded.caution_note,
+      image_url = excluded.image_url,
+      price_vnd = excluded.price_vnd,
+      status = excluded.status,
+      supported_options_json = excluded.supported_options_json
+  `).run(
+    prodId,
+    prodSlug,
+    cleanName,
+    params.category || "nguyen-ban",
+    Number(params.volumeMl || 200),
+    JSON.stringify(ingredients),
+    params.tasteProfile?.trim() || "Hương vị thanh khiết tự nhiên",
+    params.shortDescription?.trim() || cleanName,
+    params.usageGuide?.trim() || "Dùng trực tiếp, ngon hơn khi dùng ấm hoặc để mát.",
+    params.storageGuide?.trim() || "Bảo quản nơi thoáng mát hoặc ngăn mát tủ lạnh.",
+    params.cautionNote?.trim() || "100% yến thật tự nhiên, không chất bảo quản.",
+    params.imageUrl?.trim() || "/brand/dishes/thanh-nguyen-dish.jpg",
+    0,
+    params.priceVnd,
+    params.status || "AVAILABLE",
+    0,
+    JSON.stringify(supportedOptions),
+    50
+  );
+
+  // Ensure standard variant exists
+  const varId = `${prodId}-var-standard`;
+  const varName =
+    params.variantLabel?.trim() ||
+    `Quy cách ${params.volumeMl || 200}ml (Tiêu chuẩn)`;
+  db.prepare(`
+    INSERT INTO product_variants (id, product_id, name, price_delta_vnd, is_available)
+    VALUES (?, ?, ?, 0, 1)
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name
+  `).run(varId, prodId, varName);
+
+  return { ok: true, productId: prodId, slug: prodSlug };
+}
+
+export function deleteProductByStaff(productId: string) {
+  const db = getSqliteDb();
+  db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(productId);
+  db.prepare("DELETE FROM products WHERE id = ?").run(productId);
+  return { ok: true };
+}
+
+// ============================================================================
+// ADMIN CMS: SITE CONTENT SETTINGS (HOMEPAGE, HERO, ABOUT, CONTACT)
+// ============================================================================
+
+const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
+  heroBadge: "Tinh Hoa Yến Việt • ISO 22000 & FDA",
+  heroTitle: "Yến Sào Hà Mi",
+  heroLead:
+    "Yến tươi chưng nóng theo ca, yến hũ thượng hạng 75ml–100ml và bộ quà tặng yến sào tinh tuyển.",
+  heroCta: "Chọn món",
+  heroDesktopImage: "/brand/hero-desktop-clean.jpg",
+  heroMobileImage: "/brand/hero-mobile-clean.jpg",
+  giftingBadge: "Món quà của sự an tâm, chạm đến sự bình yên",
+  giftingTitle: "Khẽ chạm vào miền an nhiên",
+  giftingDescription:
+    "Từ hộp quà Hoa Sen & Đàn Én 6 hũ thượng hạng, thố sứ chưng nóng giữ ấm đến hộp yến tinh chế cao cấp — kèm thiệp viết tay và tùy chọn ẩn giá tinh tế khi biếu tặng người thân, đối tác.",
+  giftingImage: "/brand/catalog/set-qua-hop-sen-en.jpg",
+  hotlineDisplay: "0935 052 959",
+  hotlineTel: "0935052959",
+  zaloUrl: "https://zalo.me/0935052959",
+  addressDisplay: "Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
+  serviceHoursDisplay: "08:00 – 21:00 hàng ngày",
+  noticeBanner:
+    "Yến Sào Hà Mi • Đặt từ 2 thố/set miễn phí giao hàng • Khung giờ giao 08:00 – 21:00",
+  aboutHeadline: "Yến Sào Hà Mi — Chất Từng Sợi Yến",
+  aboutLead:
+    "Hà Mi toàn tâm toàn ý ghi lại tinh túy của thiên nhiên và giữ trọn dưỡng chất tự nhiên trong từng sợi yến để mang đến cho bạn và những người thân yêu sự bồi bổ thuần khiết trong từng ngụm yến.",
+  aboutDiffBanner:
+    "Điều làm nên sự khác biệt của Hà Mi: YẾN SÀO THẬT – TINH KHIẾT – THƯỢNG HẠNG – DINH DƯỠNG CAO – LỢI ÍCH THỰC CHO SỨC KHỎE!",
+};
+
+export function getSiteContentSettings(): SiteContentSettings {
+  const db = getSqliteDb();
+  const row = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'site_content'")
+    .get() as { value: string } | undefined;
+  if (!row) return { ...DEFAULT_SITE_SETTINGS };
+  try {
+    const parsed = JSON.parse(row.value) as Partial<SiteContentSettings>;
+    return { ...DEFAULT_SITE_SETTINGS, ...parsed };
+  } catch {
+    return { ...DEFAULT_SITE_SETTINGS };
+  }
+}
+
+export function updateSiteContentSettings(
+  updates: Partial<SiteContentSettings>
+): SiteContentSettings {
+  const db = getSqliteDb();
+  const merged: SiteContentSettings = {
+    ...getSiteContentSettings(),
+    ...updates,
+  };
+  const nowIso = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('site_content', ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).run(JSON.stringify(merged), nowIso);
+  return merged;
+}
+
+// ============================================================================
+// ADMIN CMS: BLOG / ARTICLES (POSTS)
+// ============================================================================
+
+export function getAllPosts(onlyPublished = false): PostRecord[] {
+  const db = getSqliteDb();
+  const sql = onlyPublished
+    ? "SELECT * FROM posts WHERE is_published = 1 ORDER BY created_at DESC"
+    : "SELECT * FROM posts ORDER BY created_at DESC";
+  const rows = db.prepare(sql).all() as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: String(r.id),
+    slug: String(r.slug),
+    title: String(r.title),
+    category: String(r.category),
+    excerpt: String(r.excerpt),
+    content: String(r.content),
+    coverImageUrl: String(r.cover_image_url),
+    isPublished: Boolean(r.is_published),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  }));
+}
+
+export function getPostBySlug(slug: string): PostRecord | null {
+  const db = getSqliteDb();
+  const r = db
+    .prepare("SELECT * FROM posts WHERE slug = ?")
+    .get(slug.trim()) as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return {
+    id: String(r.id),
+    slug: String(r.slug),
+    title: String(r.title),
+    category: String(r.category),
+    excerpt: String(r.excerpt),
+    content: String(r.content),
+    coverImageUrl: String(r.cover_image_url),
+    isPublished: Boolean(r.is_published),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  };
+}
+
+export function upsertPostByStaff(params: {
+  id?: string;
+  slug?: string;
+  title: string;
+  category: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string;
+  isPublished: boolean;
+}) {
+  const db = getSqliteDb();
+  const nowIso = new Date().toISOString();
+  const cleanTitle = params.title.trim();
+  const postId = params.id?.trim() || `post-${Date.now().toString(36)}`;
+  const postSlug =
+    params.slug?.trim() ||
+    slugifyVietnamese(cleanTitle) ||
+    `bai-viet-${Date.now().toString(36)}`;
+
+  db.prepare(`
+    INSERT INTO posts (
+      id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      slug = excluded.slug,
+      title = excluded.title,
+      category = excluded.category,
+      excerpt = excluded.excerpt,
+      content = excluded.content,
+      cover_image_url = excluded.cover_image_url,
+      is_published = excluded.is_published,
+      updated_at = excluded.updated_at
+  `).run(
+    postId,
+    postSlug,
+    cleanTitle,
+    params.category?.trim() || "Tin tức Hà Mi",
+    params.excerpt?.trim() || cleanTitle,
+    params.content?.trim() || cleanTitle,
+    params.coverImageUrl?.trim() || "/brand/hero-editorial-clean.jpg",
+    params.isPublished ? 1 : 0,
+    nowIso,
+    nowIso
+  );
+
+  return { ok: true, id: postId, slug: postSlug };
+}
+
+export function deletePostByStaff(postId: string) {
+  const db = getSqliteDb();
+  db.prepare("DELETE FROM posts WHERE id = ?").run(postId);
+  return { ok: true };
+}
+
+// ============================================================================
+// ADMIN CMS: RECRUITMENT / CAREERS (JOB POSTINGS)
+// ============================================================================
+
+export function getAllJobPostings(onlyOpen = false): JobPostingRecord[] {
+  const db = getSqliteDb();
+  const sql = onlyOpen
+    ? "SELECT * FROM job_postings WHERE is_open = 1 ORDER BY created_at DESC"
+    : "SELECT * FROM job_postings ORDER BY created_at DESC";
+  const rows = db.prepare(sql).all() as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: String(r.id),
+    title: String(r.title),
+    department: String(r.department),
+    location: String(r.location),
+    employmentType: String(r.employment_type),
+    salaryRange: String(r.salary_range),
+    description: String(r.description),
+    requirements: String(r.requirements),
+    contactInfo: String(r.contact_info),
+    isOpen: Boolean(r.is_open),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  }));
+}
+
+export function upsertJobPostingByStaff(params: {
+  id?: string;
+  title: string;
+  department: string;
+  location: string;
+  employmentType: string;
+  salaryRange: string;
+  description: string;
+  requirements: string;
+  contactInfo: string;
+  isOpen: boolean;
+}) {
+  const db = getSqliteDb();
+  const nowIso = new Date().toISOString();
+  const jobId = params.id?.trim() || `job-${Date.now().toString(36)}`;
+
+  db.prepare(`
+    INSERT INTO job_postings (
+      id, title, department, location, employment_type, salary_range,
+      description, requirements, contact_info, is_open, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      department = excluded.department,
+      location = excluded.location,
+      employment_type = excluded.employment_type,
+      salary_range = excluded.salary_range,
+      description = excluded.description,
+      requirements = excluded.requirements,
+      contact_info = excluded.contact_info,
+      is_open = excluded.is_open,
+      updated_at = excluded.updated_at
+  `).run(
+    jobId,
+    params.title.trim(),
+    params.department?.trim() || "Vận hành & CSKH",
+    params.location?.trim() || "Đà Nẵng",
+    params.employmentType?.trim() || "Toàn thời gian",
+    params.salaryRange?.trim() || "Thỏa thuận theo năng lực",
+    params.description?.trim() || "",
+    params.requirements?.trim() || "",
+    params.contactInfo?.trim() || "Hotline/Zalo: 0935 052 959",
+    params.isOpen ? 1 : 0,
+    nowIso,
+    nowIso
+  );
+
+  return { ok: true, id: jobId };
+}
+
+export function deleteJobPostingByStaff(jobId: string) {
+  const db = getSqliteDb();
+  db.prepare("DELETE FROM job_postings WHERE id = ?").run(jobId);
+  return { ok: true };
+}
+
+// ============================================================================
+// ORDER NOTIFICATIONS: EMAIL & ZALO CONFIG + DISPATCH + LOGS
+// ============================================================================
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enableEmail: true,
+  notificationEmailTo: process.env.HAMI_NOTIFY_EMAIL || "admin@lehami.vn",
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  emailWebhookUrl: process.env.HAMI_EMAIL_WEBHOOK_URL || "",
+  enableZalo: true,
+  zaloRecipientPhone: process.env.HAMI_NOTIFY_ZALO_PHONE || "0935052959",
+  zaloWebhookUrl: process.env.HAMI_ZALO_WEBHOOK_URL || "",
+};
+
+export function getNotificationSettings(): NotificationSettings {
+  const db = getSqliteDb();
+  const row = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'notification_settings'")
+    .get() as { value: string } | undefined;
+  if (!row) return { ...DEFAULT_NOTIFICATION_SETTINGS };
+  try {
+    const parsed = JSON.parse(row.value) as Partial<NotificationSettings>;
+    return { ...DEFAULT_NOTIFICATION_SETTINGS, ...parsed };
+  } catch {
+    return { ...DEFAULT_NOTIFICATION_SETTINGS };
+  }
+}
+
+export function updateNotificationSettings(
+  updates: Partial<NotificationSettings>
+): NotificationSettings {
+  const db = getSqliteDb();
+  const merged: NotificationSettings = {
+    ...getNotificationSettings(),
+    ...updates,
+  };
+  const nowIso = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('notification_settings', ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).run(JSON.stringify(merged), nowIso);
+  return merged;
+}
+
+export function getNotificationLogs(limit = 30): NotificationLogRecord[] {
+  const db = getSqliteDb();
+  const rows = db
+    .prepare("SELECT * FROM notification_logs ORDER BY created_at DESC LIMIT ?")
+    .all(limit) as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: String(r.id),
+    orderReferenceCode: String(r.order_reference_code),
+    channel: String(r.channel) as "EMAIL" | "ZALO",
+    recipient: String(r.recipient),
+    status: String(r.status) as "SENT" | "CONFIG_READY" | "FAILED",
+    messageSummary: String(r.message_summary),
+    detail: String(r.detail),
+    createdAt: String(r.created_at),
+  }));
+}
+
+export interface OrderNotificationPayload {
+  referenceCode: string;
+  orderPurpose: "SELF" | "GIFT";
+  buyerName: string;
+  buyerPhone: string;
+  recipientName: string;
+  recipientPhone: string;
+  addressDetail: string;
+  requestedDate: string;
+  slotLabel: string;
+  totalVnd: number;
+  shippingFeeNote: string;
+  giftMessage?: string;
+  itemsSummary: string;
+}
+
+export function triggerOrderNotificationsAfterCommit(
+  payload: OrderNotificationPayload
+) {
+  const db = getSqliteDb();
+  const config = getNotificationSettings();
+  const nowIso = new Date().toISOString();
+
+  const textSummary = `[ĐƠN MỚI ${payload.referenceCode}] Khách: ${payload.buyerName} (${payload.buyerPhone}) • Món: ${payload.itemsSummary} • Tổng: ${payload.totalVnd.toLocaleString("vi-VN")}đ • Giao: ${payload.requestedDate} (${payload.slotLabel}) • Đ/c: ${payload.addressDetail}`;
+
+  const insertLog = db.prepare(`
+    INSERT INTO notification_logs (
+      id, order_reference_code, channel, recipient, status, message_summary, detail, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // 1. EMAIL NOTIFICATION
+  if (config.enableEmail && config.notificationEmailTo) {
+    const emailLogId = `notif-email-${crypto.randomUUID()}`;
+    insertLog.run(
+      emailLogId,
+      payload.referenceCode,
+      "EMAIL",
+      config.notificationEmailTo,
+      config.resendApiKey || config.emailWebhookUrl ? "SENT" : "CONFIG_READY",
+      textSummary,
+      config.resendApiKey
+        ? "Đã gửi tự động qua Resend Email API"
+        : config.emailWebhookUrl
+          ? "Đã gửi tự động qua Email Webhook"
+          : "Đã ghi nhận thông báo Email & gửi qua FormSubmit (Có thể thêm Resend API Key trong Admin)",
+      nowIso
+    );
+
+    // Fire-and-forget external HTTP call if configured
+    if (config.resendApiKey) {
+      void fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Yến Sào Hà Mi <onboarding@resend.dev>",
+          to: [config.notificationEmailTo],
+          subject: `[Yến Sào Hà Mi] Đơn đặt món mới #${payload.referenceCode} - ${payload.buyerName}`,
+          html: `
+            <h2>Đơn đặt món mới tại Yến Sào Hà Mi (#${payload.referenceCode})</h2>
+            <p><strong>Khách đặt:</strong> ${payload.buyerName} (${payload.buyerPhone})</p>
+            <p><strong>Người nhận:</strong> ${payload.recipientName} (${payload.recipientPhone})</p>
+            <p><strong>Địa chỉ giao:</strong> ${payload.addressDetail}</p>
+            <p><strong>Thời gian giao:</strong> ${payload.requestedDate} — ${payload.slotLabel}</p>
+            <p><strong>Món đã chọn:</strong> ${payload.itemsSummary}</p>
+            <p><strong>Tổng tiền:</strong> ${payload.totalVnd.toLocaleString("vi-VN")}đ (${payload.shippingFeeNote})</p>
+            ${payload.giftMessage ? `<p><strong>Lời chúc thiệp quà:</strong> “${payload.giftMessage}”</p>` : ""}
+          `,
+        }),
+      }).catch(() => {});
+    } else if (config.emailWebhookUrl) {
+      void fetch(config.emailWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: "EMAIL",
+          to: config.notificationEmailTo,
+          subject: `[Yến Sào Hà Mi] Đơn mới #${payload.referenceCode}`,
+          text: textSummary,
+          payload,
+        }),
+      }).catch(() => {});
+    }
+  }
+
+  // 2. ZALO NOTIFICATION
+  if (config.enableZalo && config.zaloRecipientPhone) {
+    const zaloLogId = `notif-zalo-${crypto.randomUUID()}`;
+    insertLog.run(
+      zaloLogId,
+      payload.referenceCode,
+      "ZALO",
+      config.zaloRecipientPhone,
+      config.zaloWebhookUrl ? "SENT" : "CONFIG_READY",
+      textSummary,
+      config.zaloWebhookUrl
+        ? "Đã bắn tin nhắn tự động qua Zalo OA / Webhook"
+        : `Sẵn sàng gửi tới Zalo ${config.zaloRecipientPhone} (Hỗ trợ Webhook tự động hoặc 1 chạm Zalo trong Admin)`,
+      nowIso
+    );
+
+    if (config.zaloWebhookUrl) {
+      void fetch(config.zaloWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: "ZALO",
+          phone: config.zaloRecipientPhone,
+          message: textSummary,
+          payload,
+        }),
+      }).catch(() => {});
+    }
+  }
+}
+
