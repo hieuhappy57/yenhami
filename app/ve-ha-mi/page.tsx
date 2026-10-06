@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function VeHaMiPage() {
   return (
-    <div className="max-w-[1060px] mx-auto px-4 pr-16 md:pr-4 py-10 md:py-14 space-y-10">
+    <div className="max-w-[1060px] mx-auto px-4 py-10 md:py-14 space-y-10">
       {/* 1. Hero Story */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border-b border-[#155132]/15 pb-8">
         <div className="lg:col-span-7 space-y-3.5">

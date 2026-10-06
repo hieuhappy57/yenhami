@@ -59,7 +59,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 pr-16 md:pr-4 py-8 md:py-12">
+    <div className="max-w-[1200px] mx-auto px-4 py-8 md:py-12">
       <div className="mb-6">
         <Link
           href="/yen-tuoi-chung-nong"
@@ -258,7 +258,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
                   </div>
                 </div>
 
-                {/* Primary CTAs (padded away from right rail on mobile via parent pr-16) */}
+                {/* Primary CTAs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
                   <button
                     type="button"

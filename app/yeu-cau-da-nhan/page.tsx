@@ -62,7 +62,7 @@ export default async function YeuCauDaNhanPage({
       : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 pr-16 md:pr-6 lg:py-14">
+    <div className="mx-auto max-w-3xl px-4 py-10 lg:py-14">
       {order ? (
         <div
           data-testid="order-confirmation-card"

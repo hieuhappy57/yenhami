@@ -60,7 +60,7 @@ export function CatalogProductLinesSection({
   };
 
   return (
-    <div className="space-y-8 md:space-y-12 py-6 md:py-10 pl-3 pr-16 sm:px-4 sm:pr-16 xl:px-4 max-w-[1200px] mx-auto border-t border-[#BD9342]/25">
+    <div className="space-y-8 md:space-y-12 py-6 md:py-10 px-3 sm:px-4 max-w-[1200px] mx-auto border-t border-[#BD9342]/25">
       {/* 1. SET QUÀ TẶNG YẾN SÀO THƯỢNG HẠNG (MẪU THỰC TẾ) */}
       <section
         id="danh-muc-set-qua"

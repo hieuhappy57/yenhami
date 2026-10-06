@@ -19,7 +19,7 @@ export default function LienHePage() {
   const slots = getDeliverySlots({ requestedDate: tomorrow });
 
   return (
-    <div className="max-w-[1100px] mx-auto px-4 pr-16 md:pr-4 py-10 md:py-14 space-y-10">
+    <div className="max-w-[1100px] mx-auto px-4 py-10 md:py-14 space-y-10">
       <div className="border-b border-[#155132]/15 pb-6 space-y-2">
         <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-3 py-1 rounded-full">
           Phạm vi phục vụ & Liên hệ

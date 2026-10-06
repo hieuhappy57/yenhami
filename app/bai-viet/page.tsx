@@ -9,7 +9,7 @@ export default function BaiVietPage() {
   const posts = getAllPosts(true);
 
   return (
-    <div className="mx-auto max-w-[1280px] px-4 py-10 pr-16 md:px-8 md:pr-20">
+    <div className="mx-auto max-w-[1280px] px-4 py-10 md:px-8">
       <div className="rounded-3xl border border-[#BD9342]/35 bg-[#FFFCF4] p-6 sm:p-10">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#155132]/10 border border-[#BD9342]/45 px-3.5 py-1 text-xs font-semibold text-[#155132]">
           <Sparkles className="h-3.5 w-3.5 text-[#BD9342]" />

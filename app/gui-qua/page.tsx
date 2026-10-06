@@ -20,7 +20,7 @@ export default function GuiQuaPage() {
 
   return (
     <div className="space-y-8 pb-8">
-      <section className="bg-[#FFFCF4] border-b border-[#BD9342]/35 py-10 md:py-14 px-4 pr-16 md:pr-4">
+      <section className="bg-[#FFFCF4] border-b border-[#BD9342]/35 py-10 md:py-14 px-4">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#BD9342]/50 px-3 py-1 text-xs font-semibold text-[#8A6632]">

@@ -118,7 +118,7 @@ export default function HomePage() {
         aria-label="Điểm cốt lõi Yến Sào Hà Mi"
         className="border-y border-[#BD9342]/25 bg-[#FFFCF4]/60 py-8 md:py-10"
       >
-        <div className="max-w-[1200px] mx-auto px-4 pr-16 xl:pr-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="max-w-[1200px] mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
           {HIGHLIGHTS.map((item) => {
             const Icon = item.icon;
             return (
@@ -144,7 +144,7 @@ export default function HomePage() {
       {/* 4. MỘT MỤC GỬI QUÀ GỌN */}
       <section
         aria-labelledby="gifting-heading"
-        className="py-8 md:py-12 px-4 pr-16 xl:pr-4 max-w-[1200px] mx-auto"
+        className="py-8 md:py-12 px-4 max-w-[1200px] mx-auto"
       >
         <div className="rounded-lg bg-[#FFFCF4] border border-[#BD9342]/35 overflow-hidden grid grid-cols-1 md:grid-cols-12 items-center">
           <div className="md:col-span-5 h-[220px] sm:h-[260px]">
@@ -188,7 +188,7 @@ export default function HomePage() {
       {latestPosts.length > 0 && (
         <section
           aria-labelledby="blog-home-heading"
-          className="py-6 md:py-10 px-4 pr-16 xl:pr-4 max-w-[1200px] mx-auto"
+          className="py-6 md:py-10 px-4 max-w-[1200px] mx-auto"
         >
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -253,7 +253,7 @@ export default function HomePage() {
       {/* 5. FAQ 3 CÂU NGẮN (Đóng mặc định) */}
       <section
         aria-labelledby="faq-heading"
-        className="py-6 md:py-10 px-4 pr-16 xl:pr-4 max-w-[1200px] mx-auto"
+        className="py-6 md:py-10 px-4 max-w-[1200px] mx-auto"
       >
         <div className="max-w-2xl mx-auto">
           <h2

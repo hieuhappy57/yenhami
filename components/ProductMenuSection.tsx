@@ -57,7 +57,7 @@ export function ProductMenuSection({
     <section
       id="menu-chu-luc"
       aria-labelledby="menu-section-heading"
-      className="py-4 md:py-10 pl-3 pr-16 sm:px-4 sm:pr-16 xl:px-4 max-w-[1200px] mx-auto"
+      className="py-4 md:py-10 px-3 sm:px-4 max-w-[1200px] mx-auto"
     >
       {/* Compact Header + Single-Row Horizontal Filter */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 mb-3.5 md:mb-5">

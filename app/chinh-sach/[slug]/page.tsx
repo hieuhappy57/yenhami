@@ -111,7 +111,7 @@ export default async function PolicyDetailPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pr-16 md:pr-4 py-10 md:py-14 space-y-8">
+    <div className="max-w-3xl mx-auto px-4 py-10 md:py-14 space-y-8">
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[#155132] hover:underline"

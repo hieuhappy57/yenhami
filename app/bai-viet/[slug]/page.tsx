@@ -28,7 +28,7 @@ export default async function BaiVietDetailPage({
     .filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 pr-16 md:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-10 md:px-8">
       <Link
         href="/bai-viet"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155132] hover:text-[#8A6632]"

@@ -274,7 +274,7 @@ export function OrderRequestClient({
   };
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-4 pr-16 md:pr-6 xl:px-4 lg:py-8">
+    <div className="mx-auto max-w-[760px] px-4 py-4 lg:py-8">
       {/* Compact Page Title */}
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h1 className="font-serif-display text-xl font-bold text-[#155132] sm:text-2xl">
