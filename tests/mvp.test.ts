@@ -42,7 +42,7 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
           productId: "prod-thanh-nguyen",
           variantId: "prod-thanh-nguyen-var-standard",
           quantity: 2,
-          clientExpectedUnitPriceVnd: 50000, // Real price is 185,000đ
+          clientExpectedUnitPriceVnd: 50000, // Real price is 295,000đ
         },
       ],
       zoneId: "zone-hai-chau",
@@ -67,9 +67,9 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
       now: fixedNow,
     });
     assert.equal(valid.ok, true);
-    assert.equal(valid.subtotalVnd, 370000);
+    assert.equal(valid.subtotalVnd, 590000);
     assert.equal(valid.shippingFeeVnd, 0);
-    assert.equal(valid.totalVnd, 370000);
+    assert.equal(valid.totalVnd, 590000);
     assert.equal(valid.isTotalFinal, true);
   });
 

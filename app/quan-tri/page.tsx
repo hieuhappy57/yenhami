@@ -157,7 +157,7 @@ const ORDER_STATUS_OPTIONS: {
   },
   {
     value: "CANCELLED",
-    label: "Đã hủy (Trả chỗ ca bếp)",
+    label: "Đã hủy (Hoàn trả hạn mức khung giờ)",
     badgeClass: "bg-rose-100 text-rose-900 border-rose-300",
   },
 ];
@@ -929,7 +929,7 @@ export default function QuanTriPage() {
           active: activeSection === "catalog" && Boolean(editingProduct),
         },
         {
-          label: "Khung giờ Ca bếp",
+          label: "Khung giờ Giao hàng",
           onClick: () => setActiveSection("slots"),
           active: activeSection === "slots",
         },
@@ -2262,7 +2262,7 @@ export default function QuanTriPage() {
           )}
 
           {/* ================================================================= */}
-          {/* SECTION 2B: KHUNG GIỜ CA BẾP (08:00 - 21:00)                      */}
+          {/* SECTION 2B: KHUNG GIỜ GIAO HÀNG (08:00 - 21:00)                   */}
           {/* ================================================================= */}
           {activeSection === "slots" && (
             <div className="space-y-5">

@@ -8,14 +8,16 @@ import {
   syncDbFromCloud,
 } from "@/db";
 import { OrderRequestClient } from "@/components/OrderRequestClient";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Đặt món | Yến Sào Hà Mi",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Đặt Món Yến Tươi Chưng Nóng & Set Quà Biếu Giao Ngay 2H",
   description:
-    "Chọn món yến tươi chưng nóng, khu vực giao hàng, khung giờ nhận món và thiệp quà tặng. Hà Mi sẽ liên hệ xác nhận lịch chưng nóng.",
-};
+    "Chọn món yến tươi chưng nóng thố sứ 200ml, khu vực giao hàng tại Đà Nẵng, khung giờ nhận món (08:00 – 21:00) và thiệp quà tặng viết tay. Hà Mi liên hệ xác nhận lịch chưng nóng.",
+  path: "/dat-hang",
+});
 
 export default async function DatHangPage() {
   await syncDbFromCloud();

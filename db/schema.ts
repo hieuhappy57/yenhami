@@ -233,6 +233,7 @@ export interface PostRecord {
   excerpt: string;
   content: string;
   coverImageUrl: string;
+  coverImageAlt?: string;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;

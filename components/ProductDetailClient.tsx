@@ -101,12 +101,12 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
               </span>
               {product.status === "AVAILABLE" && (
                 <span className="text-xs font-semibold text-[#155132] bg-[#DBF1EE]/80 px-2.5 py-1 rounded">
-                  Phục vụ theo ca bếp
+                  Chưng tươi thủ công • Giao ngay trong 2H
                 </span>
               )}
               {product.status === "OUT_OF_STOCK" && (
                 <span className="text-xs font-semibold text-white bg-amber-800 px-2.5 py-1 rounded">
-                  Tạm hết ca này
+                  Tạm hết trong ngày
                 </span>
               )}
               {product.status === "PENDING_DATA_APPROVAL" && (
@@ -121,7 +121,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
             </h1>
 
             {/* Price Box */}
-            <div className="p-4 rounded-lg bg-[#FFFCF4] border border-[#BD9342]/45">
+            <div className="p-4 rounded-lg bg-[#FFFCF4] border border-[#BD9342]/45 space-y-2">
               {unitPrice !== null ? (
                 <div className="flex flex-wrap items-baseline gap-2.5">
                   <span
@@ -131,7 +131,9 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
                     {unitPrice.toLocaleString("vi-VN")}đ
                   </span>
                   <span className="text-xs font-semibold text-[#8A6632] bg-white border border-[#BD9342]/40 px-2 py-0.5 rounded">
-                    Giá mẫu • Thố {product.volumeMl}ml
+                    {product.volumeMl === 200
+                      ? "Thố sứ 200ml (35g yến tươi) • Giao nóng 2H"
+                      : `Quy cách ${product.volumeMl}ml • Chuẩn ISO 22000 & FDA`}
                   </span>
                 </div>
               ) : (
@@ -140,6 +142,9 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
                   tuyến.
                 </p>
               )}
+              <p className="text-xs text-[#155132] font-medium leading-relaxed">
+                ✨ Dù là mẹ bầu cần thêm dưỡng chất, ông bà lớn tuổi, hay người đang hồi phục sau bệnh, yến chưng nóng luôn là món quà ấm lòng – ngon miệng – dễ hấp thu!
+              </p>
             </div>
 
             <p className="text-base text-[#2B433A] leading-relaxed">{product.shortDescription}</p>

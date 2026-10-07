@@ -4,14 +4,17 @@ import Link from "next/link";
 import { Clock, MapPin, MessageCircle, PhoneCall } from "lucide-react";
 import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr } from "@/db";
 import { BRAND_CONFIG } from "@/config/brand";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Liên Hệ & Khu Vực Giao Yến Chưng Nóng | Yến Sào Hà Mi",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Liên Hệ & Khu Vực Giao Yến Chưng Nóng 2H Tại Đà Nẵng",
   description:
-    "Tra cứu phạm vi phục vụ giao nóng tại Đà Nẵng, khung giờ các ca bếp và kênh liên hệ chính thức của Yến Sào Hà Mi.",
-};
+    "Tra cứu phạm vi phục vụ giao nóng trong 2H tại Đà Nẵng, khung giờ phục vụ (08:00 – 21:00) và kênh liên hệ Hotline/Zalo chính thức của Yến Sào Hà Mi.",
+  path: "/lien-he",
+});
 
 export default function LienHePage() {
   const zones = getServiceZones();
@@ -20,16 +23,21 @@ export default function LienHePage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 py-10 md:py-14 space-y-10">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Liên hệ & Khu vực giao nhận", path: "/lien-he" },
+        ]}
+      />
       <div className="border-b border-[#155132]/15 pb-6 space-y-2">
         <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-3 py-1 rounded-full">
           Phạm vi phục vụ & Liên hệ
         </span>
         <h1 className="font-serif-display text-3xl sm:text-4xl font-semibold text-[#155132]">
-          Khu Vực Giao Nóng & Kênh Liên Hệ Hà Mi
+          Khu Vực Giao Nóng 2H & Kênh Liên Hệ Hà Mi
         </h1>
         <p className="text-sm sm:text-base text-[#2B433A]/90 max-w-2xl">
-          Để thố yến giữ được độ ấm khi trao tay, Hà Mi phân chia khu vực giao nhận tại
-          Đà Nẵng và phục vụ theo các khung giờ ca bếp cố định trong ngày.
+          Để thố yến giữ trọn độ ấm nóng và hương thơm khi trao tay, Hà Mi chưng thủ công tươi mới ngay khi nhận đơn và giao ấm nóng trong vòng 2 giờ tại Đà Nẵng.
         </p>
       </div>
 
@@ -83,10 +91,10 @@ export default function LienHePage() {
           <div className="rounded-2xl border border-[#155132]/15 bg-white p-5 space-y-3 shadow-xs">
             <h2 className="flex items-center gap-2 font-serif-display text-xl font-semibold text-[#155132]">
               <Clock className="w-5 h-5 text-[#BD9342]" />
-              <span>Khung giờ ca bếp trong ngày</span>
+              <span>Khung giờ giao nóng trong ngày</span>
             </h2>
             <p className="text-xs text-[#2B433A]/85">
-              Lịch mẫu cho ngày mai ({tomorrow}):
+              Khung giờ phục vụ cho ngày mai ({tomorrow}):
             </p>
             <div className="space-y-2">
               {slots.map((slot) => (

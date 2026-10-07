@@ -5,14 +5,18 @@ import { Gift, Heart, CheckCircle2, Sparkles } from "lucide-react";
 import { getAllProducts } from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Set Quà Biếu Yến Sào Thượng Hạng & Thiệp Viết Tay | Yến Sào Hà Mi",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Set Quà Biếu Yến Sào Thượng Hạng & Thiệp Viết Tay",
   description:
-    "Gửi trao Set Quà Yến Sào Thượng Hạng 6 vị, Thố Yến Tươi Chưng Nóng và Yến Sào Tinh Chế cao cấp kèm thiệp viết tay và tùy chọn ẩn giá.",
-};
+    "Gửi trao Set Quà Yến Sào Thượng Hạng 6 vị, Thố Yến Tươi Chưng Nóng và Yến Sào Tinh Chế cao cấp kèm thiệp viết tay và tùy chọn ẩn giá trên phiếu giao tại Đà Nẵng.",
+  path: "/gui-qua",
+  image: "/brand/catalog/set-qua-hop-sen-en.jpg",
+});
 
 export default function GuiQuaPage() {
   const products = getAllProducts();
@@ -20,6 +24,12 @@ export default function GuiQuaPage() {
 
   return (
     <div className="space-y-8 pb-8">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Set quà biếu sức khỏe", path: "/gui-qua" },
+        ]}
+      />
       <section className="bg-[#FFFCF4] border-b border-[#BD9342]/35 py-10 md:py-14 px-4">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">

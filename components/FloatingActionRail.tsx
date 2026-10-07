@@ -120,6 +120,12 @@ export function FloatingActionRail() {
         </div>
       )}
 
+      {/* Badge Giao Nóng 2H */}
+      <div className="inline-flex items-center gap-1 rounded-full bg-[#155132] text-[#FFFCF4] border border-[#BD9342] px-2.5 py-1 text-[10px] sm:text-[11px] font-bold shadow-md">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#BD9342] animate-pulse" aria-hidden="true" />
+        <span>Giao Nóng 2H</span>
+      </div>
+
       {/* 1. Nút Đặt hàng (Chỉ hiện trên Desktop vì Mobile đã có Giỏ hàng Header + Thanh nổi dưới đáy) */}
       <div className="group relative hidden md:flex items-center">
         <span
@@ -148,21 +154,49 @@ export function FloatingActionRail() {
         </button>
       </div>
 
-      {/* 2. Nút Nhắn tin Zalo */}
+      {/* 1B. Nút Gọi Hotline 0935 052 959 (Mobile & Desktop) */}
+      <div className="group relative flex items-center">
+        <span
+          role="tooltip"
+          className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#155132] px-3 py-1.5 text-xs font-semibold text-[#FFFCF4] shadow-md border border-[#BD9342]"
+        >
+          Hotline Giao Nóng 2H: {BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}
+        </span>
+        <a
+          href={`tel:${BRAND_CONFIG.contact.hotlineTel || "0935052959"}`}
+          data-testid="rail-btn-hotline"
+          aria-label={`Gọi Hotline Giao Nóng 2H ${BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}`}
+          title={`Hotline Giao Nóng 2H: ${BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}`}
+          className="relative flex items-center gap-1.5 min-h-[44px] px-3 md:px-3.5 py-2 rounded-full bg-[#155132] text-[#FFFCF4] border-2 border-[#BD9342] shadow-lg hover:bg-[#0e3b23] transition-colors"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4 h-4 md:w-5 md:h-5 text-[#BD9342] shrink-0 fill-current"
+            aria-hidden="true"
+          >
+            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z" />
+          </svg>
+          <span className="text-[11px] sm:text-xs font-bold tracking-tight whitespace-nowrap">
+            {BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}
+          </span>
+        </a>
+      </div>
+
+      {/* 2. Nút Nhắn tin Zalo OA */}
       <div className="group relative flex items-center">
         <span
           role="tooltip"
           className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#2B433A] px-3 py-1.5 text-xs font-medium text-white shadow-md"
         >
-          Nhắn tin Zalo Yến Sào Hà Mi
+          Zalo OA Yến Sào Hà Mi • Giao Nóng 2H
         </span>
         <button
           type="button"
           onClick={handleZaloClick}
           data-testid="rail-btn-zalo"
-          aria-label="Nhắn tin Zalo Yến Sào Hà Mi"
-          title="Nhắn tin Zalo Yến Sào Hà Mi"
-          className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border border-[#155132]/25 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
+          aria-label="Nhắn tin Zalo OA Yến Sào Hà Mi - Giao Nóng 2H"
+          title="Nhắn tin Zalo OA Yến Sào Hà Mi - Giao Nóng 2H"
+          className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border-2 border-[#0068FF]/60 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
         >
           <svg
             viewBox="0 0 40 40"

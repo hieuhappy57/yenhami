@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { buildPageMetadata } from "@/config/seo";
 
 const POLICIES: Record<
   string,
@@ -13,17 +14,17 @@ const POLICIES: Record<
   }
 > = {
   "giao-nhan": {
-    title: "Chính Sách Giao Nhận & Giữ Ấm",
+    title: "Chính Sách Giao Nhận & Giữ Ấm 2H",
     subtitle:
-      "Quy định về vùng phục vụ giao nóng, khung giờ ca bếp và bảo quản thố yến sứ 200ml.",
+      "Quy định về vùng phục vụ giao nóng trong 2 giờ, ưu đãi miễn phí giao hàng và bảo quản thố yến sứ 200ml.",
     sections: [
       {
-        heading: "1. Giao theo khung giờ ca bếp đã xác nhận",
-        body: "Yến Tươi Chưng Nóng được chưng mới theo từng ca bếp. Thời gian giao hàng thực tế chỉ được ấn định sau khi nhân viên Hà Mi liên hệ xác nhận yêu cầu đặt món với khách hàng.",
+        heading: "1. Chưng mới theo đơn & Giao ấm nóng trong 2 giờ",
+        body: "Yến Tươi Chưng Nóng (35g yến tươi thật/thố 200ml) được chưng thủ công mới ngay khi nhận đơn và giao ấm nóng trong vòng 2 giờ tại Đà Nẵng. Đặt từ 2 thố trở lên được miễn phí giao hàng trong bán kính 5km.",
       },
       {
         heading: "2. Phân vùng phục vụ tại Đà Nẵng",
-        body: "Khu vực trung tâm được áp dụng biểu phí giao tiêu chuẩn. Với các khu vực xa trung tâm (như Cẩm Lệ, Liên Chiểu), Hà Mi tiếp nhận yêu cầu và báo phí giao thực tế khi gọi xác nhận. Các khu vực ngoài bán kính giữ nóng tiêu chuẩn sẽ được thông báo rõ để khách hàng chủ động.",
+        body: "Khu vực trung tâm được áp dụng biểu phí giao tiêu chuẩn (miễn phí khi đặt từ 2 thố trong bán kính 5km). Với các khu vực xa trung tâm (như Cẩm Lệ, Liên Chiểu), Hà Mi tiếp nhận yêu cầu và báo phí giao thực tế khi gọi xác nhận. Các khu vực ngoài bán kính giữ nóng tiêu chuẩn sẽ được thông báo rõ để khách hàng chủ động.",
       },
       {
         heading: "3. Kiểm tra khi nhận hàng",
@@ -38,7 +39,7 @@ const POLICIES: Record<
     sections: [
       {
         heading: "1. Chưa thu tiền tự động khi gửi yêu cầu",
-        body: "Để tránh trường hợp ca bếp đã đầy hoặc địa chỉ nằm ngoài vùng giao nóng, website Yến Sào Hà Mi không tự động thu tiền trực tuyến tại bước gửi biểu mẫu.",
+        body: "Để đảm bảo khung giờ giao hàng thuận tiện nhất và kiểm tra địa chỉ thuộc vùng giao nóng, website Yến Sào Hà Mi không tự động thu tiền trực tuyến tại bước gửi biểu mẫu.",
       },
       {
         heading: "2. Xác nhận tổng tiền tại máy chủ",
@@ -53,11 +54,11 @@ const POLICIES: Record<
     sections: [
       {
         heading: "1. Thay đổi hoặc hủy trước khi bếp chưng",
-        body: "Vì sản phẩm là Yến Tươi Chưng Nóng chế biến mới theo đơn, khách hàng có thể thay đổi khẩu vị, giờ giao hoặc hủy yêu cầu hoàn toàn miễn phí khi đơn đang ở trạng thái 'Chờ Hà Mi xác nhận' hoặc trước khi bếp bắt đầu chưng.",
+        body: "Vì sản phẩm là Yến Tươi Chưng Nóng chế biến mới ngay khi nhận đơn, khách hàng có thể thay đổi khẩu vị, giờ giao hoặc hủy yêu cầu hoàn toàn miễn phí khi đơn đang ở trạng thái 'Chờ Hà Mi xác nhận' hoặc trước khi bếp bắt đầu chưng.",
       },
       {
-        heading: "2. Giải phóng năng lực ca bếp",
-        body: "Khi một yêu cầu được hủy hợp lệ, hệ thống tự động hoàn trả số lượng thố vào hạn mức của ca bếp trong ngày đó để phục vụ các khách hàng khác.",
+        heading: "2. Giải phóng hạn mức khung giờ giao hàng",
+        body: "Khi một yêu cầu được hủy hợp lệ, hệ thống tự động hoàn trả số lượng thố vào hạn mức của khung giờ giao hàng trong ngày đó để phục vụ các khách hàng khác.",
       },
     ],
   },
@@ -90,12 +91,17 @@ export async function generateMetadata({
   const { slug } = await params;
   const policy = POLICIES[slug];
   if (!policy) {
-    return { title: "Chính sách phục vụ | Yến Sào Hà Mi" };
+    return buildPageMetadata({
+      title: "Chính Sách Phục Vụ",
+      description: "Quy định giao nhận, thanh toán và bảo mật tại Yến Sào Hà Mi.",
+      path: `/chinh-sach/${slug}`,
+    });
   }
-  return {
-    title: `${policy.title} | Yến Sào Hà Mi`,
+  return buildPageMetadata({
+    title: policy.title,
     description: policy.subtitle,
-  };
+    path: `/chinh-sach/${slug}`,
+  });
 }
 
 export default async function PolicyDetailPage({

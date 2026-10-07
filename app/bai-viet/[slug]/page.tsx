@@ -1,10 +1,43 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Sparkles } from "lucide-react";
 import { getAllPosts, getPostBySlug, syncDbFromCloud } from "@/db";
+import { ArticleJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  await syncDbFromCloud();
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+
+  if (!post) {
+    return buildPageMetadata({
+      title: "Bài viết & Cẩm nang Yến Sào",
+      description:
+        "Chia sẻ kiến thức dinh dưỡng yến tươi chưng nóng, cách dùng tổ yến hiệu quả và gợi ý chọn quà biếu sức khỏe từ Yến Sào Hà Mi.",
+      path: `/bai-viet/${slug}`,
+    });
+  }
+
+  return buildPageMetadata({
+    title: post.title,
+    description: post.excerpt || post.title,
+    path: `/bai-viet/${post.slug}`,
+    image: post.coverImageUrl,
+    type: "article",
+    publishedTime: post.createdAt,
+    modifiedTime: post.updatedAt || post.createdAt,
+    keywords: [post.category.toLowerCase(), post.title.toLowerCase()],
+  });
+}
 
 export default async function BaiVietDetailPage({
   params,
@@ -30,6 +63,7 @@ export default async function BaiVietDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 md:px-8">
+      <ArticleJsonLd post={post} />
       <Link
         href="/bai-viet"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155132] hover:text-[#8A6632]"
@@ -43,7 +77,7 @@ export default async function BaiVietDetailPage({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={post.coverImageUrl}
-            alt={post.title}
+            alt={post.coverImageAlt || post.title}
             className="h-full w-full object-cover"
           />
         </div>
@@ -111,7 +145,7 @@ export default async function BaiVietDetailPage({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={rel.coverImageUrl}
-                  alt={rel.title}
+                  alt={rel.coverImageAlt || rel.title}
                   className="h-20 w-24 rounded-xl object-cover shrink-0"
                 />
                 <div>

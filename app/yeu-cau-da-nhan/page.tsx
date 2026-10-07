@@ -11,14 +11,17 @@ import {
 import { getOrderRequestByReference, syncDbFromCloud } from "@/db";
 import type { OrderStatus, PaymentStatus } from "@/db/schema";
 import { OrderConfirmationClientFallback } from "@/components/OrderConfirmationClientFallback";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Đã Nhận Yêu Cầu Đặt Yến | Yến Sào Hà Mi",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Đã Nhận Yêu Cầu Đặt Yến",
   description:
     "Yêu cầu đặt Yến Tươi Chưng Nóng của bạn đã được hệ thống Hà Mi ghi nhận và đang chờ nhân viên liên hệ xác nhận.",
-};
+  path: "/yeu-cau-da-nhan",
+  noIndex: true,
+});
 
 const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING_CONFIRMATION: "Chờ Hà Mi xác nhận",

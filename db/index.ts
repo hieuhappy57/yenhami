@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import {
   DEMO_DELIVERY_SLOTS,
+  DEMO_POSTS,
   DEMO_PRODUCTS,
   DEMO_SERVICE_ZONES,
   DEMO_VARIANTS,
@@ -520,47 +521,32 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     }
   }
 
-  // Seed initial blog posts if posts table is empty
-  const postCnt = db.prepare("SELECT COUNT(*) as cnt FROM posts").get() as { cnt: number };
-  if (postCnt.cnt === 0) {
-    const nowIso = new Date().toISOString();
-    const insertPost = db.prepare(`
-      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertPost.run(
-      "post-1",
-      "quy-trinh-chung-nong-yen-tuoi-ha-mi",
-      "Vì sao Yến Tươi Chưng Nóng trong thố sứ 200ml giữ trọn dưỡng chất?",
-      "Kiến thức yến sào",
-      "Khám phá quy trình chưng mới theo ca từ sợi yến tươi tuyển chọn và nước lọc RO tinh khiết tại bếp Yến Sào Hà Mi.",
-      "Tại Yến Sào Hà Mi, mỗi thố yến tươi 200ml được chưng mới theo khung giờ khách hẹn từ 08:00 sáng đến 21:00 đêm.\n\nNhờ kết hợp nguồn tổ yến Việt Nam có hàm lượng protein cao và hệ thống lọc nước tinh khiết RO đạt chuẩn ISO 22000:2018 & FDA Hoa Kỳ, từng sợi yến nở mềm tự nhiên, giữ trọn hương vị thanh khiết mà hoàn toàn không dùng chất bảo quản.",
-      "/brand/hero-editorial-clean.jpg",
-      1,
-      nowIso,
-      nowIso
-    );
-    insertPost.run(
-      "post-2",
-      "bo-suu-tap-set-qua-sen-vang-yen-sao-thuong-hang",
-      "Ra mắt Set Quà Hoa Sen Vàng & 6 Vị Yến Hũ Thượng Hạng Hà Mi",
-      "Tin tức Hà Mi",
-      "Món quà của sự an tâm, chạm đến sự bình yên — Thiết kế hộp quà Hoa Sen & Đàn Én ép kim sang trọng cho người thân và đối tác.",
-      "Bộ quà tặng Yến Sào Thượng Hạng Hà Mi quy tụ 6 hương vị tinh tuyển trong hũ thủy tinh tiệt trùng 75ml và 100ml: Đường Phèn, Gừng Tươi, Nhân Sâm, Đông Trùng Hạ Thảo, Tam Vị và Tứ Vị.\n\nMỗi hộp quà đều đi kèm túi xách đồng bộ, thiệp viết tay theo yêu cầu và tùy chọn ẩn giá trên phiếu giao quà.",
-      "/brand/catalog/set-qua-6-hu-6-vi.jpg",
-      1,
-      nowIso,
-      nowIso
-    );
-    insertPost.run(
-      "post-3",
-      "phan-biet-yen-sao-tinh-che-rut-long-chuan-xuat-khau",
-      "Bí quyết chọn Yến Sào Tinh Chế & Yến Rút Lông Định Hình chuẩn ISO 22000",
-      "Cẩm nang sức khỏe",
-      "Tìm hiểu kỹ thuật làm ẩm nhẹ và rút lông đại thủ công giúp tổ yến Hà Mi giữ nguyên cấu trúc sợi dài dày, không chất tẩy trắng.",
-      "Yến sào tinh chế tại Hà Mi được tuyển chọn từ những tổ yến thô nguyên bản, áp dụng kỹ thuật làm ẩm nhẹ và rút lông đại thủ công để hạn chế tối đa tiếp xúc với nước.\n\nSản phẩm được rửa bằng nước lọc RO tinh khiết và sấy khô đạt độ giòn tiêu chuẩn, cam kết 3 không: Không chất tẩy trắng, không chất độn (mủ trôm), không thêm muối hay đường.",
-      "/brand/catalog/yen-tinh-che-to-yen.jpg",
-      1,
+  // Ensure canonical SEO/GEO blog posts are always present
+  const nowIso = new Date().toISOString();
+  db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
+  const upsertCanonicalPost = db.prepare(`
+    INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      slug = excluded.slug,
+      title = excluded.title,
+      category = excluded.category,
+      excerpt = excluded.excerpt,
+      content = excluded.content,
+      cover_image_url = excluded.cover_image_url,
+      is_published = excluded.is_published,
+      updated_at = excluded.updated_at
+  `);
+  for (const post of DEMO_POSTS) {
+    upsertCanonicalPost.run(
+      post.id,
+      post.slug,
+      post.title,
+      post.category,
+      post.excerpt,
+      post.content,
+      post.coverImageUrl,
+      post.isPublished ? 1 : 0,
       nowIso,
       nowIso
     );
@@ -569,7 +555,6 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   // Seed initial job postings if job_postings table is empty
   const jobCnt = db.prepare("SELECT COUNT(*) as cnt FROM job_postings").get() as { cnt: number };
   if (jobCnt.cnt === 0) {
-    const nowIso = new Date().toISOString();
     const insertJob = db.prepare(`
       INSERT INTO job_postings (
         id, title, department, location, employment_type, salary_range,
@@ -578,13 +563,13 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     `);
     insertJob.run(
       "job-1",
-      "Chuyên viên Tư vấn Khách hàng & Quà tặng Doanh nghiệp (CSKH)",
+      "Chuyên viên Tư vấn Khách hàng & Quà tặng Sức khỏe (CSKH)",
       "Kinh doanh & CSKH",
       "Đà Nẵng",
       "Toàn thời gian",
       "8.000.000đ – 15.000.000đ + Thưởng doanh số",
-      "Tư vấn khách hàng đặt Yến Tươi Chưng Nóng, Yến Hũ Thượng Hạng và Set Quà Doanh Nghiệp qua Website, Zalo OA và Hotline. Phối hợp điều phối lịch giao hàng theo khung giờ 08:00 – 21:00.",
-      "Giao tiếp lịch sự, tận tâm; yêu thích ngành thực phẩm chăm sóc sức khỏe cao cấp; ưu tiên ứng viên có kinh nghiệm CSKH hoặc telesales.",
+      "Tư vấn khách hàng đặt Yến Tươi Chưng Nóng Giao Ngay 2H, Yến Hũ Thượng Hạng và Set Quà Sức Khỏe qua Website, Zalo OA và Hotline. Phối hợp điều phối lịch giao hàng theo khung giờ 08:00 – 21:00.",
+      "Giao tiếp lịch sự, tận tâm; yêu thích ngành thực phẩm chăm sóc sức khỏe gia đình; ưu tiên ứng viên có kinh nghiệm CSKH hoặc telesales.",
       "Ứng tuyển qua Hotline/Zalo: 0935 052 959 (Phòng Nhân sự Yến Sào Hà Mi)",
       1,
       nowIso,
@@ -592,12 +577,12 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     );
     insertJob.run(
       "job-2",
-      "Kỹ thuật viên Sơ chế Tổ Yến & Chưng Yến theo ca",
+      "Kỹ thuật viên Sơ chế Tổ Yến & Chưng Yến Thủ Công",
       "Bếp & Sản xuất ISO 22000",
       "Xã Xuân Phú / Trung tâm TP. Đà Nẵng",
-      "Toàn thời gian / Theo ca",
+      "Toàn thời gian",
       "7.500.000đ – 12.000.000đ",
-      "Thực hiện rút lông tổ yến tinh chế theo quy trình làm ẩm nhẹ chuẩn ISO 22000:2018 và chưng mới thố yến sứ 200ml theo đúng định lượng của bếp Hà Mi.",
+      "Thực hiện rút lông tổ yến tinh chế theo quy trình làm ẩm nhẹ chuẩn ISO 22000:2018 và chưng thủ công tươi nóng thố yến sứ 200ml (35g yến tươi) ngay khi nhận đơn của bếp Hà Mi.",
       "Cẩn thận, tỉ mỉ, tuân thủ nghiêm ngặt quy định vệ sinh an toàn thực phẩm; được đào tạo bài bản quy trình chuẩn của Hà Mi.",
       "Ứng tuyển qua Hotline/Zalo: 0935 052 959 — Địa chỉ: Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
       1,
@@ -742,7 +727,7 @@ export function getDeliverySlots(params?: {
 
     const remainingBowls = Math.max(0, maxCap - dateReserved);
     if (!unavailableReason && remainingBowls === 0) {
-      unavailableReason = "Ca bếp đã đầy cho ngày này";
+      unavailableReason = "Khung giờ đã đầy cho ngày này";
     }
 
     return {
@@ -2050,17 +2035,17 @@ export function deleteProductByStaff(productId: string) {
 // ============================================================================
 
 const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
-  heroBadge: "Tinh Hoa Yến Việt • ISO 22000 & FDA",
-  heroTitle: "Yến Sào Hà Mi",
+  heroBadge: "Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất",
+  heroTitle: "Yến Tươi Chưng Nóng Thố Sứ — Giao Ngay Trong 2H Tại Đà Nẵng",
   heroLead:
-    "Yến tươi chưng nóng theo ca, yến hũ thượng hạng 75ml–100ml và bộ quà tặng yến sào tinh tuyển.",
-  heroCta: "Chọn món",
+    "Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất. 35g yến tươi thật nguyên tổ trong thố sứ 200ml, chưng tươi theo yêu cầu, giao ấm nóng tận tay trong 2 giờ nội thành Đà Nẵng. Món quà bồi bổ trọn vẹn cho người bệnh, mẹ bầu và ông bà cao tuổi.",
+  heroCta: "Đặt Giao Nóng 2H - Từ 295.000đ",
   heroDesktopImage: "/brand/hero-desktop-clean.jpg",
   heroMobileImage: "/brand/hero-mobile-clean.jpg",
-  giftingBadge: "Món quà của sự an tâm, chạm đến sự bình yên",
-  giftingTitle: "Khẽ chạm vào miền an nhiên",
+  giftingBadge: "Món quà ấm lòng – Ngon miệng – Dễ hấp thu",
+  giftingTitle: "Gửi Trao Tình Thân & Sự An Tâm Trọn Vẹn",
   giftingDescription:
-    "Từ hộp quà Hoa Sen & Đàn Én 6 hũ thượng hạng, thố sứ chưng nóng giữ ấm đến hộp yến tinh chế cao cấp — kèm thiệp viết tay và tùy chọn ẩn giá tinh tế khi biếu tặng người thân, đối tác.",
+    "Dù là mẹ bầu cần thêm dưỡng chất, ông bà lớn tuổi, hay người đang hồi phục sau bệnh, yến chưng nóng luôn là món quà ấm lòng – ngon miệng – dễ hấp thu! Từ thố sứ 200ml chưng nóng giao ngay 2H, hộp quà Hoa Sen Vàng 6 hũ thượng hạng đến yến tinh chế cao cấp — kèm thiệp viết tay và tùy chọn ẩn giá tinh tế.",
   giftingImage: "/brand/catalog/set-qua-hop-sen-en.jpg",
   hotlineDisplay: "0935 052 959",
   hotlineTel: "0935052959",
@@ -2068,12 +2053,12 @@ const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
   addressDisplay: "Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
   serviceHoursDisplay: "08:00 – 21:00 hàng ngày",
   noticeBanner:
-    "Yến Sào Hà Mi • Đặt từ 2 thố/set miễn phí giao hàng • Khung giờ giao 08:00 – 21:00",
-  aboutHeadline: "Yến Sào Hà Mi — Chất Từng Sợi Yến",
+    "✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨",
+  aboutHeadline: "Yến Sào Hà Mi — Nóng Thơm Trọn Vị, Vẹn Nguyên Dưỡng Chất",
   aboutLead:
-    "Hà Mi toàn tâm toàn ý ghi lại tinh túy của thiên nhiên và giữ trọn dưỡng chất tự nhiên trong từng sợi yến để mang đến cho bạn và những người thân yêu sự bồi bổ thuần khiết trong từng ngụm yến.",
+    "Mỗi thố yến 200ml chứa đến 35g yến tươi thật, gói trọn hương vị tự nhiên và giá trị dinh dưỡng nguyên vẹn. Chưng thủ công tươi nóng ngay khi nhận đơn và giao ấm nóng tận tay trong 2 giờ tại Đà Nẵng.",
   aboutDiffBanner:
-    "Điều làm nên sự khác biệt của Hà Mi: YẾN SÀO THẬT – TINH KHIẾT – THƯỢNG HẠNG – DINH DƯỠNG CAO – LỢI ÍCH THỰC CHO SỨC KHỎE!",
+    "Dù là mẹ bầu cần thêm dưỡng chất, ông bà lớn tuổi, hay người đang hồi phục sau bệnh, yến chưng nóng luôn là món quà ấm lòng – ngon miệng – dễ hấp thu!",
 };
 
 export function getSiteContentSettings(): SiteContentSettings {
@@ -2084,7 +2069,23 @@ export function getSiteContentSettings(): SiteContentSettings {
   if (!row) return { ...DEFAULT_SITE_SETTINGS };
   try {
     const parsed = JSON.parse(row.value) as Partial<SiteContentSettings>;
-    return { ...DEFAULT_SITE_SETTINGS, ...parsed };
+    const merged: SiteContentSettings = { ...DEFAULT_SITE_SETTINGS, ...parsed };
+    // Auto-upgrade legacy copy if stored in DB or Cloud Gist
+    if (
+      merged.heroTitle === "Yến Sào Hà Mi" ||
+      merged.heroLead.includes("theo ca")
+    ) {
+      merged.heroBadge = DEFAULT_SITE_SETTINGS.heroBadge;
+      merged.heroTitle = DEFAULT_SITE_SETTINGS.heroTitle;
+      merged.heroLead = DEFAULT_SITE_SETTINGS.heroLead;
+    }
+    if (merged.heroCta === "Chọn món") {
+      merged.heroCta = DEFAULT_SITE_SETTINGS.heroCta;
+    }
+    if (merged.noticeBanner.includes("Khung giờ giao 08:00")) {
+      merged.noticeBanner = DEFAULT_SITE_SETTINGS.noticeBanner;
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_SITE_SETTINGS };
   }
@@ -2111,40 +2112,52 @@ export function updateSiteContentSettings(
 // ADMIN CMS: BLOG / ARTICLES (POSTS)
 // ============================================================================
 
+const POST_ALT_BY_SLUG = new Map<string, string>(
+  DEMO_POSTS.map((p) => [p.slug, p.coverImageAlt])
+);
+
 export function getAllPosts(onlyPublished = false): PostRecord[] {
   const db = getSqliteDb();
   const sql = onlyPublished
-    ? "SELECT * FROM posts WHERE is_published = 1 ORDER BY created_at DESC"
-    : "SELECT * FROM posts ORDER BY created_at DESC";
+    ? "SELECT * FROM posts WHERE is_published = 1 ORDER BY created_at DESC, id ASC"
+    : "SELECT * FROM posts ORDER BY created_at DESC, id ASC";
   const rows = db.prepare(sql).all() as Record<string, unknown>[];
-  return rows.map((r) => ({
-    id: String(r.id),
-    slug: String(r.slug),
-    title: String(r.title),
-    category: String(r.category),
-    excerpt: String(r.excerpt),
-    content: String(r.content),
-    coverImageUrl: String(r.cover_image_url),
-    isPublished: Boolean(r.is_published),
-    createdAt: String(r.created_at),
-    updatedAt: String(r.updated_at),
-  }));
+  return rows.map((r) => {
+    const slug = String(r.slug);
+    const title = String(r.title);
+    return {
+      id: String(r.id),
+      slug,
+      title,
+      category: String(r.category),
+      excerpt: String(r.excerpt),
+      content: String(r.content),
+      coverImageUrl: String(r.cover_image_url),
+      coverImageAlt: POST_ALT_BY_SLUG.get(slug) || title,
+      isPublished: Boolean(r.is_published),
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
+  });
 }
 
 export function getPostBySlug(slug: string): PostRecord | null {
   const db = getSqliteDb();
+  const cleanSlug = slug.trim();
   const r = db
     .prepare("SELECT * FROM posts WHERE slug = ?")
-    .get(slug.trim()) as Record<string, unknown> | undefined;
+    .get(cleanSlug) as Record<string, unknown> | undefined;
   if (!r) return null;
+  const title = String(r.title);
   return {
     id: String(r.id),
     slug: String(r.slug),
-    title: String(r.title),
+    title,
     category: String(r.category),
     excerpt: String(r.excerpt),
     content: String(r.content),
     coverImageUrl: String(r.cover_image_url),
+    coverImageAlt: POST_ALT_BY_SLUG.get(String(r.slug)) || title,
     isPublished: Boolean(r.is_published),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
@@ -2812,6 +2825,57 @@ export async function syncDbFromCloud(force = false): Promise<void> {
           stmt.run(...vals);
         }
       }
+
+      // Ensure canonical SEO/GEO posts and updated 295.000đ+ fresh bowl prices are always present after cloud sync
+      const syncNowIso = new Date().toISOString();
+      db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
+      const upsertPostStmt = db.prepare(`
+        INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          slug = excluded.slug,
+          title = excluded.title,
+          category = excluded.category,
+          excerpt = excluded.excerpt,
+          content = excluded.content,
+          cover_image_url = excluded.cover_image_url,
+          is_published = excluded.is_published,
+          updated_at = excluded.updated_at
+      `);
+      for (const post of DEMO_POSTS) {
+        upsertPostStmt.run(
+          post.id,
+          post.slug,
+          post.title,
+          post.category,
+          post.excerpt,
+          post.content,
+          post.coverImageUrl,
+          post.isPublished ? 1 : 0,
+          syncNowIso,
+          syncNowIso
+        );
+      }
+
+      const upsertFreshProdStmt = db.prepare(`
+        UPDATE products
+        SET ingredients_json = ?, taste_profile = ?, short_description = ?, usage_guide = ?, caution_note = ?, price_vnd = ?
+        WHERE id = ? AND (price_vnd IS NULL OR price_vnd < 295000)
+      `);
+      for (const p of DEMO_PRODUCTS) {
+        if (p.id.startsWith("prod-")) {
+          upsertFreshProdStmt.run(
+            JSON.stringify(p.ingredients),
+            p.tasteProfile,
+            p.shortDescription,
+            p.usageGuide,
+            p.cautionNote,
+            p.priceVnd,
+            p.id
+          );
+        }
+      }
+
       db.exec("COMMIT;");
       lastCloudSyncAtMs = Date.now();
     } catch {

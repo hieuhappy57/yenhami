@@ -11,16 +11,26 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
-export const metadata: Metadata = {
-  title: "Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ | lehami.vn",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ",
   description:
     "Tìm hiểu câu chuyện thương hiệu Yến Sào Hà Mi: Yến sào thật – Tinh khiết – Thượng hạng, nhà máy đạt chuẩn ISO 22000:2018 và chứng nhận FDA Hoa Kỳ.",
-};
+  path: "/ve-ha-mi",
+  image: "/brand/catalog/nha-may-so-che.jpg",
+});
 
 export default function VeHaMiPage() {
   return (
     <div className="max-w-[1060px] mx-auto px-4 py-10 md:py-14 space-y-10">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Về Yến Sào Hà Mi", path: "/ve-ha-mi" },
+        ]}
+      />
       {/* 1. Hero Story */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border-b border-[#155132]/15 pb-8">
         <div className="lg:col-span-7 space-y-3.5">

@@ -1,13 +1,24 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MapPin, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
-import { getAllProducts, getDeliverySlots, getServiceZones } from "@/db";
+import { getAllProducts, getDeliverySlots, getServiceZones, syncDbFromCloud } from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
 
-export default function MenuPage() {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Thực Đơn Yến Tươi Chưng Nóng Thố Sứ 200ml & Sản Phẩm Yến Sào",
+  description:
+    "Menu 8 món Yến Tươi Chưng Nóng thố sứ 200ml (35g yến tươi thật) giá chỉ từ 295.000đ, giao ấm nóng trong 2 giờ tại Đà Nẵng. Set Quà Tặng Hoa Sen Vàng, Yến Hũ Chưng Sẵn và Yến Sào Tinh Chế chuẩn ISO 22000:2018 & FDA Hoa Kỳ.",
+  path: "/yen-tuoi-chung-nong",
+});
+
+export default async function MenuPage() {
+  await syncDbFromCloud();
   const products = getAllProducts();
   const freshBowlProducts = products.filter((p) => !p.id.startsWith("cat-"));
   const zones = getServiceZones();
@@ -15,6 +26,12 @@ export default function MenuPage() {
 
   return (
     <div>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Thực đơn & Sản phẩm", path: "/yen-tuoi-chung-nong" },
+        ]}
+      />
       {/* Header Banner */}
       <section className="bg-[#FFFCF4] border-b border-[#BD9342]/35 py-8 md:py-12 px-4 pr-14 md:pr-4">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -26,7 +43,7 @@ export default function MenuPage() {
               Thực Đơn & Sản Phẩm Yến Sào Hà Mi
             </h1>
             <p className="text-sm sm:text-base text-[#2B433A]/90 leading-relaxed">
-              Bao gồm 8 món Yến Tươi Chưng Nóng (thố sứ 200ml), Set Quà Tặng Hoa Sen Vàng, Yến Hũ Chưng Sẵn (75ml & 100ml) và Yến Sào Tinh Chế 100g chuẩn ISO 22000:2018 & FDA Hoa Kỳ.
+              Bao gồm 8 món Yến Tươi Chưng Nóng (thố sứ 200ml • 35g yến tươi thật • giá từ 295.000đ/thố), Set Quà Tặng Hoa Sen Vàng, Yến Hũ Chưng Sẵn (75ml & 100ml) và Yến Sào Tinh Chế 100g chuẩn ISO 22000:2018 & FDA Hoa Kỳ.
             </p>
           </div>
           <Link
@@ -41,8 +58,8 @@ export default function MenuPage() {
       {/* Main Menu Grid */}
       <ProductMenuSection
         products={freshBowlProducts}
-        title="Menu Yến Tươi Chưng Nóng (Thố 200ml)"
-        subtitle="Chưng mới theo khung giờ hẹn (08:00 – 21:00). Đặt từ 2 thố được Miễn phí giao hàng."
+        title="Menu Yến Tươi Chưng Nóng (Thố Sứ 200ml • 35g Yến Tươi)"
+        subtitle="Chưng thủ công tươi mới ngay khi nhận đơn, giao ấm nóng trong 2 giờ (08:00 – 21:00). Đặt từ 2 thố được Miễn phí giao hàng trong bán kính 5km."
       />
 
       {/* Catalog Product Lines */}
@@ -53,11 +70,10 @@ export default function MenuPage() {
         <div className="rounded-xl bg-[#FFFCF4] border border-[#BD9342]/40 p-6">
           <div className="flex items-center gap-2 text-[#155132] font-serif-display text-xl font-semibold mb-3">
             <MapPin className="w-5 h-5 text-[#8A6632]" aria-hidden="true" />
-            <h2>Khu vực phục vụ giao nóng tại Đà Nẵng [DEMO]</h2>
+            <h2>Khu vực phục vụ giao nóng 2H tại Đà Nẵng</h2>
           </div>
           <p className="text-xs sm:text-sm text-[#2B433A]/85 mb-4">
-            Trải nghiệm yến chưng nóng phụ thuộc quãng đường di chuyển. Dưới đây là cấu hình phân
-            vùng mẫu đang áp dụng khi kiểm tra đơn:
+            Thố sứ 200ml giữ nhiệt giúp món yến đến tay vẫn ấm nóng trọn vị. Đặt từ 2 thố miễn phí giao hàng trong bán kính 5km:
           </p>
           <ul className="space-y-2.5 text-xs sm:text-sm">
             {zones.map((z) => (
@@ -74,8 +90,8 @@ export default function MenuPage() {
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#155132] bg-[#DBF1EE]/70 px-2 py-0.5 rounded">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {z.shippingFeeVnd === 0
-                        ? "Miễn phí [DEMO]"
-                        : `${z.shippingFeeVnd?.toLocaleString("vi-VN")}đ [DEMO]`}
+                        ? "Miễn phí giao"
+                        : `${z.shippingFeeVnd?.toLocaleString("vi-VN")}đ`}
                     </span>
                   )}
                   {z.deliveryStatus === "FEE_PENDING_CONFIRMATION" && (
@@ -99,11 +115,10 @@ export default function MenuPage() {
         <div className="rounded-xl bg-[#FFFCF4] border border-[#BD9342]/40 p-6">
           <div className="flex items-center gap-2 text-[#155132] font-serif-display text-xl font-semibold mb-3">
             <Clock className="w-5 h-5 text-[#8A6632]" aria-hidden="true" />
-            <h2>Khung giờ chưng & giao theo ca bếp [DEMO]</h2>
+            <h2>Khung giờ chưng nóng & giao ngay trong ngày</h2>
           </div>
           <p className="text-xs sm:text-sm text-[#2B433A]/85 mb-4">
-            Mỗi ca bếp giới hạn số lượng thố để đảm bảo chất lượng chưng mới. Khi ca đã đầy, hệ
-            thống tự động khóa nhận thêm vào ca đó:
+            Mỗi thố yến được chưng thủ công tươi mới ngay khi nhận đơn và giao ấm nóng trong vòng 2 giờ (08:00 – 21:00):
           </p>
           <ul className="space-y-2.5 text-xs sm:text-sm">
             {slots.map((s) => {
@@ -116,7 +131,7 @@ export default function MenuPage() {
                   <div>
                     <p className="font-semibold text-[#155132]">{s.label}</p>
                     <p className="text-xs text-[#2B433A]/75">
-                      Thời gian chuẩn bị tối thiểu: {s.minLeadMinutes} phút trước ca
+                      Thời gian chuẩn bị tối thiểu: {s.minLeadMinutes} phút
                     </p>
                   </div>
                   <span
@@ -126,7 +141,7 @@ export default function MenuPage() {
                         : "bg-[#DBF1EE]/70 text-[#155132]"
                     }`}
                   >
-                    {isFull ? "Đã đầy ca" : `Còn nhận ${s.remainingBowls}/${s.maxCapacityBowls} thố`}
+                    {isFull ? "Tạm đầy khung giờ" : `Còn nhận ${s.remainingBowls}/${s.maxCapacityBowls} thố`}
                   </span>
                 </li>
               );

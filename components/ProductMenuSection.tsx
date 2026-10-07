@@ -74,16 +74,17 @@ export function ProductMenuSection({
             >
               {title}
             </h2>
-            <span className="text-[11px] sm:text-xs font-medium text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/35 px-2 py-0.5 rounded">
-              Thố sứ 200ml • Chưng mới theo ca
+            <span className="text-[11px] sm:text-xs font-semibold text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-2.5 py-0.5 rounded">
+              Thố sứ 200ml (35g yến tươi) • Giá chỉ từ 295.000đ / 1 thố
             </span>
-            <span className="text-[11px] sm:text-xs font-semibold text-[#155132] bg-[#155132]/10 border border-[#155132]/25 px-2 py-0.5 rounded">
-              Đặt từ 2 thố • Free Ship
+            <span className="text-[11px] sm:text-xs font-semibold text-[#155132] bg-[#155132]/10 border border-[#155132]/25 px-2.5 py-0.5 rounded">
+              Giao ngay trong 2H • Đặt từ 2 thố Free Ship
             </span>
           </div>
-          {subtitle && (
-            <p className="text-xs sm:text-sm text-[#2B433A]/85 mt-1">{subtitle}</p>
-          )}
+          <p className="text-xs sm:text-sm text-[#2B433A]/90 mt-1.5 leading-relaxed">
+            {subtitle ||
+              "Mỗi thố yến 200ml chứa đến 35g yến tươi thật, gói trọn hương vị tự nhiên và giá trị dinh dưỡng nguyên vẹn. Dù là mẹ bầu cần thêm dưỡng chất, ông bà lớn tuổi, hay người đang hồi phục sau bệnh, yến chưng nóng luôn là món quà ấm lòng – ngon miệng – dễ hấp thu!"}
+          </p>
         </div>
 
         {/* Single-Row Scrollable Filter Tabs */}
@@ -124,7 +125,7 @@ export function ProductMenuSection({
           const isJustAdded = justAddedId === product.id;
 
           const highlightIngredients = product.ingredients.filter(
-            (ing) => !/^(tổ yến tươi chưng|nước tinh khiết)/i.test(ing.trim())
+            (ing) => !/^((35g\s+)?tổ yến tươi chưng|nước tinh khiết)/i.test(ing.trim())
           );
           const visibleIngredientsText =
             (highlightIngredients.length > 0
@@ -211,7 +212,7 @@ export function ProductMenuSection({
                       isOrderable
                         ? `Chọn ${product.name}`
                         : isOutOfStock
-                          ? "Món tạm hết ca này"
+                          ? "Món tạm hết trong ngày"
                           : "Món chưa mở đặt"
                     }
                     aria-label={

@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import {
   Briefcase,
   CheckCircle2,
@@ -13,8 +14,17 @@ import {
   getSiteContentSettings,
   syncDbFromCloud,
 } from "@/db";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Tuyển Dụng & Cơ Hội Nghề Nghiệp Tại Đà Nẵng",
+  description:
+    "Đồng hành cùng Yến Sào Hà Mi mang những thố yến tươi chưng nóng chuẩn vị và quà tặng sức khỏe tinh khiết đến từng gia đình Việt.",
+  path: "/tuyen-dung",
+});
 
 export default async function TuyenDungPage() {
   await syncDbFromCloud();
@@ -23,6 +33,12 @@ export default async function TuyenDungPage() {
 
   return (
     <div className="mx-auto max-w-[1160px] px-4 py-10 md:px-8">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Tuyển dụng", path: "/tuyen-dung" },
+        ]}
+      />
       <div className="rounded-3xl border border-[#BD9342]/35 bg-[#FFFCF4] p-6 sm:p-10">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#155132]/10 border border-[#BD9342]/45 px-3.5 py-1 text-xs font-semibold text-[#155132]">
           <Sparkles className="h-3.5 w-3.5 text-[#BD9342]" />

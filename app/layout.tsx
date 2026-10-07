@@ -6,6 +6,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { FloatingActionRail } from "@/components/FloatingActionRail";
 import { MobileStickyCartBar } from "@/components/MobileStickyCartBar";
+import { OrganizationAndLocalBusinessJsonLd } from "@/components/SeoJsonLd";
+import { AnalyticsScripts } from "@/components/AnalyticsScripts";
+import { SEO_CONFIG, absoluteUrl } from "@/config/seo";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
@@ -22,9 +25,21 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Yến Sào Hà Mi — Yến Tươi Chưng Nóng | Chưng điều lành, trao người thương",
-  description:
-    "Thố yến tươi chưng nóng chuẩn bị chỉn chu cho những lần thăm hỏi và chăm người thân. Minh bạch thành phần, dễ chọn theo khẩu vị, gửi yêu cầu đặt món và Hà Mi xác nhận.",
+  metadataBase: new URL(SEO_CONFIG.siteUrl),
+  title: {
+    default: SEO_CONFIG.defaultTitle,
+    template: SEO_CONFIG.titleTemplate,
+  },
+  description: SEO_CONFIG.defaultDescription,
+  keywords: SEO_CONFIG.keywords,
+  applicationName: SEO_CONFIG.siteName,
+  authors: [{ name: SEO_CONFIG.siteName, url: SEO_CONFIG.siteUrl }],
+  creator: SEO_CONFIG.siteName,
+  publisher: SEO_CONFIG.siteName,
+  alternates: {
+    canonical: SEO_CONFIG.siteUrl,
+  },
+  verification: SEO_CONFIG.verification,
   icons: {
     icon: [
       { url: "/brand/ha-mi-favicon-512.png", sizes: "512x512", type: "image/png" },
@@ -34,10 +49,37 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title: "Yến Sào Hà Mi — Yến Tươi Chưng Nóng | Chưng điều lành, trao người thương",
-    description:
-      "Thố yến tươi chưng nóng chuẩn bị chỉn chu cho những lần thăm hỏi và chăm người thân. Minh bạch thành phần, dễ chọn theo khẩu vị.",
-    images: ["/brand/hero-desktop-clean.jpg"],
+    type: "website",
+    locale: SEO_CONFIG.locale,
+    url: SEO_CONFIG.siteUrl,
+    siteName: SEO_CONFIG.siteName,
+    title: SEO_CONFIG.defaultTitle,
+    description: SEO_CONFIG.defaultDescription,
+    images: [
+      {
+        url: absoluteUrl(SEO_CONFIG.defaultOgImage),
+        width: 1200,
+        height: 630,
+        alt: SEO_CONFIG.defaultTitle,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SEO_CONFIG.defaultTitle,
+    description: SEO_CONFIG.defaultDescription,
+    images: [absoluteUrl(SEO_CONFIG.defaultOgImage)],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
@@ -49,6 +91,8 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${plusJakarta.variable} ${beVietnamPro.variable}`}>
       <body className="min-h-screen flex flex-col bg-white text-[#2B433A] font-sans antialiased selection:bg-[#155132] selection:text-[#FFFCF4]">
+        <OrganizationAndLocalBusinessJsonLd />
+        <AnalyticsScripts />
         <CartProvider>
           <SiteHeader />
           <main className="flex-1">{children}</main>

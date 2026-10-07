@@ -62,30 +62,27 @@ export function SiteHeader() {
       {/* Top Bar */}
       <div
         data-testid="demo-mode-banner"
-        className="bg-[#155132] text-[#FFFCF4] py-1.5 px-3 text-[11px] sm:text-xs"
+        className="bg-[#155132] text-[#FFFCF4] py-1.5 px-3 text-[11px] sm:text-xs border-b border-[#BD9342]/30"
       >
-        <div className="max-w-[1200px] mx-auto flex items-center justify-center sm:justify-between gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 truncate">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-center lg:justify-between gap-3">
+          <span className="truncate text-center lg:text-left text-[#FFFCF4] font-medium">
+            ✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨
+          </span>
+
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             <PhoneCall
               className="w-3.5 h-3.5 text-[#BD9342] shrink-0"
               aria-hidden="true"
             />
-            <span className="truncate">
-              {BRAND_CONFIG.contact.hotlineDisplay ? (
-                <>
-                  Hotline: <strong>{BRAND_CONFIG.contact.hotlineDisplay}</strong>
-                </>
-              ) : (
-                <>
-                  Yến Sào Hà Mi • <strong>Miễn phí giao hàng cho đơn từ 2 thố</strong>
-                </>
-              )}
-            </span>
+            <a
+              href={`tel:${BRAND_CONFIG.contact.hotlineTel || "0935052959"}`}
+              className="hover:text-[#BD9342] transition-colors"
+            >
+              Hotline/Zalo: <strong>{BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}</strong>
+            </a>
+            <span className="text-[#BD9342]">•</span>
+            <span className="text-[#BD9342] font-semibold">Giá chỉ từ 295.000đ / 1 thố</span>
           </div>
-
-          <span className="truncate text-center text-[#FFFCF4]/95 font-medium">
-            Yến Tươi Chưng Nóng Mỗi Ngày • Đặt từ 2 thố Free Ship
-          </span>
         </div>
       </div>
 
