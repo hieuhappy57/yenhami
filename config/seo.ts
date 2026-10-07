@@ -11,10 +11,10 @@ export const SEO_CONFIG = {
   shortName: BRAND_CONFIG.shortName,
   locale: "vi_VN",
   defaultTitle:
-    "Yến Sào Hà Mi — Yến Tươi Chưng Nóng Giao Ngay 2H Tại Đà Nẵng",
+    "Yến Sào Đà Nẵng Uy Tín — Hà Mi | Yến Tươi Chưng Nóng Giao Ngay 2H",
   titleTemplate: "%s | Yến Sào Hà Mi",
   defaultDescription:
-    "Thố yến tươi chưng nóng 200ml (35g yến tươi thật) từ 295.000đ, giao ấm nóng 2H tại Đà Nẵng. Quà biếu mẹ bầu, người bệnh, ông bà chuẩn ISO 22000 & FDA Hoa Kỳ.",
+    "Yến Sào Hà Mi tại Đà Nẵng: 35g yến tươi thật chưng nóng thủ công trong thố sứ 200ml, giá từ 295k, đạt chuẩn ISO 22000 & FDA. Giao ấm nóng hỏa tốc 2 giờ nội thành Đà Nẵng. Món quà sức khỏe cho mẹ bầu, người bệnh, ông bà. Hotline/Zalo: 0935 052 959.",
   defaultOgImage: "/brand/hero-desktop-clean.jpg",
   keywords: [
     "yến sào hà mi",
