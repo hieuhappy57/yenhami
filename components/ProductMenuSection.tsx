@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import type { ProductCategory, ProductRecord } from "@/db/schema";
 import { useCart } from "./CartProvider";
 
@@ -18,6 +18,7 @@ export function ProductMenuSection({
 }) {
   const { addItem } = useCart();
   const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>("all");
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   const filterTabs: { id: "all" | ProductCategory; label: string }[] = useMemo(
     () => [
@@ -51,6 +52,10 @@ export function ProductMenuSection({
       imageUrl: product.imageUrl,
       quantity: 1,
     });
+    setJustAddedId(product.id);
+    setTimeout(() => {
+      setJustAddedId((prev) => (prev === product.id ? null : prev));
+    }, 1200);
   };
 
   return (
@@ -96,9 +101,9 @@ export function ProductMenuSection({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setActiveCategory(tab.id)}
-                className={`shrink-0 whitespace-nowrap min-h-[36px] px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap min-h-[40px] px-3 sm:px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342]"
+                    ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342] shadow-2xs"
                     : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
                 }`}
               >
@@ -116,6 +121,7 @@ export function ProductMenuSection({
           const isOutOfStock = product.status === "OUT_OF_STOCK";
           const isPendingApproval =
             product.status === "PENDING_DATA_APPROVAL" || product.priceVnd === null;
+          const isJustAdded = justAddedId === product.id;
 
           const highlightIngredients = product.ingredients.filter(
             (ing) => !/^(tổ yến tươi chưng|nước tinh khiết)/i.test(ing.trim())
@@ -130,7 +136,7 @@ export function ProductMenuSection({
             <article
               key={product.id}
               data-testid={`product-card-${product.slug}`}
-              className="flex flex-col rounded-lg bg-white border border-[#155132]/15 shadow-xs hover:shadow-md transition-shadow overflow-hidden"
+              className="flex flex-col rounded-lg bg-white border border-[#155132]/15 shadow-xs hover:border-[#BD9342]/65 hover:shadow-md transition-all duration-200 overflow-hidden"
             >
               {/* Square Clickable Image */}
               <div className="relative aspect-square bg-[#FFFCF4] overflow-hidden">
@@ -216,14 +222,20 @@ export function ProductMenuSection({
                           : `${product.name} chưa mở đặt`
                     }
                     onClick={() => handleQuickAdd(product)}
-                    className={`shrink-0 inline-flex items-center justify-center min-w-[36px] min-h-[36px] rounded-md text-[11px] sm:text-xs font-semibold transition-colors ${
+                    className={`shrink-0 inline-flex items-center justify-center min-w-[40px] min-h-[40px] rounded-md text-[11px] sm:text-xs font-semibold transition-all duration-150 ${
                       isOrderable
-                        ? "w-9 h-9 sm:w-10 sm:h-10 bg-[#155132] text-[#FFFCF4] border border-[#BD9342] hover:bg-[#0e3b23] cursor-pointer"
+                        ? isJustAdded
+                          ? "w-10 h-10 sm:w-10 sm:h-10 bg-[#0e3b23] text-[#BD9342] border-2 border-[#BD9342] cursor-pointer"
+                          : "w-10 h-10 sm:w-10 sm:h-10 bg-[#155132] text-[#FFFCF4] border border-[#BD9342] hover:bg-[#0e3b23] cursor-pointer"
                         : "px-2 py-1 bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed"
                     }`}
                   >
                     {isOrderable ? (
-                      <Plus className="w-4 h-4" aria-hidden="true" />
+                      isJustAdded ? (
+                        <Check className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                      ) : (
+                        <Plus className="w-4 h-4" aria-hidden="true" />
+                      )
                     ) : isOutOfStock ? (
                       <span>Hết</span>
                     ) : (

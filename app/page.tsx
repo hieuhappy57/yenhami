@@ -206,10 +206,10 @@ export default async function HomePage() {
             </div>
             <Link
               href="/bai-viet"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155132] hover:text-[#8A6632]"
+              className="inline-flex items-center gap-1.5 min-h-[36px] text-xs font-bold text-[#155132] hover:text-[#8A6632] transition-colors"
             >
               <span>Xem tất cả bài viết</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </Link>
           </div>
 
@@ -218,7 +218,7 @@ export default async function HomePage() {
               <Link
                 key={post.id}
                 href={`/bai-viet/${post.slug}`}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-[#155132]/15 bg-white shadow-2xs transition hover:border-[#BD9342]"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-[#155132]/15 bg-white shadow-2xs transition hover:border-[#BD9342] hover:shadow-md"
               >
                 <div className="aspect-[16/9] w-full overflow-hidden bg-[#F5F0E3]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -242,7 +242,7 @@ export default async function HomePage() {
                     </p>
                   </div>
                   <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#155132]">
-                    <BookOpen className="h-3.5 w-3.5 text-[#BD9342]" />
+                    <BookOpen className="h-3.5 w-3.5 text-[#BD9342]" aria-hidden="true" />
                     Đọc bài viết →
                   </span>
                 </div>
@@ -270,9 +270,12 @@ export default async function HomePage() {
                 key={idx}
                 className="group rounded-lg bg-[#FFFCF4] border border-[#BD9342]/30 px-4 py-3 open:bg-white transition-colors"
               >
-                <summary className="font-medium text-sm sm:text-base text-[#155132] cursor-pointer list-none flex items-center justify-between gap-3">
+                <summary className="min-h-[36px] font-medium text-sm sm:text-base text-[#155132] cursor-pointer list-none flex items-center justify-between gap-3">
                   <span>{item.q}</span>
-                  <span className="text-[#8A6632] text-base font-bold group-open:rotate-45 transition-transform">
+                  <span
+                    aria-hidden="true"
+                    className="text-[#8A6632] text-base font-bold group-open:rotate-45 transition-transform"
+                  >
                     +
                   </span>
                 </summary>

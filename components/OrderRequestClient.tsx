@@ -401,9 +401,9 @@ export function OrderRequestClient({
                               item.quantity - 1
                             )
                           }
-                          className="flex h-8 w-7 sm:h-8 sm:w-8 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
+                          className="flex h-9 w-9 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                         <span className="min-w-6 text-center text-xs font-bold text-[#155132]">
                           {item.quantity}
@@ -419,9 +419,9 @@ export function OrderRequestClient({
                               item.quantity + 1
                             )
                           }
-                          className="flex h-8 w-7 sm:h-8 sm:w-8 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
+                          className="flex h-9 w-9 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
 
@@ -435,9 +435,9 @@ export function OrderRequestClient({
                             item.selectedOption
                           )
                         }
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-[#2B433A]/70 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-[#2B433A]/70 hover:bg-red-50 hover:text-red-700 cursor-pointer"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -450,16 +450,16 @@ export function OrderRequestClient({
               {totalBowls < 2 ? (
                 <>
                   <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8A6632]">
-                    <Truck className="h-3.5 w-3.5 text-[#BD9342] shrink-0" />
+                    <Truck className="h-3.5 w-3.5 text-[#BD9342] shrink-0" aria-hidden="true" />
                     <span>Đặt từ 2 thố được Miễn phí giao hàng</span>
                   </span>
                   <button
                     type="button"
                     data-testid="auto-two-bowls-freeship-btn"
                     onClick={handleAutoSetTwoBowlsFreeShip}
-                    className="inline-flex items-center gap-1 rounded-md bg-[#155132] border border-[#BD9342] px-2.5 py-1 text-xs font-semibold text-[#FFFCF4] hover:bg-[#0e3b23] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 min-h-[36px] rounded-md bg-[#155132] border border-[#BD9342] px-3 py-1.5 text-xs font-semibold text-[#FFFCF4] hover:bg-[#0e3b23] transition-colors cursor-pointer"
                   >
-                    <Plus className="h-3 w-3 text-[#BD9342]" />
+                    <Plus className="h-3 w-3 text-[#BD9342]" aria-hidden="true" />
                     <span>Đặt 2 thố • Free Ship</span>
                   </button>
                 </>
@@ -468,7 +468,7 @@ export function OrderRequestClient({
                   data-testid="freeship-active-badge"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#155132]"
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#155132] shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#155132] shrink-0" aria-hidden="true" />
                   <span>
                     Đã áp dụng Free Ship tự động ({totalBowls} thố)
                   </span>
@@ -498,13 +498,17 @@ export function OrderRequestClient({
                   data-testid="buyer-name-input"
                   type="text"
                   required
+                  aria-invalid={Boolean(fieldErrors.buyerName)}
+                  aria-describedby={fieldErrors.buyerName ? "buyerName-error" : undefined}
                   value={buyerName}
                   onChange={(e) => setBuyerName(e.target.value)}
                   placeholder="Ví dụ: Chị Minh Anh"
                   className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                 />
                 {fieldErrors.buyerName && (
-                  <p className="mt-1 text-xs text-red-700">{fieldErrors.buyerName}</p>
+                  <p id="buyerName-error" role="alert" className="mt-1 text-xs text-red-700">
+                    {fieldErrors.buyerName}
+                  </p>
                 )}
               </div>
 
@@ -523,13 +527,17 @@ export function OrderRequestClient({
                   data-testid="buyer-phone-input"
                   type="tel"
                   required
+                  aria-invalid={Boolean(fieldErrors.buyerPhone)}
+                  aria-describedby={fieldErrors.buyerPhone ? "buyerPhone-error" : undefined}
                   value={buyerPhone}
                   onChange={(e) => setBuyerPhone(e.target.value)}
                   placeholder="Ví dụ: 0905123456"
                   className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                 />
                 {fieldErrors.buyerPhone && (
-                  <p className="mt-1 text-xs text-red-700">{fieldErrors.buyerPhone}</p>
+                  <p id="buyerPhone-error" role="alert" className="mt-1 text-xs text-red-700">
+                    {fieldErrors.buyerPhone}
+                  </p>
                 )}
               </div>
             </div>
@@ -549,13 +557,15 @@ export function OrderRequestClient({
                 data-testid="address-detail-input"
                 type="text"
                 required
+                aria-invalid={Boolean(fieldErrors.addressDetail)}
+                aria-describedby={fieldErrors.addressDetail ? "addressDetail-error" : undefined}
                 value={addressDetail}
                 onChange={(e) => setAddressDetail(e.target.value)}
                 placeholder="Số nhà, tên đường, phường/quận tại Đà Nẵng..."
                 className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
               />
               {fieldErrors.addressDetail && (
-                <p className="mt-1 text-xs text-red-700">
+                <p id="addressDetail-error" role="alert" className="mt-1 text-xs text-red-700">
                   {fieldErrors.addressDetail}
                 </p>
               )}
@@ -578,10 +588,12 @@ export function OrderRequestClient({
                   value={requestedDate}
                   onChange={(e) => setRequestedDate(e.target.value)}
                   required
+                  aria-invalid={Boolean(fieldErrors.requestedDate)}
+                  aria-describedby={fieldErrors.requestedDate ? "requestedDate-error" : undefined}
                   className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-[#FFFCF4] px-3 py-2 text-base sm:text-sm font-medium text-[#2B433A] focus:border-[#155132] focus:bg-white focus:outline-none"
                 />
                 {fieldErrors.requestedDate && (
-                  <p className="mt-1 text-xs text-red-700">
+                  <p id="requestedDate-error" role="alert" className="mt-1 text-xs text-red-700">
                     {fieldErrors.requestedDate}
                   </p>
                 )}
@@ -662,7 +674,7 @@ export function OrderRequestClient({
                   }
                   className="h-4 w-4 rounded border-[#155132]/35 text-[#155132] focus:ring-[#155132]"
                 />
-                <Gift className="h-4 w-4 text-[#BD9342]" />
+                <Gift className="h-4 w-4 text-[#BD9342]" aria-hidden="true" />
                 <span>Quà tặng</span>
               </label>
 
@@ -685,13 +697,15 @@ export function OrderRequestClient({
                         data-testid="recipient-name-input"
                         type="text"
                         required={isGift}
+                        aria-invalid={Boolean(fieldErrors.recipientName)}
+                        aria-describedby={fieldErrors.recipientName ? "recipientName-error" : undefined}
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
                         placeholder="Ví dụ: Cô Thu Hà"
                         className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                       {fieldErrors.recipientName && (
-                        <p className="mt-1 text-xs text-red-700">
+                        <p id="recipientName-error" role="alert" className="mt-1 text-xs text-red-700">
                           {fieldErrors.recipientName}
                         </p>
                       )}
@@ -711,13 +725,15 @@ export function OrderRequestClient({
                         data-testid="recipient-phone-input"
                         type="tel"
                         required={isGift}
+                        aria-invalid={Boolean(fieldErrors.recipientPhone)}
+                        aria-describedby={fieldErrors.recipientPhone ? "recipientPhone-error" : undefined}
                         value={recipientPhone}
                         onChange={(e) => setRecipientPhone(e.target.value)}
                         placeholder="Ví dụ: 0914123456"
                         className="mt-1 w-full min-h-[42px] rounded-md border border-[#155132]/25 bg-white px-3 py-2 text-base sm:text-sm text-[#2B433A] focus:border-[#155132] focus:outline-none"
                       />
                       {fieldErrors.recipientPhone && (
-                        <p className="mt-1 text-xs text-red-700">
+                        <p id="recipientPhone-error" role="alert" className="mt-1 text-xs text-red-700">
                           {fieldErrors.recipientPhone}
                         </p>
                       )}
@@ -817,11 +833,28 @@ export function OrderRequestClient({
             {(submitError || (serverQuote && !serverQuote.ok)) && (
               <div
                 role="alert"
+                tabIndex={-1}
                 data-testid="checkout-error-alert"
-                className="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-900"
+                className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-900 space-y-1.5"
               >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" />
-                <span>{submitError || serverQuote?.errorMessage}</span>
+                <div className="flex items-start gap-2 font-semibold">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" aria-hidden="true" />
+                  <span>{submitError || serverQuote?.errorMessage}</span>
+                </div>
+                {Object.keys(fieldErrors).length > 0 && (
+                  <ul className="pl-6 list-disc space-y-1">
+                    {Object.entries(fieldErrors).map(([fieldKey, errText]) => (
+                      <li key={fieldKey}>
+                        <a
+                          href={`#${fieldKey}`}
+                          className="underline font-medium hover:text-red-950"
+                        >
+                          {errText}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 

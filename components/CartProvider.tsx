@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { CheckCircle2, X } from "lucide-react";
 
 export interface CartItem {
   productId: string;
@@ -261,16 +263,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         <div
           role="status"
           aria-live="polite"
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] bg-[#155132] text-white border border-[#BD9342] px-4 py-3 rounded-lg shadow-lg text-sm flex items-center justify-between gap-3"
+          data-testid="cart-toast-notification"
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-1.5rem)] bg-[#155132]/95 backdrop-blur-md text-[#FFFCF4] border border-[#BD9342] px-3.5 py-2.5 rounded-xl shadow-xl text-xs sm:text-sm flex items-center justify-between gap-2.5 transition-all"
         >
-          <span>{toastMessage}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="text-xs underline text-[#FFFCF4] shrink-0 min-h-[32px] px-2"
-          >
-            Đóng
-          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <CheckCircle2
+              className="w-4 h-4 text-[#BD9342] shrink-0"
+              aria-hidden="true"
+            />
+            <span className="truncate font-medium">{toastMessage}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link
+              href="/dat-hang"
+              onClick={() => setToastMessage(null)}
+              className="inline-flex items-center justify-center min-h-[34px] px-2.5 py-1 rounded-md bg-[#FFFCF4] text-[#155132] font-bold text-xs hover:bg-[#DBF1EE] transition-colors"
+            >
+              Đặt món →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              aria-label="Đóng thông báo"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-[#FFFCF4]/85 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
     </CartContext.Provider>

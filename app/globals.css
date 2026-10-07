@@ -49,7 +49,30 @@ body {
   font-family: var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Accessible focus ring */
+/* UI/UX Pro Max: Heading Line Balance & Readable Body Copy */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Tactile micro-interaction feedback for interactive buttons (80-150ms) */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+}
+
+/* Accessible focus ring (keyboard only via :focus-visible) */
 :focus-visible {
   outline: 2px solid var(--canopy-green);
   outline-offset: 2px;

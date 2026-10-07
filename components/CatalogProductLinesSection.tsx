@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Award, CheckCircle2, Gift, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { Award, Check, CheckCircle2, Gift, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import type { ProductRecord } from "@/db/schema";
 import { useCart } from "./CartProvider";
 
@@ -13,6 +13,7 @@ export function CatalogProductLinesSection({
 }) {
   const { addItem } = useCart();
   const [jarVolumeTab, setJarVolumeTab] = useState<"75ml" | "100ml" | "all">("75ml");
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   const giftSetProducts = useMemo(
     () => products.filter((p) => p.id.startsWith("cat-set-qua-")),
@@ -57,6 +58,10 @@ export function CatalogProductLinesSection({
       imageUrl: product.imageUrl,
       quantity: 1,
     });
+    setJustAddedId(product.id);
+    setTimeout(() => {
+      setJustAddedId((prev) => (prev === product.id ? null : prev));
+    }, 1200);
   };
 
   return (
@@ -71,7 +76,7 @@ export function CatalogProductLinesSection({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
-              <Gift className="w-3.5 h-3.5 text-[#BD9342]" />
+              <Gift className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
               <span>Bộ sưu tập Quà biếu sức khỏe & Doanh nghiệp</span>
             </div>
             <h2
@@ -116,58 +121,70 @@ export function CatalogProductLinesSection({
 
           {/* Right: Orderable Set Cards */}
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {giftSetProducts.map((product) => (
-              <article
-                key={product.id}
-                data-testid={`product-card-${product.slug}`}
-                className="flex flex-col justify-between rounded-xl bg-white border border-[#155132]/15 p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-shadow"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/35 px-2 py-0.5 rounded">
-                      Hộp 6 hũ × {product.volumeMl}ml
-                    </span>
-                    <span className="text-[11px] font-semibold text-[#155132]">
-                      Free Ship
-                    </span>
+            {giftSetProducts.map((product) => {
+              const isJustAdded = justAddedId === product.id;
+              return (
+                <article
+                  key={product.id}
+                  data-testid={`product-card-${product.slug}`}
+                  className="flex flex-col justify-between rounded-xl bg-white border border-[#155132]/15 p-3.5 sm:p-4 shadow-xs hover:border-[#BD9342]/65 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/35 px-2 py-0.5 rounded">
+                        Hộp 6 hũ × {product.volumeMl}ml
+                      </span>
+                      <span className="text-[11px] font-semibold text-[#155132]">
+                        Free Ship
+                      </span>
+                    </div>
+                    <h3 className="font-serif-display text-base sm:text-lg font-bold text-[#155132] leading-snug">
+                      <Link
+                        href={`/san-pham/${product.slug}`}
+                        className="hover:underline underline-offset-4"
+                      >
+                        {product.name}
+                      </Link>
+                    </h3>
+                    <p className="text-xs text-[#2B433A]/85 leading-relaxed line-clamp-3">
+                      {product.shortDescription}
+                    </p>
+                    <p className="text-[11px] text-[#8A6632] font-medium truncate">
+                      Vị: {product.ingredients.join(" • ")}
+                    </p>
                   </div>
-                  <h3 className="font-serif-display text-base sm:text-lg font-bold text-[#155132] leading-snug">
-                    <Link
-                      href={`/san-pham/${product.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {product.name}
-                    </Link>
-                  </h3>
-                  <p className="text-xs text-[#2B433A]/85 leading-relaxed line-clamp-3">
-                    {product.shortDescription}
-                  </p>
-                  <p className="text-[11px] text-[#8A6632] font-medium truncate">
-                    Vị: {product.ingredients.join(" • ")}
-                  </p>
-                </div>
 
-                <div className="pt-3 mt-3 border-t border-[#155132]/10 flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-base sm:text-lg font-bold text-[#155132]">
-                      {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
-                    </span>
-                    <span className="block text-[10px] text-[#2B433A]/70">
-                      / Hộp quà 6 hũ
-                    </span>
+                  <div className="pt-3 mt-3 border-t border-[#155132]/10 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-base sm:text-lg font-bold text-[#155132]">
+                        {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
+                      </span>
+                      <span className="block text-[10px] text-[#2B433A]/70">
+                        / Hộp quà 6 hũ
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      data-testid={`add-to-cart-${product.slug}`}
+                      onClick={() => handleQuickAdd(product)}
+                      className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 py-1.5 rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] text-xs font-semibold hover:bg-[#0e3b23] transition-colors cursor-pointer"
+                    >
+                      {isJustAdded ? (
+                        <>
+                          <Check className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                          <span>Đã chọn</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                          <span>Chọn Set</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    data-testid={`add-to-cart-${product.slug}`}
-                    onClick={() => handleQuickAdd(product)}
-                    className="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] text-xs font-semibold hover:bg-[#0e3b23] transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4 text-[#BD9342]" />
-                    <span>Chọn Set</span>
-                  </button>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -182,7 +199,7 @@ export function CatalogProductLinesSection({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
-              <Sparkles className="w-3.5 h-3.5 text-[#BD9342]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
               <span>100% Yến tự nhiên tiệt trùng • Không chất bảo quản</span>
             </div>
             <h2
@@ -204,7 +221,7 @@ export function CatalogProductLinesSection({
               role="tab"
               aria-selected={jarVolumeTab === "75ml"}
               onClick={() => setJarVolumeTab("75ml")}
-              className={`shrink-0 min-h-[36px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+              className={`shrink-0 min-h-[40px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 jarVolumeTab === "75ml"
                   ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342]"
                   : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
@@ -217,7 +234,7 @@ export function CatalogProductLinesSection({
               role="tab"
               aria-selected={jarVolumeTab === "100ml"}
               onClick={() => setJarVolumeTab("100ml")}
-              className={`shrink-0 min-h-[36px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+              className={`shrink-0 min-h-[40px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 jarVolumeTab === "100ml"
                   ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342]"
                   : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
@@ -230,7 +247,7 @@ export function CatalogProductLinesSection({
               role="tab"
               aria-selected={jarVolumeTab === "all"}
               onClick={() => setJarVolumeTab("all")}
-              className={`shrink-0 min-h-[36px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+              className={`shrink-0 min-h-[40px] px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 jarVolumeTab === "all"
                   ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342]"
                   : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
@@ -243,61 +260,72 @@ export function CatalogProductLinesSection({
 
         {/* Compact Grid of 75ml / 100ml Jars */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {jarProducts.map((product) => (
-            <article
-              key={product.id}
-              data-testid={`product-card-${product.slug}`}
-              className="flex flex-col rounded-lg bg-white border border-[#155132]/15 shadow-xs hover:shadow-md transition-shadow overflow-hidden"
-            >
-              <div className="relative aspect-square bg-[#FFFCF4] overflow-hidden">
-                <Link
-                  href={`/san-pham/${product.slug}`}
-                  className="block w-full h-full"
-                >
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    loading="lazy"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </Link>
-                <span className="absolute top-1.5 left-1.5 bg-[#155132] text-[#FFFCF4] text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded shadow-2xs">
-                  Hũ {product.volumeMl}ml
-                </span>
-              </div>
-
-              <div className="p-2 sm:p-3.5 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2">
-                <div>
-                  <h3 className="font-serif-display text-[13px] sm:text-base font-semibold text-[#155132] leading-tight sm:leading-snug line-clamp-2 min-h-[2.05rem] sm:min-h-[2.5rem]">
-                    <Link
-                      href={`/san-pham/${product.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {product.name}
-                    </Link>
-                  </h3>
-                  <p className="hidden sm:block text-xs text-[#2B433A]/80 mt-1 truncate">
-                    {product.ingredients.join(" • ")}
-                  </p>
-                </div>
-
-                <div className="pt-1.5 sm:pt-2 border-t border-[#155132]/10 flex items-center justify-between gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-[#155132]">
-                    {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
-                  </span>
-                  <button
-                    type="button"
-                    data-testid={`add-to-cart-${product.slug}`}
-                    aria-label={`Chọn món ${product.name}`}
-                    onClick={() => handleQuickAdd(product)}
-                    className="w-9 h-9 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] hover:bg-[#0e3b23] transition-colors cursor-pointer"
+          {jarProducts.map((product) => {
+            const isJustAdded = justAddedId === product.id;
+            return (
+              <article
+                key={product.id}
+                data-testid={`product-card-${product.slug}`}
+                className="flex flex-col rounded-lg bg-white border border-[#155132]/15 shadow-xs hover:border-[#BD9342]/65 hover:shadow-md transition-all duration-200 overflow-hidden"
+              >
+                <div className="relative aspect-square bg-[#FFFCF4] overflow-hidden">
+                  <Link
+                    href={`/san-pham/${product.slug}`}
+                    className="block w-full h-full"
                   >
-                    <Plus className="w-4 h-4" />
-                  </button>
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </Link>
+                  <span className="absolute top-1.5 left-1.5 bg-[#155132] text-[#FFFCF4] text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded shadow-2xs">
+                    Hũ {product.volumeMl}ml
+                  </span>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div className="p-2 sm:p-3.5 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2">
+                  <div>
+                    <h3 className="font-serif-display text-[13px] sm:text-base font-semibold text-[#155132] leading-tight sm:leading-snug line-clamp-2 min-h-[2.05rem] sm:min-h-[2.5rem]">
+                      <Link
+                        href={`/san-pham/${product.slug}`}
+                        className="hover:underline underline-offset-4"
+                      >
+                        {product.name}
+                      </Link>
+                    </h3>
+                    <p className="hidden sm:block text-xs text-[#2B433A]/80 mt-1 truncate">
+                      {product.ingredients.join(" • ")}
+                    </p>
+                  </div>
+
+                  <div className="pt-1.5 sm:pt-2 border-t border-[#155132]/10 flex items-center justify-between gap-1.5">
+                    <span className="text-xs sm:text-base font-bold text-[#155132]">
+                      {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
+                    </span>
+                    <button
+                      type="button"
+                      data-testid={`add-to-cart-${product.slug}`}
+                      aria-label={`Chọn món ${product.name}`}
+                      onClick={() => handleQuickAdd(product)}
+                      className={`w-10 h-10 inline-flex items-center justify-center rounded-md border border-[#BD9342] transition-colors cursor-pointer ${
+                        isJustAdded
+                          ? "bg-[#0e3b23] text-[#BD9342]"
+                          : "bg-[#155132] text-[#FFFCF4] hover:bg-[#0e3b23]"
+                      }`}
+                    >
+                      {isJustAdded ? (
+                        <Check className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                      ) : (
+                        <Plus className="w-4 h-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -311,7 +339,7 @@ export function CatalogProductLinesSection({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
-              <Award className="w-3.5 h-3.5 text-[#BD9342]" />
+              <Award className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
               <span>Sơ chế nước lọc RO tinh khiết • Chuẩn ISO 22000:2018 & FDA</span>
             </div>
             <h2
@@ -327,66 +355,78 @@ export function CatalogProductLinesSection({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-5">
-          {refinedNestProducts.map((product) => (
-            <article
-              key={product.id}
-              data-testid={`product-card-${product.slug}`}
-              className="flex flex-col rounded-xl bg-white border border-[#155132]/15 shadow-xs hover:shadow-md transition-shadow overflow-hidden"
-            >
-              <div className="relative h-48 sm:h-52 bg-[#FFFCF4] flex items-center justify-center p-3 overflow-hidden">
-                <Link
-                  href={`/san-pham/${product.slug}`}
-                  className="block w-full h-full"
-                >
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    loading="lazy"
-                    className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
-                  />
-                </Link>
-                <span className="absolute top-2.5 left-2.5 bg-[#FFFCF4]/95 text-[#155132] border border-[#BD9342]/40 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
-                  Hộp 100g • Nguyên chất
-                </span>
-              </div>
-
-              <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                <div>
-                  <h3 className="font-serif-display text-base sm:text-lg font-bold text-[#155132]">
-                    <Link
-                      href={`/san-pham/${product.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {product.name}
-                    </Link>
-                  </h3>
-                  <p className="text-xs text-[#2B433A]/85 mt-1.5 leading-relaxed">
-                    {product.shortDescription}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-[#155132]/10 flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-base sm:text-lg font-bold text-[#155132]">
-                      {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
-                    </span>
-                    <span className="block text-[10px] text-[#2B433A]/70">
-                      Miễn phí giao hàng
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    data-testid={`add-to-cart-${product.slug}`}
-                    onClick={() => handleQuickAdd(product)}
-                    className="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] text-xs font-semibold hover:bg-[#0e3b23] transition-colors cursor-pointer"
+          {refinedNestProducts.map((product) => {
+            const isJustAdded = justAddedId === product.id;
+            return (
+              <article
+                key={product.id}
+                data-testid={`product-card-${product.slug}`}
+                className="flex flex-col rounded-xl bg-white border border-[#155132]/15 shadow-xs hover:border-[#BD9342]/65 hover:shadow-md transition-all duration-200 overflow-hidden"
+              >
+                <div className="relative h-48 sm:h-52 bg-[#FFFCF4] flex items-center justify-center p-3 overflow-hidden">
+                  <Link
+                    href={`/san-pham/${product.slug}`}
+                    className="block w-full h-full"
                   >
-                    <Plus className="w-4 h-4 text-[#BD9342]" />
-                    <span>Đặt mua</span>
-                  </button>
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      loading="lazy"
+                      className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+                    />
+                  </Link>
+                  <span className="absolute top-2.5 left-2.5 bg-[#FFFCF4]/95 text-[#155132] border border-[#BD9342]/40 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                    Hộp 100g • Nguyên chất
+                  </span>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                  <div>
+                    <h3 className="font-serif-display text-base sm:text-lg font-bold text-[#155132]">
+                      <Link
+                        href={`/san-pham/${product.slug}`}
+                        className="hover:underline underline-offset-4"
+                      >
+                        {product.name}
+                      </Link>
+                    </h3>
+                    <p className="text-xs text-[#2B433A]/85 mt-1.5 leading-relaxed">
+                      {product.shortDescription}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#155132]/10 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-base sm:text-lg font-bold text-[#155132]">
+                        {(product.priceVnd || 0).toLocaleString("vi-VN")}đ
+                      </span>
+                      <span className="block text-[10px] text-[#2B433A]/70">
+                        Miễn phí giao hàng
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      data-testid={`add-to-cart-${product.slug}`}
+                      onClick={() => handleQuickAdd(product)}
+                      className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 py-1.5 rounded-md bg-[#155132] text-[#FFFCF4] border border-[#BD9342] text-xs font-semibold hover:bg-[#0e3b23] transition-colors cursor-pointer"
+                    >
+                      {isJustAdded ? (
+                        <>
+                          <Check className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                          <span>Đã chọn</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
+                          <span>Đặt mua</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         {/* Catalog Quality & Factory Assurance Strip */}
@@ -401,7 +441,7 @@ export function CatalogProductLinesSection({
           </div>
           <div className="md:col-span-8 space-y-2">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#155132]">
-              <ShieldCheck className="w-4 h-4 text-[#155132]" />
+              <ShieldCheck className="w-4 h-4 text-[#155132]" aria-hidden="true" />
               <span>Năng lực sản xuất & Cam kết chất lượng Yến Sào Hà Mi</span>
             </div>
             <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
@@ -411,15 +451,15 @@ export function CatalogProductLinesSection({
             </p>
             <div className="flex flex-wrap gap-3 pt-1 text-xs font-medium text-[#155132]">
               <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
                 100% Yến thật tinh khiết
               </span>
               <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
                 Không chất bảo quản & tẩy trắng
               </span>
               <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
                 Chứng nhận ISO 22000:2018 & FDA
               </span>
             </div>

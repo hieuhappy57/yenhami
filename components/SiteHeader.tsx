@@ -58,7 +58,7 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur shadow-xs border-b border-[#155132]/12">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/88 shadow-xs border-b border-[#155132]/12">
       {/* Top Bar */}
       <div
         data-testid="demo-mode-banner"
@@ -209,7 +209,7 @@ export function SiteHeader() {
       </nav>
 
       {/* Mobile & Tablet Header: Left Hamburger — Centered Logo — Right Circular Cart */}
-      <div className="lg:hidden bg-white px-3 h-16 flex items-center justify-between gap-2">
+      <div className="lg:hidden bg-white/95 px-3 h-16 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => toggleMobileMenu(!mobileMenuOpen)}
@@ -218,12 +218,12 @@ export function SiteHeader() {
           aria-label={
             mobileMenuOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"
           }
-          className="inline-flex items-center justify-center w-10 h-10 rounded-full text-[#155132] hover:bg-[#155132]/8 transition-colors cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-full text-[#155132] hover:bg-[#155132]/8 transition-colors cursor-pointer shrink-0"
         >
           {mobileMenuOpen ? (
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           ) : (
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           )}
         </button>
 
@@ -252,7 +252,7 @@ export function SiteHeader() {
         <Link
           href={cartHref}
           aria-label={`Giỏ hàng và gửi yêu cầu đặt món, hiện có ${totalBowls} thố`}
-          className="relative inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#155132]/8 text-[#155132] border border-[#BD9342]/45 hover:bg-[#155132] hover:text-[#FFFCF4] transition-colors shrink-0"
+          className="relative inline-flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-[#155132]/8 text-[#155132] border border-[#BD9342]/45 hover:bg-[#155132] hover:text-[#FFFCF4] transition-colors shrink-0"
         >
           <ShoppingBag className="w-5 h-5" aria-hidden="true" />
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#155132] text-[#FFFCF4] border border-[#BD9342] text-[10px] font-bold flex items-center justify-center">

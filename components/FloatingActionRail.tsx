@@ -87,16 +87,16 @@ export function FloatingActionRail() {
         >
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <span className="font-semibold text-[#155132] flex items-center gap-1.5 text-sm">
-              <Info className="w-4 h-4 text-[#8A6632] shrink-0" />
+              <Info className="w-4 h-4 text-[#8A6632] shrink-0" aria-hidden="true" />
               Kênh {unconfiguredChannel} chưa cấu hình URL
             </span>
             <button
               type="button"
               onClick={() => setUnconfiguredChannel(null)}
               aria-label="Đóng thông báo kênh liên hệ"
-              className="p-1 rounded hover:bg-[#DBF1EE]/60 text-[#2B433A]"
+              className="p-1.5 rounded hover:bg-[#DBF1EE]/60 text-[#2B433A] cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <p className="leading-relaxed text-[#2B433A]/90">
@@ -112,7 +112,7 @@ export function FloatingActionRail() {
             <button
               type="button"
               onClick={handleOrderClick}
-              className="text-xs font-semibold text-[#155132] underline"
+              className="text-xs font-semibold text-[#155132] underline cursor-pointer"
             >
               {totalBowls > 0 ? "Gửi yêu cầu trên web →" : "Chọn món trên web →"}
             </button>
@@ -162,7 +162,7 @@ export function FloatingActionRail() {
           data-testid="rail-btn-zalo"
           aria-label="Nhắn tin Zalo Yến Sào Hà Mi"
           title="Nhắn tin Zalo Yến Sào Hà Mi"
-          className="relative flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border border-[#155132]/25 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
+          className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0068FF] border border-[#155132]/25 shadow-md hover:border-[#0068FF] transition-colors cursor-pointer"
         >
           <svg
             viewBox="0 0 40 40"
@@ -201,7 +201,7 @@ export function FloatingActionRail() {
             data-testid="rail-btn-messenger"
             aria-label="Chat Messenger Yến Sào Hà Mi"
             title="Chat Messenger Yến Sào Hà Mi"
-            className="relative flex items-center justify-center min-w-[40px] min-h-[40px] w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-[#0084FF] border border-[#155132]/25 shadow-md hover:border-[#0084FF] transition-colors cursor-pointer"
+            className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white text-[#0084FF] border border-[#155132]/25 shadow-md hover:border-[#0084FF] transition-colors cursor-pointer"
           >
             <svg
               viewBox="0 0 36 36"
