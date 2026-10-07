@@ -62,28 +62,23 @@ export function ProductMenuSection({
     <section
       id="menu-chu-luc"
       aria-labelledby="menu-section-heading"
-      className="py-4 md:py-10 px-3 sm:px-4 max-w-[1200px] mx-auto"
+      className="py-6 md:py-12 px-3 sm:px-4 max-w-[1200px] mx-auto"
     >
-      {/* Compact Header + Single-Row Horizontal Filter */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 mb-3.5 md:mb-5">
+      {/* Clean Header + Single-Row Horizontal Filter */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4 md:mb-6">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2
-              id="menu-section-heading"
-              className="font-serif-display text-xl sm:text-3xl font-semibold text-[#155132]"
-            >
-              {title}
-            </h2>
-            <span className="text-[11px] sm:text-xs font-semibold text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-2.5 py-0.5 rounded">
-              Thố sứ 200ml (35g yến tươi) • Giá chỉ từ 295.000đ / 1 thố
-            </span>
-            <span className="text-[11px] sm:text-xs font-semibold text-[#155132] bg-[#155132]/10 border border-[#155132]/25 px-2.5 py-0.5 rounded">
-              Giao ngay trong 2H • Đặt từ 2 thố Free Ship
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 mt-1.5 leading-relaxed">
+          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
+            Thố sứ 200ml • 35g yến tươi thật • Từ 295.000đ
+          </p>
+          <h2
+            id="menu-section-heading"
+            className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#155132] mt-0.5 [text-wrap:balance]"
+          >
+            {title}
+          </h2>
+          <p className="text-xs sm:text-sm text-[#2B433A]/80 mt-1">
             {subtitle ||
-              "Mỗi thố yến 200ml chứa đến 35g yến tươi thật, gói trọn hương vị tự nhiên và giá trị dinh dưỡng nguyên vẹn. Dù là mẹ bầu cần thêm dưỡng chất, ông bà lớn tuổi, hay người đang hồi phục sau bệnh, yến chưng nóng luôn là món quà ấm lòng – ngon miệng – dễ hấp thu!"}
+              "Chưng thủ công tươi nóng ngay khi nhận đơn • Giao ấm nóng 2H Đà Nẵng (Đặt từ 2 thố Free Ship)"}
           </p>
         </div>
 
@@ -102,7 +97,7 @@ export function ProductMenuSection({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setActiveCategory(tab.id)}
-                className={`shrink-0 whitespace-nowrap min-h-[40px] px-3 sm:px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap min-h-[40px] px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                   isSelected
                     ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342] shadow-2xs"
                     : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
@@ -116,7 +111,7 @@ export function ProductMenuSection({
       </div>
 
       {/* 2-Column Mobile / 4-Column Desktop Compact Product Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {filteredProducts.map((product) => {
           const isOrderable = product.status === "AVAILABLE" && product.priceVnd !== null;
           const isOutOfStock = product.status === "OUT_OF_STOCK";

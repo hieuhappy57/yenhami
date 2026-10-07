@@ -65,11 +65,14 @@ export function SiteHeader() {
         className="bg-[#155132] text-[#FFFCF4] py-1.5 px-3 text-[11px] sm:text-xs border-b border-[#BD9342]/30"
       >
         <div className="max-w-[1200px] mx-auto flex items-center justify-center lg:justify-between gap-3">
-          <span className="truncate text-center lg:text-left text-[#FFFCF4] font-medium">
-            ✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨
+          <span className="truncate text-center lg:text-left text-[#FFFCF4] font-medium tracking-wide">
+            <span className="sm:hidden">Yến Tươi Chưng Nóng • Giao Ngay 2H Đà Nẵng</span>
+            <span className="hidden sm:inline">
+              Yến Tươi Hà Mi Chưng Nóng • Giao Ngay 2H Đà Nẵng — Quà bồi bổ mẹ bầu, người bệnh & ông bà
+            </span>
           </span>
 
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-2.5 shrink-0">
             <PhoneCall
               className="w-3.5 h-3.5 text-[#BD9342] shrink-0"
               aria-hidden="true"
@@ -80,8 +83,8 @@ export function SiteHeader() {
             >
               Hotline/Zalo: <strong>{BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}</strong>
             </a>
-            <span className="text-[#BD9342]">•</span>
-            <span className="text-[#BD9342] font-semibold">Giá chỉ từ 295.000đ / 1 thố</span>
+            <span className="text-[#BD9342]/60">|</span>
+            <span className="text-[#BD9342] font-semibold">Từ 295.000đ / thố</span>
           </div>
         </div>
       </div>
