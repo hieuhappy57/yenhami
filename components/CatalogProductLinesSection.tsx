@@ -214,7 +214,7 @@ export function CatalogProductLinesSection({
           <div
             role="tablist"
             aria-label="Chọn thể tích Yến Hũ"
-            className="flex flex-nowrap overflow-x-auto gap-1.5 pb-0.5"
+            className="flex w-full md:w-auto max-w-full min-w-0 flex-nowrap overflow-x-auto gap-1.5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <button
               type="button"

@@ -83,7 +83,7 @@ export function SiteHeader() {
             </span>
           </div>
 
-          <span className="shrink-0 text-[#FFFCF4]/95 font-medium">
+          <span className="truncate text-center text-[#FFFCF4]/95 font-medium">
             Yến Tươi Chưng Nóng Mỗi Ngày • Đặt từ 2 thố Free Ship
           </span>
         </div>
