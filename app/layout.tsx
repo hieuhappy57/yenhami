@@ -25,6 +25,20 @@ export const metadata: Metadata = {
   title: "Yến Sào Hà Mi — Yến Tươi Chưng Nóng | Chưng điều lành, trao người thương",
   description:
     "Thố yến tươi chưng nóng chuẩn bị chỉn chu cho những lần thăm hỏi và chăm người thân. Minh bạch thành phần, dễ chọn theo khẩu vị, gửi yêu cầu đặt món và Hà Mi xác nhận.",
+  icons: {
+    icon: [
+      { url: "/brand/ha-mi-favicon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: ["/brand/ha-mi-favicon-512.png"],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    title: "Yến Sào Hà Mi — Yến Tươi Chưng Nóng | Chưng điều lành, trao người thương",
+    description:
+      "Thố yến tươi chưng nóng chuẩn bị chỉn chu cho những lần thăm hỏi và chăm người thân. Minh bạch thành phần, dễ chọn theo khẩu vị.",
+    images: ["/brand/hero-desktop-clean.jpg"],
+  },
 };
 
 export default function RootLayout({
