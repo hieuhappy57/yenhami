@@ -40,7 +40,7 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = "hami_mvp_cart_v1";
+const STORAGE_KEY = "hami_mvp_cart_v2";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -56,7 +56,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.items)) setItems(parsed.items);
+        if (Array.isArray(parsed.items)) {
+          const normalized = (parsed.items as CartItem[]).map((it) =>
+            it.productId?.startsWith("prod-") && it.unitPriceVnd < 295000
+              ? { ...it, unitPriceVnd: 295000 }
+              : it
+          );
+          setItems(normalized);
+        }
         if (typeof parsed.selectedZoneId === "string") setSelectedZoneId(parsed.selectedZoneId);
         if (parsed.orderPurpose === "GIFT" || parsed.orderPurpose === "SELF") {
           setOrderPurpose(parsed.orderPurpose);

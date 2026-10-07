@@ -77,32 +77,37 @@ export default async function HomePage() {
             fetchPriority="high"
             width={1640}
             height={680}
-            className="w-full h-[460px] sm:h-[500px] md:h-[440px] lg:h-[540px] object-cover object-bottom md:object-[76%_center] lg:object-center"
+            className="w-full h-[470px] sm:h-[500px] md:h-[440px] lg:h-[540px] object-cover object-bottom md:object-[76%_center] lg:object-center"
           />
         </picture>
 
         <div className="absolute inset-x-0 top-0 md:inset-y-0 flex items-start md:items-center pointer-events-none">
-          <div className="max-w-[1200px] w-full mx-auto px-3.5 sm:px-4 md:pr-8 pt-3 sm:pt-4 md:py-6">
-            <div className="max-w-[355px] sm:max-w-md md:max-w-[430px] lg:max-w-[490px] pointer-events-auto bg-[#FFFCF4]/90 md:bg-[#FFFCF4]/86 backdrop-blur-xs p-3.5 sm:p-5 lg:p-6 rounded-2xl border border-[#BD9342]/30 shadow-xs">
-              <p className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-[#8A6632] uppercase tracking-wider">
-                <Leaf className="w-3.5 h-3.5 text-[#155132]" aria-hidden="true" />
+          <div className="max-w-[1200px] w-full mx-auto px-4 md:pr-8 pt-3 sm:pt-4 md:py-6">
+            <div className="max-w-[340px] sm:max-w-md md:max-w-[430px] lg:max-w-[490px] pointer-events-auto md:bg-[#FFFCF4]/86 md:backdrop-blur-xs md:p-5 lg:p-6 md:rounded-2xl md:border md:border-[#BD9342]/30 md:shadow-xs">
+              <p className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[#8A6632] uppercase tracking-wider">
+                <Leaf className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#155132]" aria-hidden="true" />
                 <span>Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất</span>
               </p>
 
-              <h1 className="mt-1 font-serif-display text-[21px] leading-[27px] sm:text-[26px] sm:leading-[33px] lg:text-[36px] lg:leading-[44px] font-semibold text-[#155132] [text-wrap:balance]">
+              <h1 className="mt-0.5 sm:mt-1 font-serif-display text-[22px] leading-[27px] sm:text-[26px] sm:leading-[33px] lg:text-[36px] lg:leading-[44px] font-semibold text-[#155132] [text-wrap:balance]">
                 Yến Tươi Chưng Nóng Thố Sứ — Giao Ngay 2H
                 <span className="sr-only"> Tại Đà Nẵng</span>
               </h1>
 
-              <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed mb-3 sm:mb-4 [text-wrap:pretty]">
-                35g yến tươi thật trong thố sứ 200ml, chưng thủ công tươi nóng ngay khi nhận đơn. Món quà ấm lòng cho mẹ bầu, người bệnh & ông bà.
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#2B433A]/90 leading-snug sm:leading-relaxed mb-2.5 sm:mb-4">
+                <span className="sm:hidden">
+                  35g yến tươi nguyên tổ trong thố sứ 200ml • Quà bồi bổ mẹ bầu, người bệnh & ông bà.
+                </span>
+                <span className="hidden sm:inline">
+                  35g yến tươi thật trong thố sứ 200ml, chưng thủ công tươi nóng ngay khi nhận đơn. Món quà ấm lòng cho mẹ bầu, người bệnh & ông bà.
+                </span>
               </p>
 
               <div className="flex items-center gap-2">
                 <a
                   href="#menu-chu-luc"
                   data-testid="hero-cta-choose-dish"
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[44px] px-4 sm:px-5 py-2 rounded-full bg-[#155132] text-[#FFFCF4] border border-[#BD9342] font-semibold text-xs sm:text-sm shadow-xs hover:bg-[#0e3b23] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[44px] px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#155132] text-[#FFFCF4] border border-[#BD9342] font-semibold text-xs sm:text-sm shadow-xs hover:bg-[#0e3b23] transition-colors"
                 >
                   <span>Đặt Giao Nóng • Từ 295k</span>
                   <ArrowDown className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
@@ -111,7 +116,7 @@ export default async function HomePage() {
                 <Link
                   href="/gui-qua"
                   data-testid="hero-cta-secondary"
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-[44px] px-3.5 sm:px-4 py-2 rounded-full bg-white/95 text-[#155132] border border-[#155132]/25 font-semibold text-xs sm:text-sm hover:bg-[#FFFCF4] hover:border-[#BD9342] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[44px] px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/95 text-[#155132] border border-[#155132]/25 font-semibold text-xs sm:text-sm hover:bg-[#FFFCF4] hover:border-[#BD9342] transition-colors"
                 >
                   <Gift className="w-3.5 h-3.5 text-[#8A6632]" aria-hidden="true" />
                   <span>Quà Biếu</span>
@@ -125,23 +130,23 @@ export default async function HomePage() {
       {/* 1B. THANH 4 ĐIỂM KHÁC BIỆT CỐT LÕI (Gọn gàng 2x2 trên Mobile, 4 cột ngang trên Desktop) */}
       <section
         aria-label="4 Điểm Khác Biệt Cốt Lõi Yến Sào Hà Mi"
-        className="border-b border-[#BD9342]/20 bg-[#FFFCF4] py-4 md:py-5"
+        className="border-b border-[#BD9342]/20 bg-[#FFFCF4] py-3 sm:py-4 md:py-5"
       >
         <div className="max-w-[1200px] mx-auto px-3 sm:px-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
             {CORE_DIFFERENTIATORS.map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-2.5 rounded-xl bg-white border border-[#155132]/12 p-3 sm:p-3.5 shadow-2xs"
+                className="flex items-center sm:items-start gap-2 sm:gap-2.5 rounded-xl bg-white border border-[#155132]/12 px-2.5 py-2 sm:p-3.5 shadow-2xs"
               >
-                <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#155132]/10 text-[#155132] border border-[#BD9342]/35 shrink-0 mt-0.5">
-                  <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#155132]" aria-hidden="true" />
+                <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#155132]/10 text-[#155132] border border-[#BD9342]/35 shrink-0 sm:mt-0.5">
+                  <Leaf className="w-3 h-3 sm:w-4 sm:h-4 text-[#155132]" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="font-serif-display text-[13px] sm:text-base font-semibold text-[#155132] leading-tight">
+                  <h2 className="font-serif-display text-xs sm:text-base font-semibold text-[#155132] leading-tight truncate sm:whitespace-normal">
                     {item.title}
                   </h2>
-                  <p className="text-[11px] sm:text-xs text-[#2B433A]/80 mt-0.5 leading-snug">
+                  <p className="hidden sm:block text-xs text-[#2B433A]/80 mt-0.5 leading-snug">
                     {item.desc}
                   </p>
                 </div>
