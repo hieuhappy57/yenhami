@@ -173,22 +173,22 @@ export async function POST(request: Request) {
         hidePriceOnReceipt: true,
         addressDetail: "128 Nguyễn Văn Linh, Quận Hải Châu, TP. Đà Nẵng",
         requestedDate: new Date().toISOString().slice(0, 10),
-        slotLabel: "Khung giờ (09:00 – 10:00)",
+        slotLabel: "Giao Nóng Trong 2H (09:00 – 11:00)",
         totalBowls: 3,
-        subtotalVnd: 550000,
+        subtotalVnd: 1280000,
         shippingFeeVnd: 0,
-        totalVnd: 550000,
+        totalVnd: 1280000,
         shippingFeeNote: "Miễn phí giao hàng (Đơn từ 2 thố/set)",
         items: [
           {
             productName: "Thố Yến Tươi Chưng Nóng — Thanh Nguyên",
-            variantName: "Thố sứ 200ml",
+            variantName: "Thố sứ 200ml (35g yến tươi)",
             volumeMl: 200,
             selectedOption: "Ít ngọt",
-            ingredientsText: "Tổ yến tươi nguyên chất, đường phèn kết tinh, lát gừng ấm",
+            ingredientsText: "35g tổ yến tươi nguyên chất, đường phèn kết tinh, lát gừng ấm",
             quantity: 2,
-            unitPriceVnd: 145000,
-            lineTotalVnd: 290000,
+            unitPriceVnd: 295000,
+            lineTotalVnd: 590000,
           },
           {
             productName: "Set Quà Yến Sào Thượng Hạng 6 Vị (Hộp Hoa Sen & Đàn Én)",
@@ -197,17 +197,67 @@ export async function POST(request: Request) {
             selectedOption: "Nguyên vị 6 hũ",
             ingredientsText: "Đông trùng, Nhân sâm, Kỷ tử, Táo đỏ, Hạt chia, Đường phèn",
             quantity: 1,
-            unitPriceVnd: 260000,
-            lineTotalVnd: 260000,
+            unitPriceVnd: 690000,
+            lineTotalVnd: 690000,
           },
         ],
         itemsSummary:
-          "1. Thố Yến Tươi Chưng Nóng — Thanh Nguyên (Thố sứ 200ml • Ít ngọt) x2 = 290.000đ | 2. Set Quà Yến Sào Thượng Hạng 6 Vị (Hộp 6 hũ 75ml • Nguyên vị 6 hũ) x1 = 260.000đ",
+          "1. Thố Yến Tươi Chưng Nóng — Thanh Nguyên (Thố sứ 200ml • Ít ngọt) x2 = 590.000đ | 2. Set Quà Yến Sào Thượng Hạng 6 Vị (Hộp 6 hũ 75ml • Nguyên vị 6 hũ) x1 = 690.000đ",
       });
       await syncDbToCloud();
       return NextResponse.json({
         ok: true,
         message: result.detail,
+        notificationLogs: getNotificationLogs(30),
+      });
+    }
+
+    if (action === "resend_order_notification" && body.order) {
+      const ord = body.order;
+      const items = Array.isArray(ord.items)
+        ? ord.items.map((it: Record<string, unknown>) => ({
+            productName: String(it.productNameSnapshot || ""),
+            variantName: String(it.variantNameSnapshot || "Thố 200ml"),
+            volumeMl: Number(it.volumeMlSnapshot || 200),
+            selectedOption: String(it.selectedOptionSnapshot || "Nguyên bản"),
+            ingredientsText: String(it.ingredientsSnapshot || ""),
+            quantity: Number(it.quantity || 1),
+            unitPriceVnd: Number(it.unitPriceSnapshot || 295000),
+            lineTotalVnd: Number(it.lineTotalSnapshot || 295000),
+          }))
+        : [];
+      const itemsSummary = items
+        .map(
+          (it: { productName: string; variantName: string; selectedOption: string; quantity: number; lineTotalVnd: number }, idx: number) =>
+            `${idx + 1}. ${it.productName} (${it.variantName} • ${it.selectedOption}) x${it.quantity} = ${it.lineTotalVnd.toLocaleString("vi-VN")}đ`
+        )
+        .join(" | ");
+
+      const result = await triggerOrderNotificationsAfterCommit({
+        referenceCode: String(ord.referenceCode || ""),
+        orderPurpose: ord.orderPurpose === "GIFT" ? "GIFT" : "SELF",
+        buyerName: String(ord.buyerName || ""),
+        buyerPhone: String(ord.buyerPhone || ""),
+        buyerNote: ord.buyerNote ? String(ord.buyerNote) : undefined,
+        recipientName: String(ord.recipientName || ""),
+        recipientPhone: String(ord.recipientPhone || ""),
+        giftSenderName: ord.giftSenderName ? String(ord.giftSenderName) : undefined,
+        giftMessage: ord.giftMessage ? String(ord.giftMessage) : undefined,
+        hidePriceOnReceipt: Boolean(ord.hidePriceOnReceipt),
+        addressDetail: String(ord.addressDetail || ""),
+        requestedDate: String(ord.requestedDate || ""),
+        slotLabel: String(ord.slotLabelSnapshot || ""),
+        subtotalVnd: Number(ord.subtotalVnd || ord.totalVnd || 0),
+        shippingFeeVnd: ord.shippingFeeVnd === null || ord.shippingFeeVnd === undefined ? null : Number(ord.shippingFeeVnd),
+        totalVnd: Number(ord.totalVnd || 0),
+        shippingFeeNote: String(ord.shippingFeeNote || ""),
+        items,
+        itemsSummary,
+      });
+      await syncDbToCloud();
+      return NextResponse.json({
+        ok: true,
+        message: `Đã gửi lại thông báo cho đơn #${ord.referenceCode}: ${result.detail}`,
         notificationLogs: getNotificationLogs(30),
       });
     }

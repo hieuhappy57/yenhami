@@ -249,6 +249,10 @@ export default function QuanTriPage() {
 
   const [loadingData, setLoadingData] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [autoRefreshOrders, setAutoRefreshOrders] = useState(true);
+  const [lastKnownOrderCount, setLastKnownOrderCount] = useState<number | null>(
+    null
+  );
 
   // Filters & Search (WP List Table style)
   const [orderFilterStatus, setOrderFilterStatus] = useState<string>("ALL");
@@ -307,6 +311,30 @@ export default function QuanTriPage() {
     isOpen: boolean;
   } | null>(null);
 
+  const playNewOrderChime = useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch {
+      // ignore audio context restriction
+    }
+  }, []);
+
   const loadDashboardData = useCallback(async () => {
     setLoadingData(true);
     try {
@@ -321,6 +349,18 @@ export default function QuanTriPage() {
         };
         const fetchedOrders = ordersData.orders || [];
         setOrders(fetchedOrders);
+        setLastKnownOrderCount((prevCount) => {
+          if (prevCount !== null && fetchedOrders.length > prevCount) {
+            const newest = fetchedOrders[0];
+            if (newest) {
+              setFeedbackMsg(
+                `🔔 ĐƠN MỚI VỪA ĐẶT: #${newest.referenceCode} — Khách ${newest.buyerName} (${newest.buyerPhone}) • Tổng ${formatVnd(newest.totalVnd)}`
+              );
+              playNewOrderChime();
+            }
+          }
+          return fetchedOrders.length;
+        });
         const initOrdStatus: Record<string, OrderStatus> = {};
         const initPayStatus: Record<string, PaymentStatus> = {};
         const initFee: Record<string, string> = {};
@@ -330,9 +370,9 @@ export default function QuanTriPage() {
           initFee[o.referenceCode] =
             o.shippingFeeVnd !== null ? String(o.shippingFeeVnd) : "";
         }
-        setDraftOrderStatus(initOrdStatus);
-        setDraftPaymentStatus(initPayStatus);
-        setDraftShippingFee(initFee);
+        setDraftOrderStatus((prev) => ({ ...initOrdStatus, ...prev }));
+        setDraftPaymentStatus((prev) => ({ ...initPayStatus, ...prev }));
+        setDraftShippingFee((prev) => ({ ...initFee, ...prev }));
       }
       if (catalogRes.ok) {
         const catData = (await catalogRes.json()) as {
@@ -363,7 +403,7 @@ export default function QuanTriPage() {
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [playNewOrderChime]);
 
   useEffect(() => {
     fetch("/api/admin/auth")
@@ -379,6 +419,15 @@ export default function QuanTriPage() {
       })
       .finally(() => setCheckingAuth(false));
   }, [loadDashboardData]);
+
+  // Auto-poll every 20 seconds when logged in and autoRefreshOrders is enabled
+  useEffect(() => {
+    if (!staff || !autoRefreshOrders) return;
+    const timer = window.setInterval(() => {
+      loadDashboardData();
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [staff, autoRefreshOrders, loadDashboardData]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -444,7 +493,7 @@ export default function QuanTriPage() {
     const nextPrice =
       newStatus === "PENDING_DATA_APPROVAL"
         ? null
-        : product.priceVnd ?? 145000;
+        : product.priceVnd ?? 295000;
     const res = await fetch("/api/admin/catalog", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -697,6 +746,31 @@ export default function QuanTriPage() {
     window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
   };
 
+  const handleResendOrderNotification = async (order: AdminOrderRecord) => {
+    setFeedbackMsg(
+      `Đang bắn lại thông báo tự động (Email/Google Sheets & Zalo) cho đơn #${order.referenceCode}...`
+    );
+    const res = await fetch("/api/admin/cms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "resend_order_notification",
+        order,
+      }),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      message?: string;
+      errorMessage?: string;
+    };
+    setFeedbackMsg(
+      data.message ||
+        data.errorMessage ||
+        `Đã kích hoạt gửi lại thông báo cho đơn #${order.referenceCode}.`
+    );
+    loadDashboardData();
+  };
+
   // Computed stats & filtered lists
   const pendingOrdersCount = useMemo(
     () =>
@@ -754,11 +828,11 @@ export default function QuanTriPage() {
       slug: "",
       name: "",
       category: "nguyen-ban",
-      volumeMl: 100,
-      ingredientsText: "Tổ yến nguyên chất, đường phèn kết tinh",
+      volumeMl: 200,
+      ingredientsText: "35g tổ yến tươi nguyên chất, đường phèn kết tinh",
       shortDescription: "",
-      imageUrl: "/brand/catalog/yen-hu-75ml-100ml-cam-tay.jpg",
-      priceVnd: "145000",
+      imageUrl: "/brand/dishes/thanh-nguyen-dish.jpg",
+      priceVnd: "295000",
       status: "AVAILABLE",
     });
   };
@@ -802,22 +876,22 @@ export default function QuanTriPage() {
   // WordPress-style Login Screen (wp-login.php look & feel)
   if (!staff) {
     return (
-      <div className="min-h-screen bg-[#f0f0f1] flex flex-col items-center justify-center px-4 py-12">
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center px-4 py-12">
         <div className="mb-5 flex flex-col items-center text-center">
           <Link href="/" className="group flex flex-col items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/ha-mi-logo-web-640.png"
-              alt="Yến Sào Hà Mi"
+              alt="YẾN SÀO HÀ MI"
               className="h-20 w-20 object-contain drop-shadow-xs"
             />
-            <span className="mt-2 font-serif-display text-xl font-bold text-[#155132]">
-              YẾN SÀO HÀ MI — WP ADMIN
+            <span className="mt-2 font-brand-serif text-xl font-bold uppercase tracking-[0.06em] text-[#155132]">
+              YẾN SÀO HÀ MI — QUẢN TRỊ
             </span>
           </Link>
         </div>
 
-        <div className="w-full max-w-[380px] rounded-md border border-[#c3c4c7] bg-white p-6 shadow-xs">
+        <div className="w-full max-w-[380px] rounded-xl border border-[#BD9342]/35 bg-white p-6 shadow-md">
           <div className="flex items-center gap-2 border-b border-[#dcdcde] pb-3 mb-4">
             <Lock className="h-4 w-4 text-[#155132]" />
             <h1 className="text-sm font-bold text-[#1d2327]">
@@ -884,7 +958,7 @@ export default function QuanTriPage() {
 
         <p className="mt-4 text-xs text-[#50575e]">
           <Link href="/" className="hover:text-[#155132] hover:underline">
-            ← Quay lại trang chủ Yến Sào Hà Mi
+            ← Quay lại trang chủ YẾN SÀO HÀ MI
           </Link>
         </p>
       </div>
@@ -1011,10 +1085,12 @@ export default function QuanTriPage() {
             href="/"
             target="_blank"
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#2c3338] hover:text-[#72aee6] transition"
-            title="Mở trang chủ Yến Sào Hà Mi trong tab mới"
+            title="Mở trang chủ YẾN SÀO HÀ MI trong tab mới"
           >
             <Home className="h-4 w-4 text-[#BD9342]" />
-            <span className="font-semibold tracking-wide">Yến Sào Hà Mi</span>
+            <span className="font-brand-serif font-bold uppercase tracking-[0.06em]">
+              YẾN SÀO HÀ MI
+            </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-[#a7aaad]">
               (Xem trang web <ExternalLink className="h-3 w-3" />)
             </span>
@@ -1050,6 +1126,23 @@ export default function QuanTriPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setAutoRefreshOrders((v) => !v)}
+            className={`hidden md:inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium cursor-pointer transition ${
+              autoRefreshOrders
+                ? "bg-emerald-900/70 text-emerald-200 border border-emerald-600/50"
+                : "bg-[#2c3338] text-[#a7aaad]"
+            }`}
+            title="Tự động kiểm tra và đổ chuông báo khi có đơn hàng mới mỗi 20 giây"
+          >
+            <Bell className="h-3 w-3 text-[#BD9342]" />
+            <span>
+              Tự động nhận đơn:{" "}
+              <strong>{autoRefreshOrders ? "BẬT" : "TẮT"}</strong>
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={loadDashboardData}
@@ -1209,6 +1302,34 @@ export default function QuanTriPage() {
 
         {/* Main Content Area (#wpbody-content) */}
         <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-[1440px]">
+          {/* Live Pending Orders Banner */}
+          {pendingOrdersCount > 0 && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xs border border-[#BD9342] border-l-4 border-l-[#d63638] bg-[#FFFCF4] px-4 py-3 text-xs text-[#1d2327] shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <Bell className="h-4 w-4 text-[#d63638] shrink-0 animate-bounce" />
+                <span>
+                  Đang có{" "}
+                  <strong className="text-[#d63638] font-bold">
+                    {pendingOrdersCount} đơn đặt hàng mới
+                  </strong>{" "}
+                  ở trạng thái <strong>Chờ Hà Mi xác nhận</strong>! Hệ thống tự động bắn thông báo Email &amp; Zalo ngay khi khách đặt.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection("orders");
+                    setOrderFilterStatus("PENDING_CONFIRMATION");
+                  }}
+                  className="rounded-xs bg-[#155132] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0e3b23] cursor-pointer"
+                >
+                  Xem đơn chờ xác nhận ({pendingOrdersCount})
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* WordPress Notice Banner */}
           {feedbackMsg && (
             <div
@@ -1595,6 +1716,17 @@ export default function QuanTriPage() {
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
+                              onClick={() =>
+                                handleResendOrderNotification(order)
+                              }
+                              className="inline-flex items-center gap-1 rounded-xs border border-[#BD9342]/60 bg-[#FFFCF4] px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
+                              title="Bắn lại thông báo tự động qua Google Apps Script (Email/Sheets) & Zalo Webhook"
+                            >
+                              <Send className="h-3.5 w-3.5 text-[#BD9342]" />
+                              Bắn lại TB tự động
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleQuickShareZalo(order)}
                               className="inline-flex items-center gap-1 rounded-xs border border-[#155132]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
                             >
@@ -1905,7 +2037,7 @@ export default function QuanTriPage() {
                                   priceVnd: e.target.value,
                                 })
                               }
-                              placeholder="VD: 145000"
+                              placeholder="VD: 295000"
                               className="mt-1 w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-xs font-semibold"
                             />
                           </div>
@@ -1921,7 +2053,7 @@ export default function QuanTriPage() {
                               onChange={(e) =>
                                 setEditingProduct({
                                   ...editingProduct,
-                                  volumeMl: Number(e.target.value) || 100,
+                                  volumeMl: Number(e.target.value) || 200,
                                 })
                               }
                               className="mt-1 w-full rounded-xs border border-[#8c8f94] px-3 py-2 text-xs font-semibold"
