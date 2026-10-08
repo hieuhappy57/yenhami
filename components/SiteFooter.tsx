@@ -28,20 +28,31 @@ export function SiteFooter() {
         {/* Col 1: Brand Identity & Contact */}
         <div className="md:col-span-5 space-y-4">
           <div className="flex items-center gap-3.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/ha-mi-logo-mark-256.png"
-              alt="Logo YẾN SÀO HÀ MI"
-              width={56}
-              height={56}
-              loading="lazy"
-              className="w-14 h-14 object-contain rounded-2xl bg-white p-1.5 shadow-xs border border-[#E5D5B5] shrink-0"
-            />
+            <div className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-[#FFFDF9] via-[#FFFBF2] to-[#F9EED8] p-1 border-[1.5px] border-[#C89B3C]/75 ring-3 ring-[#BD9342]/12 shadow-[0_4px_14px_rgba(189,147,66,0.22)] shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/ha-mi-logo-web-640.png"
+                alt="Logo YẾN SÀO HÀ MI"
+                width={60}
+                height={60}
+                loading="lazy"
+                className="w-full h-full object-contain rounded-full"
+              />
+            </div>
             <div>
-              <h2 className="font-brand-serif text-xl font-bold uppercase tracking-[0.06em] text-[#1B4332]">
+              <h2 className="font-serif-display text-xl sm:text-2xl font-extrabold uppercase tracking-[0.04em] text-[#11462B] leading-tight">
                 YẾN SÀO HÀ MI
               </h2>
-              <p className="text-xs font-medium text-[#7C4D2B]">
+              <div className="flex items-center gap-1.5 mt-1">
+                <span
+                  className="inline-block w-4 h-[1.5px] rounded-full bg-gradient-to-r from-[#BD9342] to-[#E5C168]"
+                  aria-hidden="true"
+                />
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9A6F21]">
+                  CHẤT TỪNG SỢI YẾN • ĐÀ NẴNG
+                </p>
+              </div>
+              <p className="text-xs font-medium text-[#7C4D2B] mt-0.5">
                 Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất
               </p>
             </div>
