@@ -115,8 +115,8 @@ async function runSeoAudit() {
 
   record(
     "3. Robots & Sitemap",
-    "Sitemap.xml bao phủ đầy đủ Trang tĩnh + Sản phẩm + Bài viết + Chính sách + LLMs",
-    sitemapEntries.length >= 10 + products.length + posts.length + 4,
+    "Sitemap.xml bao phủ đầy đủ Trang tĩnh + Sản phẩm + Bài viết + Chính sách",
+    sitemapEntries.length >= 8 + products.length + posts.length + 4,
     `Tổng cộng ${sitemapEntries.length} URLs trong sitemap.xml (${products.length} sản phẩm, ${posts.length} bài viết)`
   );
 

@@ -1,13 +1,12 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/config/seo";
-import { getAllPosts, getAllProducts, syncDbFromCloud } from "@/db";
+import { getAllPosts, getAllProducts } from "@/db";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 const POLICY_SLUGS = ["giao-nhan", "thanh-toan", "doi-huy", "quyen-rieng-tu"];
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  await syncDbFromCloud();
+export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -58,18 +57,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.65,
-    },
-    {
-      url: absoluteUrl("/llms.txt"),
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: absoluteUrl("/llms-full.txt"),
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.75,
     },
   ];
 
