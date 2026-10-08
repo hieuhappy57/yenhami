@@ -8,7 +8,7 @@ import { FloatingActionRail } from "@/components/FloatingActionRail";
 import { MobileStickyCartBar } from "@/components/MobileStickyCartBar";
 import { OrganizationAndLocalBusinessJsonLd } from "@/components/SeoJsonLd";
 import { AnalyticsScripts } from "@/components/AnalyticsScripts";
-import { GEO_META_TAGS, SEO_CONFIG, absoluteUrl } from "@/config/seo";
+import { GEO_META_TAGS, IS_PREVIEW_DEPLOYMENT, SEO_CONFIG, absoluteUrl } from "@/config/seo";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
@@ -79,7 +79,11 @@ export const metadata: Metadata = {
     description: SEO_CONFIG.defaultDescription,
     images: [absoluteUrl(SEO_CONFIG.defaultOgImage)],
   },
-  robots: {
+  robots: IS_PREVIEW_DEPLOYMENT ? {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  } : {
     index: true,
     follow: true,
     googleBot: {

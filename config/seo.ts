@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { BRAND_CONFIG } from "./brand";
+import { isPreviewDeployment } from "@/lib/deployment-policy";
 
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || "https://yenhami.com"
 ).replace(/\/$/, "");
+
+export const IS_PREVIEW_DEPLOYMENT = isPreviewDeployment(process.env.VERCEL_ENV);
 
 export const GEO_CONFIG = {
   region: "VN-DN",
@@ -146,7 +149,7 @@ export function buildPageMetadata({
       description,
       images: [ogImageUrl],
     },
-    robots: noIndex
+    robots: noIndex || IS_PREVIEW_DEPLOYMENT
       ? {
           index: false,
           follow: false,

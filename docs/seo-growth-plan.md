@@ -38,7 +38,7 @@ Execution days below start when the relevant task/model approval and dependencie
 | 6 | Draft two evidence-based product comparison/gift articles | Gemini 3.8 Flash Medium | Owner-approved product facts, useful unique content, no unsupported health claims |
 | 7 | Review baseline, deployed changes, indexing and request funnel; plan week two | Leader review; worker model proposed only if needed | Evidence-backed report; next priorities depend on results |
 
-Day 1 was approved for Gemini 3.8 Flash Medium and completed locally on 2026-10-08. See seo-day1-delivery.md for review and verification. Deployment has not been performed. Future tasks still require per-task model approval; no automatic dispatch or deployment is implied by this queue.
+Days 1 and 2 were separately approved for Gemini 3.8 Flash Medium and completed locally on 2026-10-08. Owner confirmed yenhami.com as the production domain. See seo-day1-delivery.md and seo-day2-delivery.md for review and verification. Deployment has not been performed. Future tasks still require per-task model approval; no automatic dispatch or deployment is implied by this queue.
 
 ## Goal Definition
 
