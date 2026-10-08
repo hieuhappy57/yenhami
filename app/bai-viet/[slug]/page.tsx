@@ -125,6 +125,29 @@ export default async function BaiVietDetailPage({
                     </h3>
                   );
                 }
+                if (para.startsWith("- ")) {
+                  const text = para.replace(/^-\s+/, "");
+                  const colonIdx = text.indexOf(":");
+                  if (colonIdx > 0 && colonIdx < 80) {
+                    const lead = text.slice(0, colonIdx + 1);
+                    const rest = text.slice(colonIdx + 1);
+                    return (
+                      <div key={idx} className="flex items-start gap-2.5 pl-1">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4AF37]" />
+                        <p>
+                          <strong className="font-bold text-[#1B4332]">{lead}</strong>
+                          {rest}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={idx} className="flex items-start gap-2.5 pl-1">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4AF37]" />
+                      <p>{text}</p>
+                    </div>
+                  );
+                }
                 return <p key={idx}>{para}</p>;
               })}
             </div>
