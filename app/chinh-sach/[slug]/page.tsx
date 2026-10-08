@@ -20,7 +20,7 @@ const POLICIES: Record<
     sections: [
       {
         heading: "1. Chưng mới theo đơn & Giao ấm nóng trong 2 giờ",
-        body: "Yến Tươi Chưng Nóng (35g yến tươi thật/thố 200ml) được chưng thủ công mới ngay khi nhận đơn và giao ấm nóng trong vòng 2 giờ tại Đà Nẵng. Đặt từ 2 thố trở lên được miễn phí giao hàng trong bán kính 5km.",
+        body: "Yến Tươi Chưng Nóng (35g yến tươi thật/thố 200ml) được chưng thủ công tươi nóng ngay khi nhận đơn và giao ấm nóng trong vòng 2 giờ tại Đà Nẵng. Đặt từ 2 thố trở lên được miễn phí giao hàng trong bán kính 5km.",
       },
       {
         heading: "2. Phân vùng phục vụ tại Đà Nẵng",
@@ -117,47 +117,47 @@ export default async function PolicyDetailPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 md:py-14 space-y-8">
+    <div className="bg-[#FDFBF7] max-w-3xl mx-auto px-4 py-10 md:py-14 space-y-6">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#155132] hover:underline"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EB] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Quay lại Trang chủ</span>
       </Link>
 
-      <div className="rounded-3xl border border-[#155132]/20 bg-white p-6 sm:p-8 shadow-xs space-y-6">
-        <div className="border-b border-[#155132]/12 pb-5 space-y-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-3 py-1 rounded-full">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#155132]" />
+      <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-2xs space-y-6">
+        <div className="rounded-2xl bg-[#FFE9DD] p-5 space-y-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#7C4D2B] bg-white/85 px-3 py-1 rounded-full">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#1B4332]" />
             Chính sách phục vụ Hà Mi
           </span>
-          <h1 className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#155132]">
+          <h1 className="font-serif-display text-2xl sm:text-3xl font-bold text-[#1B1B1B]">
             {policy.title}
           </h1>
-          <p className="text-xs sm:text-sm text-[#2B433A]/85">{policy.subtitle}</p>
+          <p className="text-xs sm:text-sm text-[#2B433A]">{policy.subtitle}</p>
         </div>
 
         <div className="space-y-5">
           {policy.sections.map((sec) => (
-            <section key={sec.heading} className="space-y-1.5">
-              <h2 className="font-serif-display text-lg font-semibold text-[#155132]">
+            <section key={sec.heading} className="rounded-2xl bg-[#FAF4EB] p-5 space-y-1.5">
+              <h2 className="font-serif-display text-lg font-bold text-[#1B4332]">
                 {sec.heading}
               </h2>
-              <p className="text-sm text-[#2B433A] leading-relaxed">{sec.body}</p>
+              <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">{sec.body}</p>
             </section>
           ))}
         </div>
 
-        <div className="pt-4 border-t border-[#155132]/12 flex flex-wrap gap-2">
+        <div className="pt-4 border-t border-[#E6DAC6] flex flex-wrap gap-2">
           {Object.entries(POLICIES).map(([key, item]) => (
             <Link
               key={key}
               href={`/chinh-sach/${key}`}
-              className={`text-xs px-3 py-1.5 rounded-lg border ${
+              className={`text-xs px-4 py-2 rounded-full transition ${
                 key === slug
-                  ? "bg-[#155132] text-[#FFFCF4] border-[#BD9342] font-semibold"
-                  : "bg-[#FFFCF4] text-[#2B433A] border-[#155132]/20 hover:border-[#155132]"
+                  ? "bg-[#1B4332] text-white font-bold"
+                  : "bg-[#FAF4EB] text-[#2B433A] hover:bg-[#FFE9DD]"
               }`}
             >
               {item.title}

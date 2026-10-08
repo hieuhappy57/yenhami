@@ -21,7 +21,7 @@ body {
   overflow-x: hidden;
   max-width: 100vw;
   color: var(--grove-ink);
-  background-color: #ffffff;
+  background-color: #fdfbf7;
   font-family: var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -45,6 +45,11 @@ body {
 .font-serif-display {
   font-family: var(--font-heading), var(--font-be-vietnam), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: -0.01em;
+}
+
+/* Luxury classic serif font for the YẾN SÀO HÀ MI brand lockup */
+.font-brand-serif {
+  font-family: var(--font-brand-serif), Georgia, "Times New Roman", serif;
 }
 
 .font-sans-ui {

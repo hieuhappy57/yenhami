@@ -59,13 +59,13 @@ export default async function ProductDetailPage({
   const related = getAllProducts().filter((p) => p.slug !== slug).slice(0, 4);
 
   return (
-    <div>
+    <div className="bg-[#FDFBF7]">
       <ProductJsonLd product={product} />
       <ProductDetailClient product={product} />
-      <div className="border-t border-[#BD9342]/30 bg-[#FFFCF4]/40">
+      <div className="border-t border-[#E6DAC6]">
         <ProductMenuSection
           products={related}
-          title="Các món khác trong Menu Yến Tươi Chưng Nóng"
+          title="Sản Phẩm Cùng Bộ Sưu Tập Hà Mi"
           subtitle="Khách có thể kết hợp nhiều vị khác nhau trong cùng một đơn đặt món. Đặt từ 2 thố trở lên miễn phí giao hàng trong bán kính 5km."
         />
       </div>

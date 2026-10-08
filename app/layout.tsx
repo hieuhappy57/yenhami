@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro, Plus_Jakarta_Sans } from "next/font/google";
+import { Be_Vietnam_Pro, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -14,6 +14,13 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
   weight: ["500", "600", "700", "800"],
   variable: "--font-heading",
+  display: "swap",
+});
+
+const brandSerif = Playfair_Display({
+  subsets: ["vietnamese", "latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-brand-serif",
   display: "swap",
 });
 
@@ -89,7 +96,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${plusJakarta.variable} ${beVietnamPro.variable}`}>
+    <html lang="vi" className={`${plusJakarta.variable} ${brandSerif.variable} ${beVietnamPro.variable}`}>
       <body className="min-h-screen flex flex-col bg-white text-[#2B433A] font-sans antialiased selection:bg-[#155132] selection:text-[#FFFCF4]">
         <OrganizationAndLocalBusinessJsonLd />
         <AnalyticsScripts />

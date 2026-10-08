@@ -1,39 +1,46 @@
 import React from "react";
 import Link from "next/link";
-import {
-  ArrowDown,
-  ArrowRight,
-  Gift,
-  Leaf,
-} from "lucide-react";
+import { ArrowRight, CookingPot, Leaf, Truck } from "lucide-react";
 import {
   getAllPosts,
   getAllProducts,
-  getSiteContentSettings,
   syncDbFromCloud,
 } from "@/db";
+import { LangfarmHeroCarousel } from "@/components/LangfarmHeroCarousel";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { FaqJsonLd } from "@/components/SeoJsonLd";
 
 export const dynamic = "force-dynamic";
 
-const CORE_DIFFERENTIATORS = [
+const FEATURED_CATEGORIES = [
   {
-    title: "Giao Nóng 2H",
-    desc: "Ấm thơm tận tay tại Đà Nẵng",
+    title: "Yến Tươi Chưng Nóng",
+    subtitle: "Thố sứ 200ml • Giao 2H",
+    badge: "Từ 295k",
+    href: "#menu-chu-luc",
+    image: "/brand/dishes/tu-quy-an-nhien-v2.webp",
   },
   {
-    title: "35g Yến Việt Nguyên Tổ",
-    desc: "Sợi dài, nhặt sạch bằng nước RO",
+    title: "Set Quà Thượng Hạng",
+    subtitle: "Hộp Hoa Sen & Đàn Én",
+    badge: "Quà biếu",
+    href: "#danh-muc-set-qua",
+    image: "/brand/catalog/set-qua-hop-sen-en.jpg",
   },
   {
-    title: "Đường Phèn & Thảo Mộc",
-    desc: "Vị ngọt thanh tao, dễ hấp thu",
+    title: "Yến Hũ Chưng Sẵn",
+    subtitle: "Hũ 75ml & 100ml tiện lợi",
+    badge: "Từ 40k",
+    href: "#danh-muc-yen-hu",
+    image: "/brand/catalog/hu-75ml-duong-phen-v2.webp",
   },
   {
-    title: "Không Chất Bảo Quản",
-    desc: "100% tinh khiết, chưng tươi mỗi đơn",
+    title: "Yến Sào Tinh Chế",
+    subtitle: "Nguyên tổ 100g • ISO/FDA",
+    badge: "Thượng hạng",
+    href: "#danh-muc-yen-tinh-che",
+    image: "/brand/catalog/yen-tinh-che-to-yen.jpg",
   },
 ];
 
@@ -56,167 +63,215 @@ export default async function HomePage() {
   await syncDbFromCloud();
   const allProducts = getAllProducts();
   const freshBowlProducts = allProducts.filter((p) => !p.id.startsWith("cat-"));
-  const siteSettings = getSiteContentSettings();
   const latestPosts = getAllPosts(true).slice(0, 4);
 
   return (
-    <div>
+    <div className="bg-white">
       <FaqJsonLd items={FAQ_ITEMS} />
 
-      {/* 1. HERO FULL-BLEED: Tinh gọn, sang trọng, tôn vinh hình ảnh thố yến */}
+      {/* 1. LANGFARM-STYLE FULL-BLEED HERO CAROUSEL */}
+      <LangfarmHeroCarousel />
+
+      {/* 2. SẢN PHẨM NỔI BẬT (4 Ô Ngang Gọn Gàng & Sang Trọng trên cả Mobile & Desktop) */}
       <section
-        aria-label="Giới thiệu Yến Sào Hà Mi - Yến Tươi Chưng Nóng Giao Ngay 2H"
-        data-testid="hero-section"
-        className="relative w-full overflow-hidden border-b border-[#BD9342]/20 bg-[#FFFCF4]"
+        aria-label="Sản phẩm nổi bật Yến Sào Hà Mi"
+        className="py-6 sm:py-10 md:py-12 bg-gradient-to-b from-[#FAF6EE] to-white border-b border-[#E8DEC8]/60"
       >
-        <picture className="block w-full">
-          <source media="(min-width: 768px)" srcSet={siteSettings.heroDesktopImage} />
-          <img
-            src={siteSettings.heroMobileImage}
-            alt="Thố Yến Tươi Chưng Nóng 200ml Giao Ngay 2H Tại Đà Nẵng - Yến Sào Hà Mi"
-            fetchPriority="high"
-            width={1640}
-            height={680}
-            className="w-full h-[470px] sm:h-[500px] md:h-[440px] lg:h-[540px] object-cover object-bottom md:object-[76%_center] lg:object-center"
-          />
-        </picture>
-
-        <div className="absolute inset-x-0 top-0 md:inset-y-0 flex items-start md:items-center pointer-events-none">
-          <div className="max-w-[1200px] w-full mx-auto px-4 md:pr-8 pt-3 sm:pt-4 md:py-6">
-            <div className="max-w-[340px] sm:max-w-md md:max-w-[430px] lg:max-w-[490px] pointer-events-auto md:bg-[#FFFCF4]/86 md:backdrop-blur-xs md:p-5 lg:p-6 md:rounded-2xl md:border md:border-[#BD9342]/30 md:shadow-xs">
-              <p className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[#8A6632] uppercase tracking-wider">
-                <Leaf className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#155132]" aria-hidden="true" />
-                <span>Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất</span>
-              </p>
-
-              <h1 className="mt-0.5 sm:mt-1 font-serif-display text-[22px] leading-[27px] sm:text-[26px] sm:leading-[33px] lg:text-[36px] lg:leading-[44px] font-semibold text-[#155132] [text-wrap:balance]">
-                Yến Tươi Chưng Nóng Thố Sứ — Giao Ngay 2H
-                <span className="sr-only"> Tại Đà Nẵng</span>
-              </h1>
-
-              <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#2B433A]/90 leading-snug sm:leading-relaxed mb-2.5 sm:mb-4">
-                <span className="sm:hidden">
-                  35g yến tươi nguyên tổ trong thố sứ 200ml • Quà bồi bổ mẹ bầu, người bệnh & ông bà.
-                </span>
-                <span className="hidden sm:inline">
-                  35g yến tươi thật trong thố sứ 200ml, chưng thủ công tươi nóng ngay khi nhận đơn. Món quà ấm lòng cho mẹ bầu, người bệnh & ông bà.
-                </span>
-              </p>
-
-              <div className="flex items-center gap-2">
-                <a
-                  href="#menu-chu-luc"
-                  data-testid="hero-cta-choose-dish"
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[44px] px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#155132] text-[#FFFCF4] border border-[#BD9342] font-semibold text-xs sm:text-sm shadow-xs hover:bg-[#0e3b23] transition-colors"
-                >
-                  <span>Đặt Giao Nóng • Từ 295k</span>
-                  <ArrowDown className="w-3.5 h-3.5 text-[#BD9342]" aria-hidden="true" />
-                </a>
-
-                <Link
-                  href="/gui-qua"
-                  data-testid="hero-cta-secondary"
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-[44px] px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/95 text-[#155132] border border-[#155132]/25 font-semibold text-xs sm:text-sm hover:bg-[#FFFCF4] hover:border-[#BD9342] transition-colors"
-                >
-                  <Gift className="w-3.5 h-3.5 text-[#8A6632]" aria-hidden="true" />
-                  <span>Quà Biếu</span>
-                </Link>
-              </div>
-            </div>
+        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="text-center mb-4 sm:mb-7">
+            <span className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#9A7432] mb-1">
+              Tinh Hoa Dưỡng Chất Tự Nhiên
+            </span>
+            <h2 className="font-serif-display text-xl sm:text-3xl lg:text-4xl font-bold text-[#155132]">
+              Sản phẩm nổi bật
+            </h2>
           </div>
-        </div>
-      </section>
 
-      {/* 1B. THANH 4 ĐIỂM KHÁC BIỆT CỐT LÕI (Gọn gàng 2x2 trên Mobile, 4 cột ngang trên Desktop) */}
-      <section
-        aria-label="4 Điểm Khác Biệt Cốt Lõi Yến Sào Hà Mi"
-        className="border-b border-[#BD9342]/20 bg-[#FFFCF4] py-3 sm:py-4 md:py-5"
-      >
-        <div className="max-w-[1200px] mx-auto px-3 sm:px-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
-            {CORE_DIFFERENTIATORS.map((item) => (
-              <div
-                key={item.title}
-                className="flex items-center sm:items-start gap-2 sm:gap-2.5 rounded-xl bg-white border border-[#155132]/12 px-2.5 py-2 sm:p-3.5 shadow-2xs"
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            {FEATURED_CATEGORIES.map((cat) => (
+              <a
+                key={cat.title}
+                href={cat.href}
+                className="group relative flex flex-col lg:flex-row items-center text-center lg:text-left rounded-2xl bg-gradient-to-br from-[#FFFDF9] via-[#FAF5E8] to-[#F3E9D2] border border-[#D4AF37]/45 hover:border-[#155132] p-2 sm:p-3.5 lg:px-4 lg:py-3.5 gap-1.5 sm:gap-3 lg:gap-4 shadow-[0_4px_14px_rgba(21,81,50,0.06)] hover:shadow-[0_10px_24px_rgba(21,81,50,0.12)] transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
               >
-                <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#155132]/10 text-[#155132] border border-[#BD9342]/35 shrink-0 sm:mt-0.5">
-                  <Leaf className="w-3 h-3 sm:w-4 sm:h-4 text-[#155132]" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="font-serif-display text-xs sm:text-base font-semibold text-[#155132] leading-tight truncate sm:whitespace-normal">
-                    {item.title}
-                  </h2>
-                  <p className="hidden sm:block text-xs text-[#2B433A]/80 mt-0.5 leading-snug">
-                    {item.desc}
+                {/* Gold-rimmed circular studio image */}
+                <div className="w-14 h-14 sm:w-20 sm:h-20 lg:w-[76px] lg:h-[76px] shrink-0 rounded-full p-[2px] bg-gradient-to-tr from-[#B8892D] via-[#F5DF98] to-[#C89B3C] shadow-xs">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-white">
+                    <img
+                      src={cat.image}
+                      alt={cat.title}
+                      loading="lazy"
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-108"
+                    />
+                  </div>
+                </div>
+
+                {/* Text content */}
+                <div className="min-w-0 flex-1 flex flex-col items-center lg:items-start">
+                  <span className="hidden sm:inline-block rounded-full bg-[#155132]/10 border border-[#D4AF37]/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#155132] mb-1">
+                    {cat.badge}
+                  </span>
+                  <p className="font-serif-display text-[11px] sm:text-sm lg:text-base font-bold text-[#155132] group-hover:text-[#0E3B23] leading-tight line-clamp-2">
+                    {cat.title}
+                  </p>
+                  <p className="hidden sm:block text-[11px] lg:text-xs text-[#6E5628] mt-0.5 truncate max-w-full">
+                    {cat.subtitle}
                   </p>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 2. MENU CHỦ LỰC: YẾN TƯƠI CHƯNG NÓNG (THỐ SỨ 200ML) */}
-      <ProductMenuSection products={freshBowlProducts} />
+      {/* 3. SẢN PHẨM CHỦ LỰC: YẾN TƯƠI CHƯNG NÓNG (THỐ SỨ 200ML) */}
+      <ProductMenuSection
+        products={freshBowlProducts}
+        title="Yến tươi chưng nóng nổi bật"
+      />
 
-      {/* 3. CÁC DÒNG SẢN PHẨM HÀ MI: SET QUÀ YẾN SÀO, YẾN HŨ 75ML & 100ML, YẾN SÀO TINH CHẾ */}
+      {/* 4. CÁC DÒNG SẢN PHẨM ĐẶC SẢN HÀ MI (Banner + Lưới sản phẩm không viền) */}
       <CatalogProductLinesSection products={allProducts} />
 
-      {/* 4. CẨM NANG & BÀI VIẾT CHUYÊN SÂU SEO/GEO (Tạp chí tinh gọn 2 cột Mobile / 4 cột Desktop) */}
+      {/* 5. TỪ BẾP HÀ MI: ẢNH NỀN CHÌM TÔNG KEM SÁNG & THÔNG ĐIỆP NỔI BẬT ĐỒNG BỘ MÀU WEB */}
+      <section
+        id="tu-bep-ha-mi"
+        aria-labelledby="craft-heading"
+        data-testid="brand-commitment"
+        className="mt-10 md:mt-16 max-w-[1440px] mx-auto px-4 lg:px-8"
+      >
+        <div className="relative overflow-hidden rounded-3xl min-h-[500px] sm:min-h-[520px] md:min-h-[460px] flex items-end md:items-center bg-[#FAF6EE] border border-[#D4AF37]/45 shadow-[0_8px_30px_rgba(21,81,50,0.07)]">
+          {/* Recessed Background Image (Ảnh làm nền chìm phía sau) */}
+          <img
+            src="/brand/ha-mi-craft-real.webp"
+            alt="Đôi tay nâng thố yến Hà Mi trong bộ ảnh sản phẩm thực tế"
+            width={1000}
+            height={1500}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover object-[50%_34%] md:object-[75%_40%]"
+          />
+
+          {/* Warm Ivory/Cream Veil so the photo sits softly behind and matches the site's light cream & green-gold palette */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-b from-[#FAF6EE]/80 via-[#FAF6EE]/72 to-[#FAF6EE]/95 md:bg-gradient-to-r md:from-[#FAF6EE]/95 md:via-[#FAF6EE]/82 md:to-[#FAF6EE]/25"
+          />
+
+          {/* Foreground Content & Highlighted Message Cards over the image */}
+          <div className="relative z-10 w-full p-5 sm:p-8 md:p-12 lg:p-14">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-[#D4AF37]/55 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A6632] shadow-2xs">
+                Từ bếp Hà Mi • Chuẩn vị thủ công
+              </span>
+
+              <h2
+                id="craft-heading"
+                className="mt-3 font-serif-display text-2xl sm:text-4xl lg:text-[42px] font-bold leading-[1.2] text-[#155132]"
+              >
+                Chưng tươi mỗi ngày.{" "}
+                <span className="text-[#9A6F22]">Trao gửi tận tâm.</span>
+              </h2>
+
+              <p className="mt-2.5 max-w-lg text-sm sm:text-base font-medium leading-relaxed text-[#2B433A]">
+                Một thố yến ấm, một lời quan tâm chân thành dành cho người thương.
+              </p>
+            </div>
+
+            {/* 3 Highlighted Message Cards in Warm Pearl White + Canopy Green + Gold */}
+            <ul className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+              <li className="flex items-start gap-3.5 rounded-2xl bg-white/92 hover:bg-white backdrop-blur-md border border-[#D4AF37]/45 p-3.5 sm:p-4 shadow-[0_6px_18px_rgba(21,81,50,0.08)] transition-all">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#155132] text-[#F9E498] border border-[#D4AF37]/50 shadow-2xs">
+                  <Truck className="h-5 w-5" strokeWidth={1.9} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-serif-display text-sm sm:text-base font-bold text-[#155132]">
+                    Giao nóng tại Đà Nẵng
+                  </h3>
+                  <p className="mt-0.5 text-xs sm:text-sm leading-snug text-[#2B433A]/85">
+                    Trong 2 giờ · Miễn phí giao từ 2 thố
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3.5 rounded-2xl bg-white/92 hover:bg-white backdrop-blur-md border border-[#D4AF37]/45 p-3.5 sm:p-4 shadow-[0_6px_18px_rgba(21,81,50,0.08)] transition-all">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#155132] text-[#F9E498] border border-[#D4AF37]/50 shadow-2xs">
+                  <CookingPot className="h-5 w-5" strokeWidth={1.9} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-serif-display text-sm sm:text-base font-bold text-[#155132]">
+                    Thố sứ 200ml
+                  </h3>
+                  <p className="mt-0.5 text-xs sm:text-sm leading-snug text-[#2B433A]/85">
+                    35g yến tươi · Chưng theo yêu cầu
+                  </p>
+                </div>
+              </li>
+
+              <li className="flex items-start gap-3.5 rounded-2xl bg-white/92 hover:bg-white backdrop-blur-md border border-[#D4AF37]/45 p-3.5 sm:p-4 shadow-[0_6px_18px_rgba(21,81,50,0.08)] transition-all">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#155132] text-[#F9E498] border border-[#D4AF37]/50 shadow-2xs">
+                  <Leaf className="h-5 w-5" strokeWidth={1.9} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-serif-display text-sm sm:text-base font-bold text-[#155132]">
+                    Nguyên liệu chọn lọc
+                  </h3>
+                  <p className="mt-0.5 text-xs sm:text-sm leading-snug text-[#2B433A]/85">
+                    Nhặt sạch bằng nước RO · Không chất bảo quản
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. TIN TỨC & CẨM NANG SỨC KHỎE (Borderless Langfarm Card Style) */}
       {latestPosts.length > 0 && (
         <section
           aria-labelledby="blog-home-heading"
-          className="py-6 md:py-10 px-3 sm:px-4 max-w-[1200px] mx-auto border-t border-[#BD9342]/20"
+          className="py-10 md:py-16 px-4 lg:px-8 max-w-[1440px] mx-auto"
         >
-          <div className="flex flex-wrap items-end justify-between gap-2 mb-4 sm:mb-5">
-            <div>
-              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
-                Cẩm nang sức khỏe & dinh dưỡng
-              </p>
-              <h2
-                id="blog-home-heading"
-                className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#155132] [text-wrap:balance]"
-              >
-                Góc Chia Sẻ Cùng Hà Mi
-              </h2>
-            </div>
+          <div className="flex items-end justify-between gap-4 mb-6 lg:mb-10">
+            <h2
+              id="blog-home-heading"
+              className="font-serif-display text-2xl sm:text-3xl lg:text-[40px] font-semibold text-[#1d2327]"
+            >
+              Cẩm nang dinh dưỡng & quà biếu
+            </h2>
             <Link
               href="/bai-viet"
-              className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-[#155132] hover:text-[#8A6632] transition-colors"
+              className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-[#155132] hover:underline"
             >
               <span>Xem tất cả</span>
-              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {latestPosts.map((post) => (
               <Link
                 key={post.id}
                 href={`/bai-viet/${post.slug}`}
-                className="group flex flex-col overflow-hidden rounded-xl border border-[#155132]/15 bg-white shadow-2xs transition hover:border-[#BD9342] hover:shadow-md"
+                className="group flex flex-col gap-3 bg-white rounded-3xl"
               >
-                <div className="aspect-[16/10] w-full overflow-hidden bg-[#F5F0E3]">
+                <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={post.coverImageUrl}
                     alt={post.coverImageAlt || post.title}
                     loading="lazy"
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    className="h-full w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
                   />
                 </div>
-                <div className="p-2.5 sm:p-3.5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-[#8A6632]">
-                      {post.category}
-                    </span>
-                    <h3 className="mt-0.5 font-serif-display text-[13px] sm:text-base font-semibold text-[#155132] group-hover:text-[#8A6632] line-clamp-2 leading-snug">
-                      {post.title}
-                    </h3>
-                  </div>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-[#155132]">
-                    Đọc tiếp →
+                <div className="flex flex-col gap-1 px-0.5">
+                  <span className="text-xs font-semibold text-[#8A6632]">
+                    {post.category}
                   </span>
+                  <h3 className="text-sm sm:text-base leading-6 font-medium text-[#1d2327] group-hover:text-[#155132] line-clamp-2">
+                    {post.title}
+                  </h3>
                 </div>
               </Link>
             ))}
@@ -224,34 +279,34 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* 5. FAQ 3 CÂU NGẮN (Đóng mặc định) */}
+      {/* 7. FAQ 3 CÂU NGẮN */}
       <section
         aria-labelledby="faq-heading"
-        className="py-6 md:py-10 px-3 sm:px-4 max-w-[1200px] mx-auto border-t border-[#BD9342]/20"
+        className="pb-12 md:pb-16 px-4 max-w-[1440px] mx-auto"
       >
         <div className="max-w-2xl mx-auto">
           <h2
             id="faq-heading"
-            className="font-serif-display text-xl sm:text-2xl font-semibold text-[#155132] mb-3.5 text-center"
+            className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1d2327] mb-5 text-center"
           >
             Câu hỏi thường gặp
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {FAQ_ITEMS.map((item, idx) => (
               <details
                 key={idx}
-                className="group rounded-xl bg-[#FFFCF4] border border-[#BD9342]/30 px-4 py-2.5 open:bg-white transition-colors"
+                className="group rounded-2xl bg-[#F8F5EC] px-5 py-3.5 open:bg-[#FDF3E3] transition-colors"
               >
-                <summary className="min-h-[36px] font-medium text-xs sm:text-sm text-[#155132] cursor-pointer list-none flex items-center justify-between gap-3">
+                <summary className="min-h-[36px] font-medium text-sm sm:text-base text-[#1d2327] cursor-pointer list-none flex items-center justify-between gap-3">
                   <span>{item.q}</span>
                   <span
                     aria-hidden="true"
-                    className="text-[#8A6632] text-base font-bold group-open:rotate-45 transition-transform shrink-0"
+                    className="text-[#155132] text-lg font-bold group-open:rotate-45 transition-transform shrink-0"
                   >
                     +
                   </span>
                 </summary>
-                <p className="mt-2 text-xs sm:text-sm text-[#2B433A]/85 leading-relaxed pt-2 border-t border-[#155132]/10">
+                <p className="mt-2.5 text-xs sm:text-sm text-[#50575e] leading-relaxed pt-2.5 border-t border-black/10">
                   {item.a}
                 </p>
               </details>

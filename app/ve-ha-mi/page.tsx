@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Award,
-  CheckCircle2,
   Flame,
   HeartHandshake,
   MapPin,
@@ -24,179 +23,194 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function VeHaMiPage() {
   return (
-    <div className="max-w-[1060px] mx-auto px-4 py-10 md:py-14 space-y-10">
+    <div className="bg-[#FDFBF7] pb-14 space-y-12">
       <BreadcrumbJsonLd
         items={[
           { name: "Trang chủ", path: "/" },
           { name: "Về Yến Sào Hà Mi", path: "/ve-ha-mi" },
         ]}
       />
-      {/* 1. Hero Story */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border-b border-[#155132]/15 pb-8">
-        <div className="lg:col-span-7 space-y-3.5">
-          <span className="inline-block text-xs font-semibold uppercase tracking-widest text-[#8A6632] bg-[#FFFCF4] border border-[#BD9342]/45 px-3 py-1 rounded-full">
-            Món quà của sự an tâm • Chạm đến sự bình yên
-          </span>
-          <h1 className="font-serif-display text-3xl sm:text-4xl font-bold text-[#155132]">
-            Yến Sào Hà Mi — Chất Từng Sợi Yến
-          </h1>
-          <p className="text-sm sm:text-base text-[#2B433A]/90 leading-relaxed">
-            Hà Mi toàn tâm toàn ý ghi lại tinh túy của thiên nhiên và giữ trọn dưỡng
-            chất tự nhiên trong từng sợi yến để mang đến cho bạn và những người thân
-            yêu sự bồi bổ thuần khiết trong từng ngụm yến.
-          </p>
-          <div className="rounded-xl bg-[#FFFCF4] border border-[#BD9342]/40 p-4 text-xs sm:text-sm font-semibold text-[#155132]">
-            Điều làm nên sự khác biệt của Hà Mi: YẾN SÀO THẬT – TINH KHIẾT – THƯỢNG HẠNG –
-            DINH DƯỠNG CAO – LỢI ÍCH THỰC CHO SỨC KHỎE!
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/85 leading-relaxed">
-            Hoạt động dựa trên nguyên tắc{" "}
-            <strong className="text-[#155132]">Tự nhiên – Chất lượng – Minh bạch</strong>,
-            Hà Mi nỗ lực trở thành lựa chọn hàng đầu của những khách hàng quý trọng các
-            sản phẩm tự nhiên và luôn quan tâm đến sự khỏe mạnh bền vững.
-          </p>
-        </div>
 
-        <div className="lg:col-span-5 grid grid-cols-2 gap-3">
+      {/* 1. LANGFARM-STYLE FULL-BLEED STORY HERO */}
+      <section className="max-w-[1280px] mx-auto px-4 md:px-8 pt-4 md:pt-6">
+        <div className="relative rounded-3xl overflow-hidden min-h-[360px] sm:min-h-[420px] flex flex-col justify-end p-6 sm:p-10 md:p-12 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/catalog/set-qua-hop-sen-en.jpg"
-            alt="Hộp quà Yến Sào Thượng Hạng Hà Mi"
-            className="w-full h-48 sm:h-56 object-cover rounded-xl border border-[#BD9342]/35"
+            src="/brand/banners/hero-slide-3-yen-viet-nguyen-to-v2.webp"
+            alt="Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <img
-            src="/brand/catalog/yen-tinh-che-to-yen.jpg"
-            alt="Tổ yến tinh chế nguyên bản Hà Mi"
-            className="w-full h-48 sm:h-56 object-cover rounded-xl border border-[#BD9342]/35"
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-[#0D231A]/95 via-[#0D231A]/60 to-black/20"
+            aria-hidden="true"
           />
-        </div>
-      </div>
 
-      {/* 2. Nguồn nguyên liệu & Năng lực sản xuất (ISO 22000:2018 & FDA) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-2xl bg-white border border-[#155132]/15 p-6 space-y-3 shadow-xs">
-          <div className="inline-flex items-center gap-2 text-[#155132]">
-            <Sparkles className="w-5 h-5 text-[#BD9342]" />
-            <h2 className="font-serif-display text-xl font-bold">Nguồn nguyên liệu tuyển chọn</h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Hà Mi tự hào là đơn vị trực tiếp khai thác và hợp tác với{" "}
-            <strong>hàng trăm nhà yến đạt chuẩn</strong> tại các vùng chim yến nổi tiếng
-            của Việt Nam, nơi có tổ yến cho hàm lượng protein cao. Chúng tôi giữ vững
-            cam kết kiên định về chất lượng tốt nhất thông qua các tiêu chuẩn thu mua
-            khắt khe.
-          </p>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Về quy trình sơ chế Yến Tinh Chế, Hà Mi áp dụng phương pháp{" "}
-            <strong>làm ẩm nhẹ và rút lông đại thủ công</strong> để hạn chế tối đa việc
-            tổ yến tiếp xúc với nước — hoàn toàn không chất tẩy trắng, không chất độn
-            (mủ trôm), không thêm muối hay đường.
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-white border border-[#155132]/15 p-6 space-y-3 shadow-xs">
-          <div className="inline-flex items-center gap-2 text-[#155132]">
-            <Award className="w-5 h-5 text-[#BD9342]" />
-            <h2 className="font-serif-display text-xl font-bold">
-              Năng lực sản xuất • ISO 22000:2018 & FDA
-            </h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Hà Mi vận hành các cơ sở sản xuất yến sào và các sản phẩm thực phẩm liên
-            quan đạt tiêu chuẩn quản lý quốc tế{" "}
-            <strong className="text-[#155132]">ISO 22000:2018</strong> và được khẳng
-            định thêm bởi chứng nhận{" "}
-            <strong className="text-[#155132]">
-              FDA của Cục Quản lý Thực phẩm và Dược phẩm Hoa Kỳ
-            </strong>
-            .
-          </p>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Nhà máy được trang bị các phòng chức năng chuyên dụng và{" "}
-            <strong>hệ thống lọc nước đóng chai RO tinh khiết toàn diện</strong>, được
-            sử dụng xuyên suốt từ khâu sơ chế yến thô đến khi ra thành phẩm.
-          </p>
-        </div>
-      </div>
-
-      {/* 3. Nhân sự, Triết lý & Tầm nhìn thị trường */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-2xl bg-[#FFFCF4] border border-[#BD9342]/35 p-6 space-y-2.5">
-          <div className="inline-flex items-center gap-2 text-[#155132]">
-            <HeartHandshake className="w-5 h-5 text-[#155132]" />
-            <h2 className="font-serif-display text-xl font-bold">Nhân sự & Triết lý</h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Yếu tố con người nằm ở trung tâm của Hà Mi. Đội ngũ tận tụy gồm những chuyên
-            gia đam mê, được đào tạo bài bản với chuyên môn sâu rộng và tinh thần trách
-            nhiệm cao. Hà Mi tin rằng chỉ khi tình yêu được nuôi dưỡng và tinh chế trong
-            từng sợi yến, sản phẩm mới có thể đến tay khách hàng ở hình thái quý giá và
-            giá trị nhất.
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-[#FFFCF4] border border-[#BD9342]/35 p-6 space-y-2.5">
-          <div className="inline-flex items-center gap-2 text-[#155132]">
-            <ShieldCheck className="w-5 h-5 text-[#155132]" />
-            <h2 className="font-serif-display text-xl font-bold">Tầm nhìn & Thị trường</h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed">
-            Hà Mi sở hữu công thức độc quyền cho dòng Yến chưng sẵn & Yến tươi chưng
-            nóng không chất bảo quản. Sản phẩm được tin chọn bởi khách hàng cá nhân,
-            các tập đoàn, tổ chức tài chính và công ty dược phẩm hàng đầu Việt Nam làm
-            quà tặng doanh nghiệp cao cấp, đồng thời từng bước vươn ra thị trường xuất
-            khẩu quốc tế.
-          </p>
-        </div>
-      </div>
-
-      {/* 4. Hệ sinh thái 4 dòng sản phẩm & Liên hệ chính thức */}
-      <div className="rounded-2xl bg-white border border-[#155132]/20 p-6 sm:p-8 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#155132]/10 pb-4">
-          <div>
-            <h2 className="font-serif-display text-2xl font-bold text-[#155132]">
-              Thông tin liên hệ chính thức — Yến Sào Hà Mi
-            </h2>
-            <p className="text-xs sm:text-sm text-[#8A6632] mt-0.5">
-              Món quà an yên — Khẽ chạm vào miền an nhiên
+          <div className="relative z-10 max-w-3xl space-y-3.5">
+            <span className="inline-block rounded-full bg-white/15 backdrop-blur-xs border border-[#F3D78A]/45 px-3.5 py-1 text-xs font-semibold text-[#F3D78A]">
+              Món quà của sự an tâm • Chạm đến sự bình yên
+            </span>
+            <h1 className="font-serif-display text-2xl sm:text-4xl md:text-[42px] font-bold text-white leading-tight">
+              Yến Sào Hà Mi — Chất Từng Sợi Yến
+            </h1>
+            <p className="text-xs sm:text-base text-white/90 leading-relaxed max-w-2xl">
+              Hà Mi toàn tâm toàn ý giữ trọn dưỡng chất tự nhiên trong từng sợi yến Việt nguyên tổ để mang đến cho mẹ bầu, người đang hồi phục sau bệnh và ông bà cao tuổi sự bồi bổ thuần khiết, ấm áp nhất.
             </p>
           </div>
-          <Link
-            href="/dat-hang"
-            className="inline-flex items-center justify-center min-h-[42px] px-5 py-2 rounded-lg bg-[#155132] border border-[#BD9342] text-xs sm:text-sm font-bold text-[#FFFCF4] hover:bg-[#0e3b23]"
-          >
-            Đặt món trực tuyến →
-          </Link>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm text-[#2B433A]">
-          <div className="flex items-start gap-2.5">
-            <MapPin className="w-4 h-4 text-[#155132] shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-[#155132]">Địa chỉ:</strong>
-              <span>Thôn Bà Rén, Xã Xuân Phú, Thành phố Đà Nẵng, Việt Nam</span>
+      {/* 2. LANGFARM-STYLE MISSION QUOTE BANNER + WOVEN RIBBON + 3 PASTEL BLOBS */}
+      <section className="max-w-[1280px] mx-auto px-4 md:px-8">
+        <div className="rounded-t-3xl bg-[#FAD4B8] px-6 py-10 sm:px-12 sm:py-12 text-center">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#7C4D2B] mb-2">
+            Triết lý hoạt động: Tự nhiên – Chất lượng – Minh bạch
+          </p>
+          <blockquote className="font-serif-display text-xl sm:text-2xl md:text-[28px] font-bold text-[#1B1B1B] max-w-4xl mx-auto leading-snug">
+            “Yến Sào Thật – Tinh Khiết – Thượng Hạng – Dinh Dưỡng Cao – Lợi Ích Thực Cho Sức Khỏe Gia Đình Việt”
+          </blockquote>
+        </div>
+        <div
+          className="h-3 w-full rounded-b-xl overflow-hidden"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, #1B4332 0px, #1B4332 16px, #D4AF37 16px, #D4AF37 32px, #C86D51 32px, #C86D51 48px, #FAF6F0 48px, #FAF6F0 64px)",
+          }}
+          aria-hidden="true"
+        />
+      </section>
+
+      {/* 3. 4 PASTEL STORY PILLARS (LANGFARM CARD GRID) */}
+      <section className="max-w-[1280px] mx-auto px-4 md:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="rounded-3xl bg-[#FFE9DD] p-6 sm:p-8 space-y-3">
+            <div className="inline-flex items-center gap-2.5 text-[#1B4332]">
+              <span className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[#7C4D2B]" />
+              </span>
+              <h2 className="font-serif-display text-xl sm:text-2xl font-bold text-[#1B1B1B]">
+                Nguồn nguyên liệu tuyển chọn
+              </h2>
             </div>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Hà Mi trực tiếp khai thác và hợp tác với <strong>hàng trăm nhà yến đạt chuẩn</strong> tại các vùng chim yến nổi tiếng của Việt Nam, nơi có tổ yến già cho sợi dài dày và hàm lượng protein cao.
+            </p>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Quy trình sơ chế áp dụng phương pháp <strong>làm ẩm nhẹ và rút lông đại thủ công</strong> bằng nước lọc RO tinh khiết — hoàn toàn không chất tẩy trắng, không chất độn (mủ trôm), không thêm muối hay đường.
+            </p>
           </div>
-          <div className="flex items-start gap-2.5">
-            <Phone className="w-4 h-4 text-[#155132] shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-[#155132]">Hotline tư vấn & đặt hàng:</strong>
-              <a
-                href="tel:0935052959"
-                className="font-semibold text-[#8A6632] hover:underline"
-              >
-                0935 052 959
-              </a>
+
+          <div className="rounded-3xl bg-[#E2FCF3] p-6 sm:p-8 space-y-3">
+            <div className="inline-flex items-center gap-2.5 text-[#1B4332]">
+              <span className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center">
+                <Award className="w-5 h-5 text-[#1B4332]" />
+              </span>
+              <h2 className="font-serif-display text-xl sm:text-2xl font-bold text-[#1B1B1B]">
+                Chuẩn quốc tế ISO 22000:2018 & FDA
+              </h2>
             </div>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Cơ sở sản xuất của Hà Mi đạt tiêu chuẩn quản lý an toàn thực phẩm quốc tế <strong className="text-[#1B4332]">ISO 22000:2018</strong> và chứng nhận <strong className="text-[#1B4332]">FDA của Cục Quản lý Thực phẩm và Dược phẩm Hoa Kỳ</strong>.
+            </p>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Nhà máy trang bị các phòng chức năng chuyên dụng và <strong>hệ thống lọc nước tinh khiết RO toàn diện</strong> xuyên suốt từ khâu nhặt lông đến khi chưng nóng thố sứ.
+            </p>
           </div>
-          <div className="flex items-start gap-2.5">
-            <Flame className="w-4 h-4 text-[#155132] shrink-0 mt-0.5" />
+
+          <div className="rounded-3xl bg-[#FAEFCA] p-6 sm:p-8 space-y-3">
+            <div className="inline-flex items-center gap-2.5 text-[#1B4332]">
+              <span className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center">
+                <HeartHandshake className="w-5 h-5 text-[#7C4D2B]" />
+              </span>
+              <h2 className="font-serif-display text-xl sm:text-2xl font-bold text-[#1B1B1B]">
+                Con người & Tâm huyết trong từng thố yến
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Đội ngũ nghệ nhân sơ chế và đầu bếp chưng yến tại Hà Mi được đào tạo bài bản với tinh thần trách nhiệm cao. Mỗi thố yến 200ml chứa đến 35g yến tươi thật được chưng thủ công tươi nóng ngay khi nhận đơn như chính tay người thân chăm sóc.
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-[#F5E2F9] p-6 sm:p-8 space-y-3">
+            <div className="inline-flex items-center gap-2.5 text-[#1B4332]">
+              <span className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-[#1B4332]" />
+              </span>
+              <h2 className="font-serif-display text-xl sm:text-2xl font-bold text-[#1B1B1B]">
+                Tầm nhìn & Sự tin chọn
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#2B433A] leading-relaxed">
+              Sản phẩm Yến Tươi Chưng Nóng Thố Sứ 200ml, Set Quà Hoa Sen Vàng và Yến Sào Tinh Chế Hà Mi được các gia đình, doanh nghiệp và khách hàng tại Đà Nẵng tin chọn làm món quà bồi bổ cho mẹ bầu, người bệnh, ông bà và đối tác.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. BOTANICAL WAVE DIVIDER */}
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8" aria-hidden="true">
+        <svg viewBox="0 0 1200 60" fill="none" className="w-full h-10 sm:h-12 text-[#1B4332]">
+          <path
+            d="M0 42 Q 300 54, 580 38 T 1200 42"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path d="M585 38 C 585 20, 570 12, 562 15 C 566 26, 576 34, 585 38 Z" fill="currentColor" />
+          <path d="M588 38 C 594 18, 610 10, 618 14 C 612 26, 600 34, 588 38 Z" fill="currentColor" />
+        </svg>
+      </div>
+
+      {/* 5. OFFICIAL CONTACT BANNER */}
+      <section className="max-w-[1280px] mx-auto px-4 md:px-8">
+        <div className="rounded-3xl bg-[#FAF4EB] p-6 sm:p-10 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E6DAC6] pb-5">
             <div>
-              <strong className="block text-[#155132]">Website & Giờ phục vụ:</strong>
-              <span>lehami.vn • Giao hàng 08:00 – 21:00</span>
+              <h2 className="font-serif-display text-2xl sm:text-3xl font-bold text-[#1B4332]">
+                Thông tin liên hệ chính thức — Yến Sào Hà Mi
+              </h2>
+              <p className="text-xs sm:text-sm text-[#7C4D2B] mt-1">
+                Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất • Giao Ngay Trong 2H Tại Đà Nẵng
+              </p>
+            </div>
+            <Link
+              href="/dat-hang"
+              className="inline-flex items-center justify-center min-h-[44px] px-6 py-2.5 rounded-full bg-[#1B4332] text-xs sm:text-sm font-bold text-[#FFFCF4] hover:bg-[#133023] transition shrink-0"
+            >
+              Đặt Giao Nóng 2H →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs sm:text-sm text-[#2B433A]">
+            <div className="flex items-start gap-3 bg-white rounded-2xl p-4">
+              <MapPin className="w-5 h-5 text-[#7C4D2B] shrink-0 mt-0.5" />
+              <div>
+                <strong className="block text-[#1B4332]">Địa chỉ sản xuất & phục vụ:</strong>
+                <span>Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-white rounded-2xl p-4">
+              <Phone className="w-5 h-5 text-[#7C4D2B] shrink-0 mt-0.5" />
+              <div>
+                <strong className="block text-[#1B4332]">Hotline / Zalo OA 2H:</strong>
+                <a
+                  href="tel:0935052959"
+                  className="font-bold text-base text-[#7C4D2B] hover:underline"
+                >
+                  0935 052 959
+                </a>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-white rounded-2xl p-4">
+              <Flame className="w-5 h-5 text-[#7C4D2B] shrink-0 mt-0.5" />
+              <div>
+                <strong className="block text-[#1B4332]">Khung giờ chưng nóng & giao:</strong>
+                <span>08:00 – 21:00 mỗi ngày (Giao trong 2 giờ)</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

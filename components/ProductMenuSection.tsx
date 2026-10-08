@@ -8,7 +8,7 @@ import { useCart } from "./CartProvider";
 
 export function ProductMenuSection({
   products,
-  title = "Menu Yến Tươi Chưng Nóng",
+  title = "Yến Tươi Chưng Nóng Nổi Bật",
   subtitle,
 }: {
   products: ProductRecord[];
@@ -62,31 +62,27 @@ export function ProductMenuSection({
     <section
       id="menu-chu-luc"
       aria-labelledby="menu-section-heading"
-      className="py-6 md:py-12 px-3 sm:px-4 max-w-[1200px] mx-auto"
+      className="py-8 md:py-14 px-4 lg:px-8 max-w-[1440px] mx-auto"
     >
-      {/* Clean Header + Single-Row Horizontal Filter */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4 md:mb-6">
+      {/* Langfarm-style Large Serif Section Heading + Filter Pills */}
+      <div className="mb-6 lg:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#8A6632]">
-            Thố sứ 200ml • 35g yến tươi thật • Từ 295.000đ
-          </p>
           <h2
             id="menu-section-heading"
-            className="font-serif-display text-2xl sm:text-3xl font-semibold text-[#155132] mt-0.5 [text-wrap:balance]"
+            className="font-serif-display text-2xl sm:text-3xl lg:text-[42px] lg:leading-[3.25rem] font-semibold text-[#1d2327]"
           >
             {title}
           </h2>
-          <p className="text-xs sm:text-sm text-[#2B433A]/80 mt-1">
-            {subtitle ||
-              "Chưng thủ công tươi nóng ngay khi nhận đơn • Giao ấm nóng 2H Đà Nẵng (Đặt từ 2 thố Free Ship)"}
-          </p>
+          {subtitle && (
+            <p className="text-xs sm:text-sm text-[#50575e] mt-1">{subtitle}</p>
+          )}
         </div>
 
-        {/* Single-Row Scrollable Filter Tabs */}
+        {/* Filter Pills */}
         <div
           role="tablist"
           aria-label="Lọc món"
-          className="flex flex-nowrap overflow-x-auto gap-1.5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex flex-nowrap overflow-x-auto gap-2 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {filterTabs.map((tab) => {
             const isSelected = activeCategory === tab.id;
@@ -97,10 +93,10 @@ export function ProductMenuSection({
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setActiveCategory(tab.id)}
-                className={`shrink-0 whitespace-nowrap min-h-[40px] px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap min-h-[38px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-[#155132] text-[#FFFCF4] border border-[#BD9342] shadow-2xs"
-                    : "bg-[#FFFCF4] text-[#2B433A] border border-[#155132]/20 hover:border-[#155132]"
+                    ? "bg-[#155132] text-white"
+                    : "bg-[#F6F4EE] text-[#1d2327] hover:bg-[#EBE6D8]"
                 }`}
               >
                 {tab.label}
@@ -110,8 +106,8 @@ export function ProductMenuSection({
         </div>
       </div>
 
-      {/* 2-Column Mobile / 4-Column Desktop Compact Product Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* Langfarm-style Borderless Product Grid: Rounded-2xl Square Image + Simple Title + Bold Price */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
         {filteredProducts.map((product) => {
           const isOrderable = product.status === "AVAILABLE" && product.priceVnd !== null;
           const isOutOfStock = product.status === "OUT_OF_STOCK";
@@ -119,23 +115,14 @@ export function ProductMenuSection({
             product.status === "PENDING_DATA_APPROVAL" || product.priceVnd === null;
           const isJustAdded = justAddedId === product.id;
 
-          const highlightIngredients = product.ingredients.filter(
-            (ing) => !/^((35g\s+)?tổ yến tươi chưng|nước tinh khiết)/i.test(ing.trim())
-          );
-          const visibleIngredientsText =
-            (highlightIngredients.length > 0
-              ? highlightIngredients
-              : product.ingredients
-            ).join(" • ");
-
           return (
             <article
               key={product.id}
               data-testid={`product-card-${product.slug}`}
-              className="flex flex-col rounded-lg bg-white border border-[#155132]/15 shadow-xs hover:border-[#BD9342]/65 hover:shadow-md transition-all duration-200 overflow-hidden"
+              className="group flex flex-col gap-3 bg-white rounded-3xl"
             >
-              {/* Square Clickable Image */}
-              <div className="relative aspect-square bg-[#FFFCF4] overflow-hidden">
+              {/* Square Rounded-2xl Image Container */}
+              <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                 <Link
                   href={`/san-pham/${product.slug}`}
                   aria-label={`Xem chi tiết ${product.name}`}
@@ -145,16 +132,22 @@ export function ProductMenuSection({
                     src={product.imageUrl}
                     alt={product.name}
                     loading="lazy"
-                    width={320}
-                    height={320}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    width={410}
+                    height={410}
+                    className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </Link>
+
+                {product.isIllustrationImage && (
+                  <span className="absolute bottom-2.5 left-2.5 rounded bg-white/90 px-1.5 py-0.5 text-[10px] text-[#2B433A]">
+                    Ảnh minh họa
+                  </span>
+                )}
 
                 {isOutOfStock && (
                   <span
                     data-testid={`badge-out-of-stock-${product.slug}`}
-                    className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 bg-amber-800 text-white text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded shadow"
+                    className="absolute top-2.5 left-2.5 bg-amber-800 text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow"
                   >
                     Tạm hết
                   </span>
@@ -162,82 +155,69 @@ export function ProductMenuSection({
                 {isPendingApproval && (
                   <span
                     data-testid={`badge-unapproved-${product.slug}`}
-                    className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 bg-[#2B433A] text-[#FFFCF4] text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded shadow"
+                    className="absolute top-2.5 left-2.5 bg-[#2B433A] text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow"
                   >
                     Chưa mở đặt
                   </span>
                 )}
+
+                {/* Subtle Floating Add-to-Cart Button on Bottom-Right of Image */}
+                <button
+                  type="button"
+                  disabled={!isOrderable}
+                  data-testid={`add-to-cart-${product.slug}`}
+                  title={
+                    isOrderable
+                      ? `Chọn ${product.name}`
+                      : isOutOfStock
+                        ? "Món tạm hết trong ngày"
+                        : "Món chưa mở đặt"
+                  }
+                  aria-label={
+                    isOrderable
+                      ? `Chọn món ${product.name}`
+                      : isOutOfStock
+                        ? `${product.name} tạm hết`
+                        : `${product.name} chưa mở đặt`
+                  }
+                  onClick={() => handleQuickAdd(product)}
+                  className={`absolute bottom-2.5 right-2.5 inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full shadow-md transition-all duration-150 ${
+                    isOrderable
+                      ? isJustAdded
+                        ? "bg-[#155132] text-[#F9E498] scale-105 cursor-pointer"
+                        : "bg-white/95 text-[#155132] hover:bg-[#155132] hover:text-white cursor-pointer"
+                      : "bg-gray-200/90 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isOrderable ? (
+                    isJustAdded ? (
+                      <Check className="w-4 h-4" aria-hidden="true" />
+                    ) : (
+                      <Plus className="w-4 h-4" aria-hidden="true" />
+                    )
+                  ) : (
+                    <span className="text-[10px] font-bold">Hết</span>
+                  )}
+                </button>
               </div>
 
-              {/* Compact Card Body: 2-line stable name, 1-line ingredients on mobile & desktop, price + Plus */}
-              <div className="p-2.5 sm:p-3.5 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
-                <div className="min-w-0">
-                  <h3 className="font-serif-display text-[13px] sm:text-lg font-semibold text-[#155132] leading-tight sm:leading-snug line-clamp-2 min-h-[2.05rem] sm:min-h-[2.75rem]">
-                    <Link
-                      href={`/san-pham/${product.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {product.name}
-                    </Link>
-                  </h3>
-                  <p
-                    title={product.ingredients.join(", ")}
-                    className="block text-[11px] sm:text-xs text-[#2B433A]/80 mt-0.5 line-clamp-1"
-                  >
-                    {visibleIngredientsText}
-                  </p>
-                </div>
-
-                <div className="pt-1.5 sm:pt-2.5 border-t border-[#155132]/10 flex items-center justify-between gap-1.5">
+              {/* Langfarm Minimalist Meta: Name + Price only */}
+              <div className="flex flex-col gap-1 px-0.5">
+                <h3 className="text-sm sm:text-base leading-6 font-normal text-[#1d2327] group-hover:text-[#155132] line-clamp-2 transition-colors">
+                  <Link href={`/san-pham/${product.slug}`}>
+                    {product.name}, thố sứ 200ml (35g yến tươi)
+                  </Link>
+                </h3>
+                <div className="flex items-center gap-2">
                   {product.priceVnd !== null ? (
-                    <span className="text-xs sm:text-lg font-bold text-[#155132] truncate">
-                      {product.priceVnd.toLocaleString("vi-VN")}đ
-                    </span>
+                    <p className="text-sm sm:text-base leading-6 font-semibold text-[#1d2327]">
+                      {product.priceVnd.toLocaleString("en-US")}đ
+                    </p>
                   ) : (
-                    <span className="text-[11px] sm:text-xs font-semibold text-[#8A6632] truncate">
+                    <p className="text-xs sm:text-sm font-medium text-[#8A6632]">
                       Đang cập nhật
-                    </span>
+                    </p>
                   )}
-
-                  <button
-                    type="button"
-                    disabled={!isOrderable}
-                    data-testid={`add-to-cart-${product.slug}`}
-                    title={
-                      isOrderable
-                        ? `Chọn ${product.name}`
-                        : isOutOfStock
-                          ? "Món tạm hết trong ngày"
-                          : "Món chưa mở đặt"
-                    }
-                    aria-label={
-                      isOrderable
-                        ? `Chọn món ${product.name}`
-                        : isOutOfStock
-                          ? `${product.name} tạm hết`
-                          : `${product.name} chưa mở đặt`
-                    }
-                    onClick={() => handleQuickAdd(product)}
-                    className={`shrink-0 inline-flex items-center justify-center min-w-[40px] min-h-[40px] rounded-md text-[11px] sm:text-xs font-semibold transition-all duration-150 ${
-                      isOrderable
-                        ? isJustAdded
-                          ? "w-10 h-10 sm:w-10 sm:h-10 bg-[#0e3b23] text-[#BD9342] border-2 border-[#BD9342] cursor-pointer"
-                          : "w-10 h-10 sm:w-10 sm:h-10 bg-[#155132] text-[#FFFCF4] border border-[#BD9342] hover:bg-[#0e3b23] cursor-pointer"
-                        : "px-2 py-1 bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed"
-                    }`}
-                  >
-                    {isOrderable ? (
-                      isJustAdded ? (
-                        <Check className="w-4 h-4 text-[#BD9342]" aria-hidden="true" />
-                      ) : (
-                        <Plus className="w-4 h-4" aria-hidden="true" />
-                      )
-                    ) : isOutOfStock ? (
-                      <span>Hết</span>
-                    ) : (
-                      <span>Khóa</span>
-                    )}
-                  </button>
                 </div>
               </div>
             </article>

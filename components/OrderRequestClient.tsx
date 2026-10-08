@@ -283,18 +283,23 @@ export function OrderRequestClient({
   };
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-4 lg:py-8">
+    <div className="mx-auto max-w-[820px] px-4 py-6 lg:py-10">
       {/* Compact Page Title */}
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h1 className="font-serif-display text-xl font-bold text-[#155132] sm:text-2xl">
-          Đặt món
-        </h1>
+      <div className="mb-5 flex items-baseline justify-between gap-2">
+        <div>
+          <span className="inline-block rounded-full bg-[#FFE9DD] px-3 py-0.5 text-[11px] font-bold text-[#7C4D2B]">
+            Nóng Thơm Trọn Vị • Giao Ngay 2H
+          </span>
+          <h1 className="mt-1 font-serif-display text-2xl font-bold text-[#1B1B1B] sm:text-3xl">
+            Giỏ Hàng & Đặt Món Yến Sào Hà Mi
+          </h1>
+        </div>
         {items.length > 0 && (
           <Link
             href="/#menu-chu-luc"
-            className="text-xs font-semibold text-[#155132] underline underline-offset-4 hover:text-[#8A6632]"
+            className="rounded-full bg-[#FAF4EB] px-3.5 py-1.5 text-xs font-bold text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-colors"
           >
-            + Thêm món khác
+            + Chọn thêm món
           </Link>
         )}
       </div>
@@ -302,30 +307,30 @@ export function OrderRequestClient({
       {items.length === 0 ? (
         <div
           data-testid="empty-cart-box"
-          className="rounded-lg border border-[#155132]/15 bg-white p-6 text-center"
+          className="rounded-3xl bg-white p-8 text-center shadow-2xs"
         >
-          <p className="text-sm font-semibold text-[#155132]">
-            Chưa có món trong giỏ
+          <p className="font-serif-display text-lg font-bold text-[#1B1B1B]">
+            Chưa có món trong giỏ hàng
           </p>
-          <p className="mt-1 text-xs text-[#2B433A]/80">
-            Vui lòng chọn món yến từ thực đơn để gửi yêu cầu chưng nóng.
+          <p className="mt-1.5 text-xs sm:text-sm text-[#4A4A4A]">
+            Vui lòng chọn món yến từ thực đơn để gửi yêu cầu chưng nóng giao ngay trong 2 giờ.
           </p>
           <Link
             href="/#menu-chu-luc"
             data-testid="empty-cart-menu-cta"
-            className="mt-4 inline-flex min-h-[40px] items-center justify-center rounded-md bg-[#155132] border border-[#BD9342] px-4 py-2 text-xs font-semibold text-[#FFFCF4] hover:bg-[#0e3b23]"
+            className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F3D78A] to-[#D4AF37] px-6 py-2.5 text-xs sm:text-sm font-bold text-[#1B1B1B] shadow-xs hover:brightness-105 transition"
           >
-            Xem thực đơn chọn món
+            Xem thực đơn chọn món →
           </Link>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* 1. Compact Selected Dishes Summary + Auto 2-Bowl Free Ship Feature */}
           <section
             aria-label="Món đã chọn"
-            className="rounded-lg border border-[#155132]/15 bg-white p-3 sm:p-4 space-y-2.5"
+            className="rounded-3xl bg-white p-4 sm:p-6 space-y-3 shadow-2xs"
           >
-            <div className="divide-y divide-[#155132]/10">
+            <div className="divide-y divide-[#F0E9DC]">
               {items.map((item) => {
                 const product = productMap.get(item.productId);
                 const supportedOptions = product?.supportedOptions ?? [];
@@ -334,25 +339,25 @@ export function OrderRequestClient({
                   <div
                     key={`${item.productId}-${item.variantId}-${item.selectedOption}`}
                     data-testid={`checkout-item-${item.slug}`}
-                    className="flex items-center justify-between gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <img
                         src={item.imageUrl}
                         alt={item.productName}
-                        width={44}
-                        height={44}
-                        className="h-11 w-11 shrink-0 rounded-md border border-[#155132]/15 bg-[#FFFCF4] object-cover"
+                        width={52}
+                        height={52}
+                        className="h-13 w-13 shrink-0 rounded-2xl bg-[#F8F5EC] object-cover"
                       />
                       <div className="min-w-0 flex-1">
                         <Link
                           href={`/san-pham/${item.slug}`}
-                          className="block truncate text-xs sm:text-sm font-bold text-[#155132] hover:underline"
+                          className="block truncate text-xs sm:text-sm font-bold text-[#1B1B1B] hover:text-[#1B4332]"
                         >
                           {item.productName}
                         </Link>
 
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
                           {supportedOptions.length > 1 ? (
                             <select
                               aria-label={`Khẩu vị ${item.productName}`}
@@ -366,7 +371,7 @@ export function OrderRequestClient({
                                   e.target.value
                                 )
                               }
-                              className="max-w-[150px] sm:max-w-[220px] truncate rounded border border-[#155132]/25 bg-[#FFFCF4] px-1.5 py-0.5 text-base sm:text-xs font-medium text-[#2B433A] focus:border-[#155132] focus:outline-none"
+                              className="max-w-[160px] sm:max-w-[220px] truncate rounded-full bg-[#FAF4EB] px-2.5 py-0.5 text-base sm:text-xs font-medium text-[#2B433A] focus:outline-none"
                             >
                               {supportedOptions.map((opt) => (
                                 <option key={opt} value={opt}>
@@ -375,12 +380,12 @@ export function OrderRequestClient({
                               ))}
                             </select>
                           ) : (
-                            <span className="text-[11px] text-[#2B433A]/80 truncate">
+                            <span className="text-[11px] text-[#4A4A4A] truncate">
                               {item.selectedOption}
                             </span>
                           )}
 
-                          <span className="text-xs font-semibold text-[#155132]">
+                          <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1B]">
                             {formatVnd(item.unitPriceVnd)}
                           </span>
                         </div>
@@ -389,7 +394,7 @@ export function OrderRequestClient({
 
                     {/* Quantity +/- and Remove */}
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="inline-flex items-center rounded-md border border-[#155132]/25 bg-[#FFFCF4]">
+                      <div className="inline-flex items-center rounded-full bg-[#FAF4EB] p-0.5">
                         <button
                           type="button"
                           aria-label={`Giảm số lượng ${item.productName}`}
@@ -401,11 +406,11 @@ export function OrderRequestClient({
                               item.quantity - 1
                             )
                           }
-                          className="flex h-9 w-9 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-[#1B4332] hover:bg-white cursor-pointer"
                         >
                           <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
-                        <span className="min-w-6 text-center text-xs font-bold text-[#155132]">
+                        <span className="min-w-6 text-center text-xs font-bold text-[#1B1B1B]">
                           {item.quantity}
                         </span>
                         <button
@@ -419,7 +424,7 @@ export function OrderRequestClient({
                               item.quantity + 1
                             )
                           }
-                          className="flex h-9 w-9 items-center justify-center text-[#155132] hover:bg-[#155132]/10 cursor-pointer"
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-[#1B4332] hover:bg-white cursor-pointer"
                         >
                           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
@@ -435,7 +440,7 @@ export function OrderRequestClient({
                             item.selectedOption
                           )
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-md text-[#2B433A]/70 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[#2B433A]/70 hover:bg-red-50 hover:text-red-700 cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </button>
@@ -446,29 +451,33 @@ export function OrderRequestClient({
             </div>
 
             {/* Auto 2-Bowl Free Ship Banner / Quick Action */}
-            <div className="pt-2 border-t border-[#155132]/10 flex flex-wrap items-center justify-between gap-2">
+            <div
+              className={`rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 ${
+                totalBowls < 2 ? "bg-[#FFE9DD]" : "bg-[#E2FCF3]"
+              }`}
+            >
               {totalBowls < 2 ? (
                 <>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8A6632]">
-                    <Truck className="h-3.5 w-3.5 text-[#BD9342] shrink-0" aria-hidden="true" />
-                    <span>Đặt từ 2 thố được Miễn phí giao hàng</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#7C4D2B]">
+                    <Truck className="h-4 w-4 text-[#7C4D2B] shrink-0" aria-hidden="true" />
+                    <span>Đặt từ 2 thố được Miễn phí giao hàng (5km)</span>
                   </span>
                   <button
                     type="button"
                     data-testid="auto-two-bowls-freeship-btn"
                     onClick={handleAutoSetTwoBowlsFreeShip}
-                    className="inline-flex items-center gap-1 min-h-[36px] rounded-md bg-[#155132] border border-[#BD9342] px-3 py-1.5 text-xs font-semibold text-[#FFFCF4] hover:bg-[#0e3b23] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 min-h-[36px] rounded-full bg-[#1B4332] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#133023] transition-colors cursor-pointer"
                   >
-                    <Plus className="h-3 w-3 text-[#BD9342]" aria-hidden="true" />
+                    <Plus className="h-3 w-3 text-[#F3D78A]" aria-hidden="true" />
                     <span>Đặt 2 thố • Free Ship</span>
                   </button>
                 </>
               ) : (
                 <span
                   data-testid="freeship-active-badge"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#155132]"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1B4332]"
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#155132] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-[#1B4332] shrink-0" aria-hidden="true" />
                   <span>
                     Đã áp dụng Free Ship tự động ({totalBowls} thố)
                   </span>
@@ -480,7 +489,7 @@ export function OrderRequestClient({
           {/* 2. Delivery Information & Gift Toggle (Address Only — No Fixed Zone Dropdown) */}
           <section
             aria-label="Thông tin giao hàng"
-            className="rounded-lg border border-[#155132]/15 bg-white p-3.5 sm:p-5 space-y-3"
+            className="rounded-3xl bg-white p-4 sm:p-6 space-y-3.5 shadow-2xs"
           >
             {/* Contact Name & Phone */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -798,32 +807,32 @@ export function OrderRequestClient({
           {/* 3. Compact Total Summary & Submit Button */}
           <section
             aria-label="Tổng tạm tính và gửi yêu cầu"
-            className="rounded-lg border border-[#155132]/20 bg-white p-3.5 sm:p-5"
+            className="rounded-3xl bg-[#FAF4EB] p-5 sm:p-6"
           >
-            <div className="space-y-1.5 text-xs sm:text-sm">
+            <div className="space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between text-[#2B433A]">
                 <span>Tạm tính ({serverQuote?.totalBowls ?? totalBowls} thố):</span>
-                <span className="font-semibold text-[#155132]">
+                <span className="font-bold text-[#1B1B1B]">
                   {formatVnd(serverQuote?.subtotalVnd ?? estimatedSubtotalVnd)}
                 </span>
               </div>
               <div className="flex justify-between gap-2 text-[#2B433A]">
                 <span>Giao hàng:</span>
-                <span className="text-right font-semibold text-[#155132]">
+                <span className="text-right font-semibold text-[#1B4332]">
                   {totalBowls >= 2
                     ? "Miễn phí (Đơn từ 2 thố)"
                     : "Theo địa chỉ (Đặt 2 thố Free Ship)"}
                 </span>
               </div>
-              <div className="flex items-baseline justify-between border-t border-[#155132]/12 pt-2">
-                <span className="text-sm font-bold text-[#155132]">
+              <div className="flex items-baseline justify-between border-t border-[#E6DAC6] pt-3">
+                <span className="text-sm font-bold text-[#1B1B1B]">
                   {totalBowls >= 2
                     ? "Tổng cộng (Đã Free Ship):"
                     : "Tổng tạm tính (chưa gồm phí ship):"}
                 </span>
                 <span
                   data-testid="quote-total-vnd"
-                  className="font-serif-display text-lg sm:text-xl font-bold text-[#155132]"
+                  className="font-serif-display text-xl sm:text-2xl font-extrabold text-[#1B1B1B]"
                 >
                   {formatVnd(serverQuote?.totalVnd ?? estimatedSubtotalVnd)}
                 </span>
@@ -835,7 +844,7 @@ export function OrderRequestClient({
                 role="alert"
                 tabIndex={-1}
                 data-testid="checkout-error-alert"
-                className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-900 space-y-1.5"
+                className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-900 space-y-1.5"
               >
                 <div className="flex items-start gap-2 font-semibold">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" aria-hidden="true" />
@@ -862,12 +871,12 @@ export function OrderRequestClient({
               type="submit"
               data-testid="submit-order-btn"
               disabled={submitting || items.length === 0}
-              className="mt-3 flex w-full min-h-[44px] items-center justify-center rounded-md bg-[#155132] border border-[#BD9342] px-4 py-2.5 text-sm font-bold text-[#FFFCF4] shadow-xs transition hover:bg-[#0e3b23] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              className="mt-4 flex w-full min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F3D78A] to-[#D4AF37] px-6 py-3 text-sm font-bold text-[#1B1B1B] shadow-xs transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu"}
+              {submitting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu đặt món →"}
             </button>
 
-            <p className="mt-2 text-center text-xs text-[#2B433A]/85">
+            <p className="mt-2.5 text-center text-xs text-[#4A4A4A]">
               Chưa thu tiền online • Hà Mi sẽ liên hệ xác nhận đơn trước khi chưng.
             </p>
           </section>

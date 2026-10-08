@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { resolveProductImage } from "../lib/product-images";
 import {
   DEMO_DELIVERY_SLOTS,
   DEMO_POSTS,
@@ -627,8 +628,7 @@ export function getAllProducts(): ProductRecord[] {
       usageGuide: String(r.usage_guide),
       storageGuide: String(r.storage_guide),
       cautionNote: String(r.caution_note),
-      imageUrl: String(r.image_url),
-      isIllustrationImage: Boolean(r.is_illustration_image),
+      ...resolveProductImage(prodId, String(r.image_url), Boolean(r.is_illustration_image)),
       priceVnd: r.price_vnd === null || r.price_vnd === undefined ? null : Number(r.price_vnd),
       status: String(r.status) as ProductStatus,
       isDemoFixture: Boolean(r.is_demo_fixture),
@@ -2889,4 +2889,3 @@ export async function syncDbFromCloud(force = false): Promise<void> {
     // Ignore transient network errors
   }
 }
-
