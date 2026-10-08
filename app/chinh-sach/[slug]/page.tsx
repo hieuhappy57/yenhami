@@ -96,6 +96,7 @@ export async function generateMetadata({
       title: "Chính Sách Phục Vụ",
       description: "Quy định giao nhận, thanh toán và bảo mật tại Yến Sào Hà Mi.",
       path: `/chinh-sach/${slug}`,
+      noIndex: true,
     });
   }
   return buildPageMetadata({

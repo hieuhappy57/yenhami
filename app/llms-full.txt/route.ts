@@ -37,7 +37,10 @@ export async function GET() {
     "",
     "## 2. Chi Tiết Toàn Bộ Sản Phẩm & Bảng Giá",
     ...products.flatMap((p, idx) => {
-      const price = p.priceVnd ? `${p.priceVnd.toLocaleString("vi-VN")}đ` : "Liên hệ";
+      const price =
+        typeof p.priceVnd === "number" && Number.isFinite(p.priceVnd) && p.priceVnd >= 0
+          ? `${p.priceVnd.toLocaleString("vi-VN")}đ`
+          : "Liên hệ";
       return [
         `### 2.${idx + 1}. ${p.name}`,
         `- URL: ${absoluteUrl(`/san-pham/${p.slug}`)}`,

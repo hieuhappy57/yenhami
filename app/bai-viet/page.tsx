@@ -86,6 +86,10 @@ export default async function BaiVietPage() {
                     <img
                       src={post.coverImageUrl}
                       alt={post.coverImageAlt || post.title}
+                      width={640}
+                      height={400}
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                     />
                     <span className="absolute top-4 left-4 rounded-full bg-[#1B4332]/90 backdrop-blur-xs px-3.5 py-1 text-xs font-semibold text-[#FFFCF4]">
@@ -114,6 +118,7 @@ export default async function BaiVietPage() {
                 <div className="mt-4 px-1">
                   <Link
                     href={`/bai-viet/${post.slug}`}
+                    aria-label={`Đọc chi tiết: ${post.title}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EB] px-4 py-2 text-xs sm:text-sm font-bold text-[#1B4332] group-hover:bg-[#1B4332] group-hover:text-white transition-colors"
                   >
                     <span>Đọc chi tiết bài viết</span>

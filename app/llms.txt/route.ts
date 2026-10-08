@@ -47,13 +47,19 @@ export async function GET() {
     "",
     "## Menu 8 Món Yến Tươi Chưng Nóng Thố Sứ 200ml (35g Yến Tươi Thật)",
     ...freshBowls.map((p) => {
-      const price = p.priceVnd ? `${p.priceVnd.toLocaleString("vi-VN")}đ` : "Liên hệ";
+      const price =
+        typeof p.priceVnd === "number" && Number.isFinite(p.priceVnd) && p.priceVnd >= 0
+          ? `${p.priceVnd.toLocaleString("vi-VN")}đ`
+          : "Liên hệ";
       return `- [${p.name}](${absoluteUrl(`/san-pham/${p.slug}`)}): ${price} — ${p.shortDescription} (Thành phần: ${p.ingredients.join(", ")})`;
     }),
     "",
     "## Dòng Set Quà Biếu, Yến Hũ Chưng Sẵn & Yến Sào Tinh Chế",
     ...catalogItems.map((p) => {
-      const price = p.priceVnd ? `${p.priceVnd.toLocaleString("vi-VN")}đ` : "Liên hệ";
+      const price =
+        typeof p.priceVnd === "number" && Number.isFinite(p.priceVnd) && p.priceVnd >= 0
+          ? `${p.priceVnd.toLocaleString("vi-VN")}đ`
+          : "Liên hệ";
       return `- [${p.name}](${absoluteUrl(`/san-pham/${p.slug}`)}): ${price} — ${p.shortDescription}`;
     }),
     "",

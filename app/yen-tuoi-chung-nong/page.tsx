@@ -67,6 +67,9 @@ export default async function MenuPage() {
           <img
             src="/brand/banners/hero-slide-1-tho-su-v2.webp"
             alt="Thực Đơn Yến Tươi Chưng Nóng Thố Sứ 200ml & Sản Phẩm Yến Sào Hà Mi"
+            width={1280}
+            height={520}
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div

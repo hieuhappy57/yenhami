@@ -24,6 +24,7 @@ export async function generateMetadata({
       description:
         "Khám phá thực đơn Yến Tươi Chưng Nóng thố sứ 200ml (35g yến tươi thật), Set Quà Biếu Hoa Sen Vàng và Yến Sào Tinh Chế thượng hạng từ Yến Sào Hà Mi.",
       path: `/san-pham/${slug}`,
+      noIndex: true,
     });
   }
 

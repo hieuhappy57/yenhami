@@ -39,6 +39,9 @@ export default function VeHaMiPage() {
           <img
             src="/brand/banners/hero-slide-3-yen-viet-nguyen-to-v2.webp"
             alt="Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ"
+            width={1280}
+            height={520}
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div

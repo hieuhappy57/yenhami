@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, MapPin, MessageCircle, PhoneCall } from "lucide-react";
-import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr } from "@/db";
+import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr, syncDbFromCloud } from "@/db";
 import { BRAND_CONFIG } from "@/config/brand";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
@@ -16,7 +16,8 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/lien-he",
 });
 
-export default function LienHePage() {
+export default async function LienHePage() {
+  await syncDbFromCloud();
   const zones = getServiceZones();
   const tomorrow = getTomorrowHoChiMinhDateStr();
   const slots = getDeliverySlots({ requestedDate: tomorrow });

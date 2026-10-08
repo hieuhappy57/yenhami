@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Gift, Heart, Sparkles } from "lucide-react";
-import { getAllProducts } from "@/db";
+import { getAllProducts, syncDbFromCloud } from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
@@ -41,7 +41,8 @@ const GIFT_PRIVILEGES = [
   },
 ];
 
-export default function GuiQuaPage() {
+export default async function GuiQuaPage() {
+  await syncDbFromCloud();
   const products = getAllProducts();
   const freshBowlProducts = products.filter((p) => !p.id.startsWith("cat-"));
 
@@ -61,6 +62,9 @@ export default function GuiQuaPage() {
           <img
             src="/brand/banners/hero-slide-2-set-qua-sen-vang-v3.webp"
             alt="Set Quà Yến Sào Thượng Hạng Hoa Sen & Đàn Én Hà Mi"
+            width={1280}
+            height={520}
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div

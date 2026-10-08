@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GEO_CONFIG, GEO_META_TAGS, SEO_CONFIG, SITE_URL, buildPageMetadata } from "../config/seo";
+import { isPreviewDeployment } from "../lib/deployment-policy";
+import { buildProductOffer } from "../lib/product-offer";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import manifest from "../app/manifest";
@@ -224,6 +226,46 @@ async function runSeoAudit() {
     catalogSectionContent.includes("product.categoryLabel") &&
       catalogSectionContent.includes("width={410}"),
     "Ảnh sản phẩm có alt ngữ cảnh chi tiết + kích thước cố định"
+  );
+
+  const homeContent = fs.readFileSync(path.join(rootDir, "app/page.tsx"), "utf8");
+  const detailClientContent = fs.readFileSync(
+    path.join(rootDir, "components/ProductDetailClient.tsx"),
+    "utf8"
+  );
+  record(
+    "8. Google SEO Starter Guide",
+    "Descriptive Anchor Text & Semantic Breadcrumb Navigation",
+    homeContent.includes("Xem tất cả bài viết cẩm nang") &&
+      detailClientContent.includes('aria-label="Breadcrumb"'),
+    "Liên kết nội bộ giàu ngữ cảnh & thanh điều hướng Breadcrumb chuẩn ngữ nghĩa"
+  );
+
+  const pricedOffer = buildProductOffer(
+    { priceVnd: 295000, status: "AVAILABLE" },
+    `${SITE_URL}/san-pham/test`,
+    SEO_CONFIG.siteName
+  );
+  const unpricedOffer = buildProductOffer(
+    { priceVnd: null, status: "AVAILABLE" },
+    `${SITE_URL}/san-pham/test`,
+    SEO_CONFIG.siteName
+  );
+  record(
+    "8. Google SEO Starter Guide",
+    "Truthful Product Offer Schema (Không bịa giá cho sản phẩm Liên hệ)",
+    pricedOffer?.price === 295000 && unpricedOffer === undefined,
+    "Giữ nguyên giá VND thực tế và tự động ẩn Offer khi sản phẩm chưa có giá cố định"
+  );
+
+  const staticEntry = sitemapEntries.find((e) => e.url === SITE_URL);
+  record(
+    "8. Google SEO Starter Guide",
+    "Preview Isolation & Truthful Sitemap Dates",
+    isPreviewDeployment("preview") &&
+      !isPreviewDeployment("production") &&
+      staticEntry?.lastModified === undefined,
+    "Chặn index tự động trên môi trường Preview (.vercel.app) & chỉ xuất lastModified thực"
   );
 
   const jsonLdContent = fs.readFileSync(
