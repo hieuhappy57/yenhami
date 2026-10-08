@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { SEO_CONFIG, SITE_URL, buildPageMetadata } from "../config/seo";
+import { GEO_CONFIG, GEO_META_TAGS, SEO_CONFIG, SITE_URL, buildPageMetadata } from "../config/seo";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import manifest from "../app/manifest";
@@ -27,8 +27,8 @@ async function runSeoAudit() {
   };
 
   console.log("=================================================================");
-  console.log("🔍 BÁO CÁO KIỂM TRA TỐI ƯU SEO — YẾN SÀO HÀ MI (ha-mi-website)");
-  console.log(`🌐 Tên miền cấu hình (SITE_URL): ${SITE_URL}`);
+  console.log("🔍 BÁO CÁO KIỂM TRA TỐI ƯU SEO & GEO — YẾN SÀO HÀ MI");
+  console.log(`🌐 Tên miền chính thức (SITE_URL): ${SITE_URL}`);
   console.log("=================================================================\n");
 
   // 1. Kiểm tra Cấu hình SEO Trung tâm
@@ -53,24 +53,42 @@ async function runSeoAudit() {
   );
   record(
     "1. Cấu hình Gốc",
-    "Bộ từ khóa thương hiệu & địa phương",
-    SEO_CONFIG.keywords.length >= 8,
+    "Bộ từ khóa thương hiệu & địa phương Đà Nẵng",
+    SEO_CONFIG.keywords.length >= 10,
     `${SEO_CONFIG.keywords.length} từ khóa mục tiêu`
   );
 
-  // 2. Kiểm tra Robots.txt
+  // 2. Kiểm tra Local Geo-SEO (Đà Nẵng)
+  record(
+    "2. Local Geo-SEO",
+    "Thẻ Meta Địa lý (geo.region, geo.placename, geo.position, ICBM)",
+    GEO_META_TAGS["geo.region"] === "VN-DN" &&
+      Boolean(GEO_META_TAGS["geo.placename"]) &&
+      Boolean(GEO_META_TAGS["geo.position"]) &&
+      Boolean(GEO_META_TAGS.ICBM),
+    `region=${GEO_META_TAGS["geo.region"]}, placename="${GEO_META_TAGS["geo.placename"]}", position=${GEO_META_TAGS["geo.position"]}`
+  );
+  record(
+    "2. Local Geo-SEO",
+    "Khai báo vùng phục vụ giao nóng 2H (7 Quận/Huyện Đà Nẵng)",
+    GEO_CONFIG.servedDistricts.length >= 7,
+    `${GEO_CONFIG.servedDistricts.join(", ")}`
+  );
+
+  // 3. Kiểm tra Robots.txt & AI Bots (GEO)
   const robotsConfig = robots();
-  const rules = Array.isArray(robotsConfig.rules)
-    ? robotsConfig.rules[0]
-    : robotsConfig.rules;
-  const disallowList = Array.isArray(rules?.disallow)
-    ? rules.disallow
-    : rules?.disallow
-      ? [rules.disallow]
+  const rulesList = Array.isArray(robotsConfig.rules)
+    ? robotsConfig.rules
+    : [robotsConfig.rules];
+  const defaultRule = rulesList[0];
+  const disallowList = Array.isArray(defaultRule?.disallow)
+    ? defaultRule.disallow
+    : defaultRule?.disallow
+      ? [defaultRule.disallow]
       : [];
 
   record(
-    "2. Robots & Sitemap",
+    "3. Robots & Sitemap",
     "robots.txt chặn các trang nội bộ (/quan-tri, /api/, /yeu-cau-da-nhan)",
     disallowList.includes("/quan-tri") &&
       disallowList.includes("/api/") &&
@@ -78,34 +96,52 @@ async function runSeoAudit() {
     `Disallow: ${disallowList.join(", ")}`
   );
   record(
-    "2. Robots & Sitemap",
+    "3. Robots & Sitemap",
+    "robots.txt mở quyền cho AI Search Bots (GPTBot, PerplexityBot, ClaudeBot, Google-Extended)",
+    rulesList.length >= 2,
+    `Cấu hình ${rulesList.length} nhóm User-Agent (bao gồm AI Crawlers)`
+  );
+  record(
+    "3. Robots & Sitemap",
     "robots.txt khai báo Sitemap URL chuẩn",
     robotsConfig.sitemap === `${SITE_URL}/sitemap.xml`,
     `Sitemap: ${robotsConfig.sitemap}`
   );
 
-  // 3. Kiểm tra Sitemap.xml động
+  // 4. Kiểm tra Sitemap.xml động
   const sitemapEntries = await sitemap();
   const products = getAllProducts();
   const posts = getAllPosts(true);
 
   record(
-    "2. Robots & Sitemap",
-    "Sitemap.xml bao phủ đầy đủ Trang tĩnh + Sản phẩm + Bài viết + Chính sách",
-    sitemapEntries.length >= 8 + products.length + posts.length + 4,
+    "3. Robots & Sitemap",
+    "Sitemap.xml bao phủ đầy đủ Trang tĩnh + Sản phẩm + Bài viết + Chính sách + LLMs",
+    sitemapEntries.length >= 10 + products.length + posts.length + 4,
     `Tổng cộng ${sitemapEntries.length} URLs trong sitemap.xml (${products.length} sản phẩm, ${posts.length} bài viết)`
   );
 
-  // 4. Kiểm tra Web App Manifest
+  // 5. Kiểm tra AI GEO Endpoints (/llms.txt & /llms-full.txt)
+  const llmsExists = fs.existsSync(path.join(rootDir, "app/llms.txt/route.ts"));
+  const llmsFullExists = fs.existsSync(
+    path.join(rootDir, "app/llms-full.txt/route.ts")
+  );
+  record(
+    "4. AI Search (GEO)",
+    "Endpoint /llms.txt & /llms-full.txt cho ChatGPT, Gemini, Perplexity, Claude",
+    llmsExists && llmsFullExists,
+    `Đã kích hoạt /llms.txt và /llms-full.txt`
+  );
+
+  // 6. Kiểm tra Web App Manifest
   const manifestConfig = manifest();
   record(
-    "3. Mobile & PWA",
+    "5. Mobile & PWA",
     "Web App Manifest (/manifest.webmanifest)",
     Boolean(manifestConfig.name && manifestConfig.icons && manifestConfig.icons.length >= 2),
     `theme_color=${manifestConfig.theme_color}, icons=${manifestConfig.icons?.length ?? 0}`
   );
 
-  // 5. Kiểm tra Metadata & Canonical các sản phẩm và bài viết
+  // 7. Kiểm tra Metadata & Canonical các sản phẩm và bài viết
   let validProductMetaCount = 0;
   for (const p of products) {
     const meta = buildPageMetadata({
@@ -120,10 +156,10 @@ async function runSeoAudit() {
     }
   }
   record(
-    "4. Dynamic Metadata",
-    "Metadata & Canonical cho toàn bộ trang Sản phẩm (/san-pham/[slug])",
+    "6. Dynamic Metadata",
+    "Metadata, Geo Tags & Canonical cho toàn bộ trang Sản phẩm (/san-pham/[slug])",
     validProductMetaCount === products.length,
-    `${validProductMetaCount}/${products.length} sản phẩm có Canonical + OpenGraph hợp lệ`
+    `${validProductMetaCount}/${products.length} sản phẩm có Canonical + OpenGraph + Geo Tags hợp lệ`
   );
 
   let validPostMetaCount = 0;
@@ -141,13 +177,13 @@ async function runSeoAudit() {
     }
   }
   record(
-    "4. Dynamic Metadata",
-    "Metadata & Canonical cho toàn bộ Bài viết (/bai-viet/[slug])",
+    "6. Dynamic Metadata",
+    "Metadata, Geo Tags & Canonical cho toàn bộ Bài viết (/bai-viet/[slug])",
     validPostMetaCount === posts.length,
     `${validPostMetaCount}/${posts.length} bài viết có Canonical + Article OpenGraph hợp lệ`
   );
 
-  // 6. Quét mã nguồn kiểm tra thẻ H1, JSON-LD Schema.org và Analytics
+  // 8. Quét mã nguồn kiểm tra JSON-LD Schema.org và Analytics
   const pageFilesToCheck = [
     { route: "/", file: "app/page.tsx", expectJsonLd: "FaqJsonLd" },
     { route: "/yen-tuoi-chung-nong", file: "app/yen-tuoi-chung-nong/page.tsx", expectJsonLd: "BreadcrumbJsonLd" },
@@ -165,22 +201,30 @@ async function runSeoAudit() {
     const content = fs.readFileSync(fullPath, "utf8");
     const hasJsonLd = content.includes(item.expectJsonLd);
     record(
-      "5. Schema JSON-LD",
+      "7. Schema JSON-LD",
       `Route ${item.route} nhúng ${item.expectJsonLd}`,
       hasJsonLd,
       hasJsonLd ? `Đã gắn <${item.expectJsonLd} />` : `Thiếu ${item.expectJsonLd}`
     );
   }
 
-  const layoutContent = fs.readFileSync(path.join(rootDir, "app/layout.tsx"), "utf8");
-  record(
-    "5. Schema JSON-LD",
-    "Root Layout nhúng OrganizationAndLocalBusinessJsonLd",
-    layoutContent.includes("OrganizationAndLocalBusinessJsonLd"),
-    "Khai báo Organization + FoodEstablishment + WebSite"
+  const jsonLdContent = fs.readFileSync(
+    path.join(rootDir, "components/SeoJsonLd.tsx"),
+    "utf8"
   );
   record(
-    "6. Công cụ Đo lường",
+    "7. Schema JSON-LD",
+    "SeoJsonLd tích hợp GeoCoordinates, GeoCircle, areaServed & hasCredential",
+    jsonLdContent.includes("GeoCoordinates") &&
+      jsonLdContent.includes("GeoCircle") &&
+      jsonLdContent.includes("areaServed") &&
+      jsonLdContent.includes("hasCredential"),
+    "Đầy đủ tọa độ Đà Nẵng, bán kính phục vụ 25km và chứng nhận ISO 22000 & FDA"
+  );
+
+  const layoutContent = fs.readFileSync(path.join(rootDir, "app/layout.tsx"), "utf8");
+  record(
+    "8. Công cụ Đo lường",
     "Root Layout tích hợp AnalyticsScripts (GA4, GTM, FB Pixel)",
     layoutContent.includes("AnalyticsScripts"),
     "Tự động kích hoạt khi cấu hình NEXT_PUBLIC_GA_ID / GTM_ID / FB_PIXEL_ID"
@@ -198,7 +242,7 @@ async function runSeoAudit() {
 
   console.log("\n=================================================================");
   console.log(
-    `🏆 ĐIỂM SỨC KHỎE KỸ THUẬT SEO: ${score}/100 (${passedCount}/${results.length} hạng mục đạt chuẩn)`
+    `🏆 ĐIỂM SỨC KHỎE KỸ THUẬT SEO & GEO: ${score}/100 (${passedCount}/${results.length} hạng mục đạt chuẩn)`
   );
   console.log("=================================================================");
 

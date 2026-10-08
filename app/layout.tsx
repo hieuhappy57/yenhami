@@ -8,7 +8,7 @@ import { FloatingActionRail } from "@/components/FloatingActionRail";
 import { MobileStickyCartBar } from "@/components/MobileStickyCartBar";
 import { OrganizationAndLocalBusinessJsonLd } from "@/components/SeoJsonLd";
 import { AnalyticsScripts } from "@/components/AnalyticsScripts";
-import { SEO_CONFIG, absoluteUrl } from "@/config/seo";
+import { GEO_META_TAGS, SEO_CONFIG, absoluteUrl } from "@/config/seo";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
@@ -19,7 +19,6 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 const brandSerif = Playfair_Display({
   subsets: ["vietnamese", "latin"],
-  weight: ["600", "700", "800"],
   variable: "--font-brand-serif",
   display: "swap",
 });
@@ -45,6 +44,9 @@ export const metadata: Metadata = {
   publisher: SEO_CONFIG.siteName,
   alternates: {
     canonical: SEO_CONFIG.siteUrl,
+  },
+  other: {
+    ...GEO_META_TAGS,
   },
   verification: SEO_CONFIG.verification,
   icons: {

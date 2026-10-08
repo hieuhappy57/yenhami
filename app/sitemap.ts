@@ -59,6 +59,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.65,
     },
+    {
+      url: absoluteUrl("/llms.txt"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl("/llms-full.txt"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.75,
+    },
   ];
 
   const products = getAllProducts();

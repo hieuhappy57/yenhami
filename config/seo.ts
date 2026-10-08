@@ -2,8 +2,34 @@ import type { Metadata } from "next";
 import { BRAND_CONFIG } from "./brand";
 
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://yenhami.com"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.yenhami.com"
 ).replace(/\/$/, "");
+
+export const GEO_CONFIG = {
+  region: "VN-DN",
+  placename: "Đà Nẵng, Việt Nam",
+  latitude: 16.0544,
+  longitude: 108.2022,
+  positionString: "16.0544;108.2022",
+  icbmString: "16.0544, 108.2022",
+  serviceRadiusMeters: 25000,
+  servedDistricts: [
+    "Quận Hải Châu",
+    "Quận Thanh Khê",
+    "Quận Sơn Trà",
+    "Quận Ngũ Hành Sơn",
+    "Quận Cẩm Lệ",
+    "Quận Liên Chiểu",
+    "Huyện Hòa Vang",
+  ],
+};
+
+export const GEO_META_TAGS: Record<string, string> = {
+  "geo.region": GEO_CONFIG.region,
+  "geo.placename": GEO_CONFIG.placename,
+  "geo.position": GEO_CONFIG.positionString,
+  ICBM: GEO_CONFIG.icbmString,
+};
 
 export const SEO_CONFIG = {
   siteUrl: SITE_URL,
@@ -14,19 +40,22 @@ export const SEO_CONFIG = {
     "Yến Sào Đà Nẵng Uy Tín — Hà Mi | Yến Tươi Chưng Nóng Giao Ngay 2H",
   titleTemplate: "%s | Yến Sào Hà Mi",
   defaultDescription:
-    "Yến Sào Hà Mi tại Đà Nẵng: 35g yến tươi thật chưng nóng thủ công trong thố sứ 200ml, giá từ 295k, đạt chuẩn ISO 22000 & FDA. Giao ấm nóng hỏa tốc 2 giờ nội thành Đà Nẵng. Món quà sức khỏe cho mẹ bầu, người bệnh, ông bà. Hotline/Zalo: 0935 052 959.",
+    "Yến Sào Hà Mi Đà Nẵng: 35g yến tươi thật chưng nóng trong thố sứ 200ml từ 295.000đ, giao ấm nóng 2H. Quà biếu mẹ bầu, người bệnh, ông bà chuẩn ISO 22000 & FDA. Hotline: 0935 052 959.",
   defaultOgImage: "/brand/hero-desktop-clean.jpg",
+  geo: GEO_CONFIG,
   keywords: [
     "yến sào hà mi",
+    "yến sào đà nẵng",
     "yến tươi chưng nóng",
     "yến chưng nóng đà nẵng",
+    "yến chưng nóng giao ngay đà nẵng",
     "yến chưng thố sứ",
     "quà biếu sức khỏe đà nẵng",
     "set quà yến sào",
     "yến hũ chưng sẵn",
     "yến sào tinh chế",
-    "yến chưng cho bà bầu",
-    "yến chưng thăm bệnh",
+    "yến chưng cho bà bầu đà nẵng",
+    "yến chưng thăm bệnh đà nẵng",
     "yến sào chuẩn ISO 22000",
     "yến sào FDA Hoa Kỳ",
   ],
@@ -84,6 +113,9 @@ export function buildPageMetadata({
     keywords: mergedKeywords,
     alternates: {
       canonical: canonicalUrl,
+    },
+    other: {
+      ...GEO_META_TAGS,
     },
     openGraph: {
       title: `${title} | ${SEO_CONFIG.siteName}`,

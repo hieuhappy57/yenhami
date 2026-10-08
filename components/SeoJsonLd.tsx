@@ -1,6 +1,6 @@
 import React from "react";
 import { BRAND_CONFIG } from "@/config/brand";
-import { SEO_CONFIG, absoluteUrl } from "@/config/seo";
+import { GEO_CONFIG, SEO_CONFIG, absoluteUrl } from "@/config/seo";
 import type { PostRecord, ProductRecord } from "@/db/schema";
 
 export function OrganizationAndLocalBusinessJsonLd() {
@@ -11,18 +11,38 @@ export function OrganizationAndLocalBusinessJsonLd() {
         "@type": "Organization",
         "@id": `${SEO_CONFIG.siteUrl}/#organization`,
         name: BRAND_CONFIG.brandName,
-        alternateName: "Yến Tươi Chưng Nóng Hà Mi",
+        alternateName: ["Yến Tươi Chưng Nóng Hà Mi", "Yến Sào Hà Mi Đà Nẵng"],
         url: SEO_CONFIG.siteUrl,
         logo: {
           "@type": "ImageObject",
           url: absoluteUrl("/brand/ha-mi-logo-web-640.png"),
         },
+        description: SEO_CONFIG.defaultDescription,
+        knowsAbout: [
+          "Yến tươi chưng nóng thố sứ 200ml",
+          "Giao yến chưng nóng hỏa tốc 2 giờ tại Đà Nẵng",
+          "Yến sào tinh chế chuẩn ISO 22000:2018 & FDA Hoa Kỳ",
+          "Quà biếu sức khỏe cho mẹ bầu, người bệnh, người cao tuổi",
+          "Set quà tặng yến sào thượng hạng",
+        ],
+        hasCredential: [
+          {
+            "@type": "EducationalOccupationalCredential",
+            credentialCategory: "Food Safety Management System",
+            name: "ISO 22000:2018",
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            credentialCategory: "International Registration",
+            name: "FDA Hoa Kỳ (US Food and Drug Administration)",
+          },
+        ],
         contactPoint: {
           "@type": "ContactPoint",
           telephone: BRAND_CONFIG.contact.hotlineTel || "0935052959",
           email: BRAND_CONFIG.contact.emailDisplay || "cskh@yenhami.com",
           contactType: "customer service",
-          areaServed: "VN",
+          areaServed: ["VN-DN", "VN"],
           availableLanguage: ["Vietnamese"],
         },
         sameAs: BRAND_CONFIG.contact.zaloUrl
@@ -44,7 +64,49 @@ export function OrganizationAndLocalBusinessJsonLd() {
           streetAddress: BRAND_CONFIG.contact.addressDisplay,
           addressLocality: "Đà Nẵng",
           addressRegion: "Đà Nẵng",
+          postalCode: "550000",
           addressCountry: "VN",
+        },
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: GEO_CONFIG.latitude,
+          longitude: GEO_CONFIG.longitude,
+        },
+        areaServed: [
+          {
+            "@type": "City",
+            name: "Đà Nẵng",
+            sameAs: "https://vi.wikipedia.org/wiki/%C4%90%C3%A0_N%E1%BA%B5ng",
+          },
+          ...GEO_CONFIG.servedDistricts.map((district) => ({
+            "@type": "AdministrativeArea",
+            name: `${district}, Đà Nẵng`,
+          })),
+          {
+            "@type": "GeoCircle",
+            geoMidpoint: {
+              "@type": "GeoCoordinates",
+              latitude: GEO_CONFIG.latitude,
+              longitude: GEO_CONFIG.longitude,
+            },
+            geoRadius: GEO_CONFIG.serviceRadiusMeters,
+          },
+        ],
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: "Danh mục sản phẩm Yến Sào Hà Mi",
+          itemListElement: [
+            {
+              "@type": "OfferCatalog",
+              name: "Yến Tươi Chưng Nóng Thố Sứ 200ml (35g yến tươi thật) — Giao Nóng 2H Đà Nẵng",
+              url: absoluteUrl("/yen-tuoi-chung-nong"),
+            },
+            {
+              "@type": "OfferCatalog",
+              name: "Set Quà Biếu Yến Sào Hoa Sen & Đàn Én Thượng Hạng",
+              url: absoluteUrl("/gui-qua"),
+            },
+          ],
         },
         openingHoursSpecification: [
           {
@@ -164,6 +226,10 @@ export function ProductJsonLd({ product }: { product: ProductRecord }) {
           price: product.priceVnd ?? 295000,
           availability,
           itemCondition: "https://schema.org/NewCondition",
+          areaServed: {
+            "@type": "City",
+            name: "Đà Nẵng",
+          },
           seller: {
             "@type": "Organization",
             name: BRAND_CONFIG.brandName,
@@ -220,6 +286,10 @@ export function ArticleJsonLd({ post }: { post: PostRecord }) {
         dateModified: post.updatedAt || post.createdAt,
         articleSection: post.category,
         inLanguage: "vi-VN",
+        contentLocation: {
+          "@type": "Place",
+          name: "Đà Nẵng, Việt Nam",
+        },
         author: {
           "@type": "Organization",
           name: BRAND_CONFIG.brandName,
