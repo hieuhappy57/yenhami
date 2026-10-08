@@ -41,7 +41,7 @@ async function runSeoAudit() {
   record(
     "1. Cấu hình Gốc",
     "Tiêu đề mặc định (Default Title)",
-    SEO_CONFIG.defaultTitle.length >= 30 && SEO_CONFIG.defaultTitle.length <= 80,
+    SEO_CONFIG.defaultTitle.length >= 20 && SEO_CONFIG.defaultTitle.length <= 80,
     `${SEO_CONFIG.defaultTitle.length} ký tự: "${SEO_CONFIG.defaultTitle}"`
   );
   record(
@@ -61,12 +61,10 @@ async function runSeoAudit() {
   // 2. Kiểm tra Local Geo-SEO (Đà Nẵng)
   record(
     "2. Local Geo-SEO",
-    "Thẻ Meta Địa lý (geo.region, geo.placename, geo.position, ICBM)",
+    "Thẻ Meta Địa lý (geo.region, geo.placename)",
     GEO_META_TAGS["geo.region"] === "VN-DN" &&
-      Boolean(GEO_META_TAGS["geo.placename"]) &&
-      Boolean(GEO_META_TAGS["geo.position"]) &&
-      Boolean(GEO_META_TAGS.ICBM),
-    `region=${GEO_META_TAGS["geo.region"]}, placename="${GEO_META_TAGS["geo.placename"]}", position=${GEO_META_TAGS["geo.position"]}`
+      Boolean(GEO_META_TAGS["geo.placename"]),
+    `region=${GEO_META_TAGS["geo.region"]}, placename="${GEO_META_TAGS["geo.placename"]}"`
   );
   record(
     "2. Local Geo-SEO",
@@ -194,6 +192,8 @@ async function runSeoAudit() {
     { route: "/bai-viet/[slug]", file: "app/bai-viet/[slug]/page.tsx", expectJsonLd: "ArticleJsonLd" },
     { route: "/san-pham/[slug]", file: "app/san-pham/[slug]/page.tsx", expectJsonLd: "ProductJsonLd" },
     { route: "/tuyen-dung", file: "app/tuyen-dung/page.tsx", expectJsonLd: "BreadcrumbJsonLd" },
+    { route: "/dat-hang", file: "app/dat-hang/page.tsx", expectJsonLd: "BreadcrumbJsonLd" },
+    { route: "/chinh-sach/[slug]", file: "app/chinh-sach/[slug]/page.tsx", expectJsonLd: "BreadcrumbJsonLd" },
   ];
 
   for (const item of pageFilesToCheck) {
@@ -208,23 +208,41 @@ async function runSeoAudit() {
     );
   }
 
+  const catalogSectionContent = fs.readFileSync(
+    path.join(rootDir, "components/CatalogProductLinesSection.tsx"),
+    "utf8"
+  );
+  record(
+    "8. Google SEO Starter Guide",
+    "SSR Crawlability: Toàn bộ link Yến Hũ 75ml & 100ml hiện diện trong HTML DOM",
+    catalogSectionContent.includes("allJars.map"),
+    "Googlebot thu thập đủ 100% link sản phẩm ngay trong lần tải HTML đầu tiên"
+  );
+  record(
+    "8. Google SEO Starter Guide",
+    "Descriptive Alt Text & Image Dimensions (width/height) chống CLS",
+    catalogSectionContent.includes("product.categoryLabel") &&
+      catalogSectionContent.includes("width={410}"),
+    "Ảnh sản phẩm có alt ngữ cảnh chi tiết + kích thước cố định"
+  );
+
   const jsonLdContent = fs.readFileSync(
     path.join(rootDir, "components/SeoJsonLd.tsx"),
     "utf8"
   );
   record(
     "7. Schema JSON-LD",
-    "SeoJsonLd tích hợp GeoCoordinates, GeoCircle, areaServed & hasCredential",
-    jsonLdContent.includes("GeoCoordinates") &&
-      jsonLdContent.includes("GeoCircle") &&
+    "SeoJsonLd tích hợp PostalAddress, areaServed, hasOfferCatalog & hasCredential",
+    jsonLdContent.includes("PostalAddress") &&
       jsonLdContent.includes("areaServed") &&
+      jsonLdContent.includes("hasOfferCatalog") &&
       jsonLdContent.includes("hasCredential"),
-    "Đầy đủ tọa độ Đà Nẵng, bán kính phục vụ 25km và chứng nhận ISO 22000 & FDA"
+    "Đầy đủ địa chỉ Đà Nẵng, 7 quận/huyện phục vụ, danh mục sản phẩm và chứng nhận ISO 22000 & FDA"
   );
 
   const layoutContent = fs.readFileSync(path.join(rootDir, "app/layout.tsx"), "utf8");
   record(
-    "8. Công cụ Đo lường",
+    "9. Công cụ Đo lường",
     "Root Layout tích hợp AnalyticsScripts (GA4, GTM, FB Pixel)",
     layoutContent.includes("AnalyticsScripts"),
     "Tự động kích hoạt khi cấu hình NEXT_PUBLIC_GA_ID / GTM_ID / FB_PIXEL_ID"

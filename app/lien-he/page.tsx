@@ -10,9 +10,9 @@ import { buildPageMetadata } from "@/config/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Liên Hệ & Khu Vực Giao Yến Chưng Nóng 2H Tại Đà Nẵng",
+  title: "Liên Hệ Yến Sào Hà Mi Tại Đà Nẵng",
   description:
-    "Tra cứu phạm vi phục vụ giao nóng trong 2H tại Đà Nẵng, khung giờ phục vụ (08:00 – 21:00) và kênh liên hệ Hotline/Zalo chính thức của Yến Sào Hà Mi.",
+    `Liên hệ Yến Sào Hà Mi tại ${BRAND_CONFIG.contact.addressDisplay}. Xem thông tin sản phẩm, kênh liên hệ và phạm vi phục vụ.`,
   path: "/lien-he",
 });
 

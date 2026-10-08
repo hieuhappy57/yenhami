@@ -8,6 +8,7 @@ import {
   syncDbFromCloud,
 } from "@/db";
 import { OrderRequestClient } from "@/components/OrderRequestClient";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
@@ -30,19 +31,27 @@ export default async function DatHangPage() {
   });
 
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-[1200px] px-4 py-12 text-sm text-[#2B433A]">
-          Đang tải biểu mẫu đặt yến...
-        </div>
-      }
-    >
-      <OrderRequestClient
-        initialProducts={products}
-        initialZones={zones}
-        initialSlots={slots}
-        defaultDate={defaultDate}
+    <>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: "Đặt món giao nóng 2H", path: "/dat-hang" },
+        ]}
       />
-    </Suspense>
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-[1200px] px-4 py-12 text-sm text-[#2B433A]">
+            Đang tải biểu mẫu đặt yến...
+          </div>
+        }
+      >
+        <OrderRequestClient
+          initialProducts={products}
+          initialZones={zones}
+          initialSlots={slots}
+          defaultDate={defaultDate}
+        />
+      </Suspense>
+    </>
   );
 }

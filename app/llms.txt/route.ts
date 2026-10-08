@@ -31,7 +31,7 @@ export async function GET() {
     `- **Hotline / Zalo đặt món:** ${BRAND_CONFIG.contact.hotlineDisplay} (${BRAND_CONFIG.contact.zaloUrl})`,
     `- **Email CSKH:** ${BRAND_CONFIG.contact.emailDisplay}`,
     `- **Địa chỉ:** ${BRAND_CONFIG.contact.addressDisplay}`,
-    `- **Tọa độ địa lý (Geo-Location):** ${GEO_CONFIG.placename} (${GEO_CONFIG.latitude}, ${GEO_CONFIG.longitude})`,
+    `- **Địa bàn:** Đà Nẵng, Việt Nam`,
     `- **Giờ mở cửa / Ca bếp:** ${BRAND_CONFIG.contact.serviceHoursDisplay}`,
     `- **Khu vực giao nóng 2H tại Đà Nẵng:** ${GEO_CONFIG.servedDistricts.join(", ")}`,
     "",

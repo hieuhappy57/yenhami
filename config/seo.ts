@@ -30,8 +30,6 @@ export const GEO_CONFIG = {
 export const GEO_META_TAGS: Record<string, string> = {
   "geo.region": GEO_CONFIG.region,
   "geo.placename": GEO_CONFIG.placename,
-  "geo.position": GEO_CONFIG.positionString,
-  ICBM: GEO_CONFIG.icbmString,
 };
 
 export const SEO_CONFIG = {
@@ -39,11 +37,10 @@ export const SEO_CONFIG = {
   siteName: BRAND_CONFIG.brandName,
   shortName: BRAND_CONFIG.shortName,
   locale: "vi_VN",
-  defaultTitle:
-    "Yến Sào Đà Nẵng Uy Tín — Hà Mi | Yến Tươi Chưng Nóng Giao Ngay 2H",
+  defaultTitle: "Yến Sào Đà Nẵng | Hà Mi",
   titleTemplate: "%s | Yến Sào Hà Mi",
   defaultDescription:
-    "Yến Sào Hà Mi Đà Nẵng: 35g yến tươi thật chưng nóng trong thố sứ 200ml từ 295.000đ, giao ấm nóng 2H. Quà biếu mẹ bầu, người bệnh, ông bà chuẩn ISO 22000 & FDA. Hotline: 0935 052 959.",
+    "Yến Sào Hà Mi tại Đà Nẵng: yến tươi chưng nóng, yến hũ chưng sẵn, yến tinh chế và quà tặng. Xem sản phẩm và gửi yêu cầu đặt hàng để Hà Mi xác nhận.",
   defaultOgImage: "/brand/hero-desktop-clean.jpg",
   geo: GEO_CONFIG,
   keywords: [
@@ -57,10 +54,6 @@ export const SEO_CONFIG = {
     "set quà yến sào",
     "yến hũ chưng sẵn",
     "yến sào tinh chế",
-    "yến chưng cho bà bầu đà nẵng",
-    "yến chưng thăm bệnh đà nẵng",
-    "yến sào chuẩn ISO 22000",
-    "yến sào FDA Hoa Kỳ",
   ],
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
@@ -106,6 +99,9 @@ export function buildPageMetadata({
 }: PageSeoInput): Metadata {
   const canonicalUrl = absoluteUrl(path);
   const ogImageUrl = absoluteUrl(image || SEO_CONFIG.defaultOgImage);
+  const fullSocialTitle = title.includes(SEO_CONFIG.siteName)
+    ? title
+    : `${title} | ${SEO_CONFIG.siteName}`;
   const mergedKeywords = keywords
     ? Array.from(new Set([...keywords, ...SEO_CONFIG.keywords]))
     : SEO_CONFIG.keywords;
@@ -121,7 +117,7 @@ export function buildPageMetadata({
       ...GEO_META_TAGS,
     },
     openGraph: {
-      title: `${title} | ${SEO_CONFIG.siteName}`,
+      title: fullSocialTitle,
       description,
       url: canonicalUrl,
       siteName: SEO_CONFIG.siteName,
@@ -145,7 +141,7 @@ export function buildPageMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | ${SEO_CONFIG.siteName}`,
+      title: fullSocialTitle,
       description,
       images: [ogImageUrl],
     },

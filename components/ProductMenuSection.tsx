@@ -130,8 +130,9 @@ export function ProductMenuSection({
                 >
                   <img
                     src={product.imageUrl}
-                    alt={product.name}
+                    alt={`${product.name} — ${product.categoryLabel} (${product.ingredients.slice(0, 3).join(", ")}) | Yến Sào Hà Mi Đà Nẵng`}
                     loading="lazy"
+                    decoding="async"
                     width={410}
                     height={410}
                     className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"

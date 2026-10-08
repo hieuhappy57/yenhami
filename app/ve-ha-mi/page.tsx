@@ -15,9 +15,9 @@ import { buildPageMetadata } from "@/config/seo";
 import { BRAND_CONFIG } from "@/config/brand";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ",
+  title: "Câu Chuyện Thương Hiệu — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ",
   description:
-    "Tìm hiểu câu chuyện thương hiệu Yến Sào Hà Mi: Yến sào thật – Tinh khiết – Thượng hạng, nhà máy đạt chuẩn ISO 22000:2018 và chứng nhận FDA Hoa Kỳ.",
+    "Tìm hiểu câu chuyện thương hiệu Yến Sào Hà Mi tại Đà Nẵng: Yến sào thật – Tinh khiết – Thượng hạng, nhà máy đạt chuẩn ISO 22000:2018 và chứng nhận FDA Hoa Kỳ.",
   path: "/ve-ha-mi",
   image: "/brand/catalog/nha-may-so-che.jpg",
 });

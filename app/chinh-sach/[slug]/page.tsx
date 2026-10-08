@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
 
 const POLICIES: Record<
@@ -118,6 +119,12 @@ export default async function PolicyDetailPage({
 
   return (
     <div className="bg-[#FDFBF7] max-w-3xl mx-auto px-4 py-10 md:py-14 space-y-6">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Trang chủ", path: "/" },
+          { name: policy.title, path: `/chinh-sach/${slug}` },
+        ]}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EB] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-colors"

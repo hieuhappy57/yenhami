@@ -20,16 +20,10 @@ export function CatalogProductLinesSection({
     [products]
   );
 
-  const jarProducts = useMemo(() => {
-    const allJars = products.filter((p) => p.id.startsWith("cat-yen-hu-"));
-    if (jarVolumeTab === "75ml") {
-      return allJars.filter((p) => p.volumeMl === 75);
-    }
-    if (jarVolumeTab === "100ml") {
-      return allJars.filter((p) => p.volumeMl === 100);
-    }
-    return allJars;
-  }, [products, jarVolumeTab]);
+  const allJars = useMemo(
+    () => products.filter((p) => p.id.startsWith("cat-yen-hu-")),
+    [products]
+  );
 
   const refinedNestProducts = useMemo(
     () =>
@@ -95,7 +89,7 @@ export function CatalogProductLinesSection({
               href="/gui-qua"
               className="shrink-0 inline-flex items-center justify-center min-h-[38px] sm:min-h-[44px] px-5 sm:px-7 py-2 rounded-full bg-gradient-to-r from-[#E6C56F] via-[#F9E498] to-[#C89B3C] text-[#4A3208] font-serif-display font-bold text-xs sm:text-base shadow-md border border-[#FFF5D6] hover:brightness-105 transition-all"
             >
-              Khám phá ngay
+              Khám phá Set Quà Biếu
             </Link>
           </div>
         </div>
@@ -133,12 +127,16 @@ export function CatalogProductLinesSection({
                   <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                     <Link
                       href={`/san-pham/${product.slug}`}
+                      aria-label={`Xem chi tiết ${product.name}`}
                       className="block w-full h-full"
                     >
                       <img
                         src={product.imageUrl || fallbackImg}
-                        alt={product.name}
+                        alt={`${product.name} — ${product.categoryLabel} | Yến Sào Hà Mi Đà Nẵng`}
                         loading="lazy"
+                        decoding="async"
+                        width={410}
+                        height={410}
                         className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </Link>
@@ -252,7 +250,7 @@ export function CatalogProductLinesSection({
               href="#yen-hu-heading"
               className="shrink-0 inline-flex items-center justify-center min-h-[38px] sm:min-h-[44px] px-5 sm:px-7 py-2 rounded-full bg-gradient-to-r from-[#E6C56F] via-[#F9E498] to-[#C89B3C] text-[#4A3208] font-serif-display font-bold text-xs sm:text-base shadow-md border border-[#FFF5D6] hover:brightness-105 transition-all"
             >
-              Khám phá ngay
+              Xem dòng Yến Hũ
             </a>
           </div>
         </div>
@@ -315,23 +313,35 @@ export function CatalogProductLinesSection({
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {jarProducts.map((product) => {
+            {allJars.map((product) => {
               const isJustAdded = justAddedId === product.id;
+              const isVisible =
+                jarVolumeTab === "all" ||
+                (jarVolumeTab === "75ml" && product.volumeMl === 75) ||
+                (jarVolumeTab === "100ml" && product.volumeMl === 100);
               return (
                 <article
                   key={product.id}
                   data-testid={`product-card-${product.slug}`}
-                  className="group flex flex-col gap-3 bg-white rounded-3xl"
+                  className={
+                    isVisible
+                      ? "group flex flex-col gap-3 bg-white rounded-3xl"
+                      : "hidden"
+                  }
                 >
                   <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                     <Link
                       href={`/san-pham/${product.slug}`}
+                      aria-label={`Xem chi tiết ${product.name}`}
                       className="block w-full h-full"
                     >
                       <img
                         src={product.imageUrl}
-                        alt={product.name}
+                        alt={`${product.name} — ${product.categoryLabel} | Yến Sào Hà Mi Đà Nẵng`}
                         loading="lazy"
+                        decoding="async"
+                        width={410}
+                        height={410}
                         className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       {product.isIllustrationImage && (
@@ -405,7 +415,7 @@ export function CatalogProductLinesSection({
               href="#yen-tinh-che-heading"
               className="shrink-0 inline-flex items-center justify-center min-h-[38px] sm:min-h-[44px] px-5 sm:px-7 py-2 rounded-full bg-gradient-to-r from-[#E6C56F] via-[#F9E498] to-[#C89B3C] text-[#4A3208] font-serif-display font-bold text-xs sm:text-base shadow-md border border-[#FFF5D6] hover:brightness-105 transition-all"
             >
-              Khám phá ngay
+              Xem dòng Yến Tinh Chế
             </a>
           </div>
         </div>
@@ -432,12 +442,16 @@ export function CatalogProductLinesSection({
                   <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC] p-4 flex items-center justify-center">
                     <Link
                       href={`/san-pham/${product.slug}`}
+                      aria-label={`Xem chi tiết ${product.name}`}
                       className="block w-full h-full"
                     >
                       <img
                         src={product.imageUrl}
-                        alt={product.name}
+                        alt={`${product.name} — ${product.categoryLabel} | Yến Sào Hà Mi Đà Nẵng`}
                         loading="lazy"
+                        decoding="async"
+                        width={410}
+                        height={410}
                         className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                       />
                     </Link>

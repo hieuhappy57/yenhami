@@ -11,9 +11,9 @@ import { buildPageMetadata } from "@/config/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Thực Đơn Yến Tươi Chưng Nóng Thố Sứ 200ml & Sản Phẩm Yến Sào",
+  title: "Yến Tươi Chưng Nóng Đà Nẵng",
   description:
-    "Menu 8 món Yến Tươi Chưng Nóng thố sứ 200ml (35g yến tươi thật) giá chỉ từ 295.000đ, giao ấm nóng trong 2 giờ tại Đà Nẵng. Set Quà Tặng Hoa Sen Vàng, Yến Hũ Chưng Sẵn và Yến Sào Tinh Chế chuẩn ISO 22000:2018 & FDA Hoa Kỳ.",
+    "Xem thực đơn yến tươi chưng nóng tại Đà Nẵng. Chọn món và gửi yêu cầu đặt hàng để Hà Mi xác nhận trước khi chuẩn bị và giao.",
   path: "/yen-tuoi-chung-nong",
 });
 
@@ -90,7 +90,7 @@ export default async function MenuPage() {
               Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất
             </span>
             <h1 className="font-serif-display text-2xl sm:text-4xl md:text-[42px] font-bold text-white leading-tight">
-              Thực Đơn & Sản Phẩm Yến Sào Hà Mi
+              Yến Tươi Chưng Nóng Đà Nẵng
             </h1>
             <p className="text-xs sm:text-base text-white/90 leading-relaxed max-w-2xl">
               Mỗi thố yến 200ml chứa đến 35g yến tươi thật nguyên tổ, chưng thủ công tươi nóng ngay khi nhận đơn và giao ấm nóng tận tay trong 2 giờ tại Đà Nẵng.

@@ -60,15 +60,26 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
 
   return (
     <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-6 md:py-10">
-      <div className="mb-6">
+      <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#4A4A4A]">
+        <Link
+          href="/"
+          className="font-semibold text-[#1B4332] hover:underline"
+        >
+          Trang chủ
+        </Link>
+        <span aria-hidden="true">/</span>
         <Link
           href="/yen-tuoi-chung-nong"
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EB] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF4EB] px-3.5 py-1 font-bold text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          <span>Quay lại Thực đơn & Sản phẩm</span>
+          <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Thực đơn & Sản phẩm</span>
         </Link>
-      </div>
+        <span aria-hidden="true">/</span>
+        <span className="font-semibold text-[#1B1B1B] truncate max-w-[220px] sm:max-w-md" aria-current="page">
+          {product.name}
+        </span>
+      </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* Left: Langfarm-style Square Studio Product Visual + 3 Pastel Badges */}
@@ -77,9 +88,10 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.imageUrl}
-              alt={`Thố yến ${product.name}`}
+              alt={`${product.name} — ${product.categoryLabel} (${product.ingredients.slice(0, 4).join(", ")}) | Yến Sào Hà Mi Đà Nẵng`}
               width={800}
               height={800}
+              fetchPriority="high"
               className="w-full h-full object-cover"
             />
             {product.isIllustrationImage && (

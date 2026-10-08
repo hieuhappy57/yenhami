@@ -18,14 +18,14 @@ const FEATURED_CATEGORIES = [
     title: "Yến Tươi Chưng Nóng",
     subtitle: "Thố sứ 200ml • Giao 2H",
     badge: "Từ 295k",
-    href: "#menu-chu-luc",
+    href: "/yen-tuoi-chung-nong",
     image: "/brand/dishes/tu-quy-an-nhien-v2.webp",
   },
   {
     title: "Set Quà Thượng Hạng",
     subtitle: "Hộp Hoa Sen & Đàn Én",
     badge: "Quà biếu",
-    href: "#danh-muc-set-qua",
+    href: "/gui-qua",
     image: "/brand/catalog/set-qua-hop-sen-en.jpg",
   },
   {
@@ -244,7 +244,7 @@ export default async function HomePage() {
               href="/bai-viet"
               className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-[#155132] hover:underline"
             >
-              <span>Xem tất cả</span>
+              <span>Xem tất cả bài viết cẩm nang</span>
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
           </div>
@@ -262,6 +262,9 @@ export default async function HomePage() {
                     src={post.coverImageUrl}
                     alt={post.coverImageAlt || post.title}
                     loading="lazy"
+                    decoding="async"
+                    width={640}
+                    height={400}
                     className="h-full w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
                   />
                 </div>

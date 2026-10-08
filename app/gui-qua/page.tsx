@@ -11,9 +11,9 @@ import { buildPageMetadata } from "@/config/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Set Quà Biếu Yến Sào Thượng Hạng & Thiệp Viết Tay",
+  title: "Quà Tặng Yến Sào Đà Nẵng",
   description:
-    "Gửi trao Set Quà Yến Sào Thượng Hạng 6 vị, Thố Yến Tươi Chưng Nóng và Yến Sào Tinh Chế cao cấp kèm thiệp viết tay và tùy chọn ẩn giá trên phiếu giao tại Đà Nẵng.",
+    "Xem các sản phẩm yến sào biếu tặng tại Đà Nẵng. Chọn sản phẩm và gửi yêu cầu quà tặng để Hà Mi xác nhận thông tin người nhận.",
   path: "/gui-qua",
   image: "/brand/catalog/set-qua-hop-sen-en.jpg",
 });
@@ -74,7 +74,7 @@ export default function GuiQuaPage() {
               Món quà của sự an tâm • Chạm đến sự bình yên
             </span>
             <h1 className="font-serif-display text-2xl sm:text-4xl md:text-[42px] font-bold text-white leading-tight">
-              Set Quà Yến Sào Thượng Hạng & Thố Yến Biếu Tặng
+              Quà Tặng Yến Sào Đà Nẵng
             </h1>
             <p className="text-xs sm:text-base text-white/90 leading-relaxed max-w-2xl">
               Từ bộ hộp quà Hoa Sen & Đàn Én 6 hũ Yến Sào Thượng Hạng, hộp Yến Sào Tinh Chế xuất khẩu đến từng thố sứ chưng nóng giữ ấm — Hà Mi chuẩn bị riêng thiệp viết tay và hỗ trợ ẩn giá trên phiếu giao.

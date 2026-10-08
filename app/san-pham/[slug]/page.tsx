@@ -27,13 +27,14 @@ export async function generateMetadata({
     });
   }
 
-  const priceText = product.priceVnd
-    ? `${product.priceVnd.toLocaleString("vi-VN")}đ`
+  const price = product.priceVnd;
+  const priceText = typeof price === "number" && Number.isFinite(price) && price >= 0
+    ? `${price.toLocaleString("vi-VN")}đ`
     : "Liên hệ";
 
   return buildPageMetadata({
     title: `${product.name} (${priceText}) — ${product.categoryLabel}`,
-    description: `${product.shortDescription} Thành phần: ${product.ingredients.join(", ")}. Khẩu vị: ${product.tasteProfile}. Đặt giao nóng 2H tại Đà Nẵng.`,
+    description: `${product.shortDescription} Thành phần: ${product.ingredients.join(", ")}. Khẩu vị: ${product.tasteProfile}. Gửi yêu cầu đặt sản phẩm tại Yến Sào Hà Mi Đà Nẵng.`,
     path: `/san-pham/${product.slug}`,
     image: product.imageUrl,
     keywords: [
