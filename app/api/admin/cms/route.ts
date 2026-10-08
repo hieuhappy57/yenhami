@@ -9,6 +9,8 @@ import {
   getNotificationLogs,
   getNotificationSettings,
   getSiteContentSettings,
+  isCloudflareR2Enabled,
+  putCloudflareR2Object,
   syncDbFromCloud,
   syncDbToCloud,
   testAndInitCloudflareD1,
@@ -273,6 +275,51 @@ export async function POST(request: Request) {
         errorMessage: res.ok ? undefined : res.message,
         cloudDbStatus: getCloudDatabaseStatus(),
       });
+    }
+
+    if (action === "upload_media_r2" && body.dataUrl) {
+      const dataUrl = String(body.dataUrl || "");
+      if (!isCloudflareR2Enabled() || !dataUrl.startsWith("data:")) {
+        return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
+      }
+      const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!match) {
+        return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
+      }
+      const contentType = match[1] || "image/jpeg";
+      const base64Data = match[2];
+      const buffer = Buffer.from(base64Data, "base64");
+      const ext = contentType.includes("png")
+        ? "png"
+        : contentType.includes("webp")
+          ? "webp"
+          : "jpg";
+      const safeName = String(body.fileName || "image")
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40) || "image";
+      const objectKey = `uploads/${Date.now()}-${safeName}.${ext}`;
+      const putRes = await putCloudflareR2Object(
+        objectKey,
+        buffer,
+        contentType
+      );
+      if (putRes.ok) {
+        const publicBase = (process.env.CLOUDFLARE_R2_PUBLIC_URL || "").replace(
+          /\/$/,
+          ""
+        );
+        const finalUrl = publicBase
+          ? `${publicBase}/${objectKey}`
+          : `/api/media/${objectKey}`;
+        return NextResponse.json({
+          ok: true,
+          url: finalUrl,
+          storedInR2: true,
+        });
+      }
+      return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
     }
 
     return NextResponse.json(

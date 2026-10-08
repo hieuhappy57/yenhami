@@ -189,14 +189,14 @@ function formatVnd(amount: number | null | undefined): string {
 }
 
 /**
- * Resize & compress an uploaded image file in browser to a clean Data URL
- * so it can be saved directly into SQLite and rendered anywhere.
+ * Resize & compress an uploaded image file in browser, then automatically upload
+ * to Cloudflare R2 Object Storage (if configured) or fallback to Data URL.
  */
 async function readAndCompressImageFile(
   file: File,
   maxWidth = 1000
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
+  const dataUrl: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Không đọc được file ảnh."));
     reader.onload = () => {
@@ -213,12 +213,32 @@ async function readAndCompressImageFile(
           return;
         }
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.84));
+        resolve(canvas.toDataURL("image/jpeg", 0.86));
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   });
+
+  try {
+    const res = await fetch("/api/admin/cms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "upload_media_r2",
+        fileName: file.name,
+        dataUrl,
+      }),
+    });
+    if (res.ok) {
+      const json = (await res.json()) as { url?: string };
+      if (json.url) return json.url;
+    }
+  } catch {
+    // Fallback to dataUrl if offline
+  }
+
+  return dataUrl;
 }
 
 export default function QuanTriPage() {
@@ -247,10 +267,16 @@ export default function QuanTriPage() {
     NotificationLogRecord[]
   >([]);
   const [cloudDbStatus, setCloudDbStatus] = useState<{
-    provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+    provider:
+      | "CLOUDFLARE_D1"
+      | "CLOUDFLARE_R2"
+      | "GITHUB_GIST"
+      | "LOCAL_SQLITE";
     label: string;
     isCloudflareD1Configured: boolean;
+    isCloudflareR2Configured?: boolean;
     databaseIdMasked: string | null;
+    r2BucketName?: string | null;
   } | null>(null);
   const [syncingD1, setSyncingD1] = useState(false);
 
@@ -397,10 +423,16 @@ export default function QuanTriPage() {
           notificationSettings?: NotificationSettings;
           notificationLogs?: NotificationLogRecord[];
           cloudDbStatus?: {
-            provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+            provider:
+              | "CLOUDFLARE_D1"
+              | "CLOUDFLARE_R2"
+              | "GITHUB_GIST"
+              | "LOCAL_SQLITE";
             label: string;
             isCloudflareD1Configured: boolean;
+            isCloudflareR2Configured?: boolean;
             databaseIdMasked: string | null;
+            r2BucketName?: string | null;
           };
         };
         if (cmsData.siteSettings) setSiteSettings(cmsData.siteSettings);
@@ -790,7 +822,7 @@ export default function QuanTriPage() {
   const handleTestInitCloudflareD1 = async () => {
     setSyncingD1(true);
     setFeedbackMsg(
-      "Đang kết nối, khởi tạo 10 bảng SQL và đồng bộ toàn bộ dữ liệu lên Cloudflare D1..."
+      "Đang kết nối, khởi tạo Bucket R2 / Bảng SQL D1 và đồng bộ toàn bộ dữ liệu lên Cloudflare..."
     );
     try {
       const res = await fetch("/api/admin/cms", {
@@ -803,10 +835,16 @@ export default function QuanTriPage() {
         message?: string;
         errorMessage?: string;
         cloudDbStatus?: {
-          provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+          provider:
+            | "CLOUDFLARE_D1"
+            | "CLOUDFLARE_R2"
+            | "GITHUB_GIST"
+            | "LOCAL_SQLITE";
           label: string;
           isCloudflareD1Configured: boolean;
+          isCloudflareR2Configured?: boolean;
           databaseIdMasked: string | null;
+          r2BucketName?: string | null;
         };
       };
       if (data.cloudDbStatus) {
@@ -815,7 +853,7 @@ export default function QuanTriPage() {
       setFeedbackMsg(
         data.message ||
           data.errorMessage ||
-          "Đã hoàn tất kiểm tra kết nối Cloudflare D1."
+          "Đã hoàn tất kiểm tra kết nối Cloudflare R2 / D1."
       );
     } finally {
       setSyncingD1(false);
@@ -1352,16 +1390,19 @@ export default function QuanTriPage() {
               <span>Database:</span>
               <span
                 className={
-                  cloudDbStatus?.provider === "CLOUDFLARE_D1"
+                  cloudDbStatus?.provider === "CLOUDFLARE_D1" ||
+                  cloudDbStatus?.provider === "CLOUDFLARE_R2"
                     ? "text-emerald-400 font-semibold"
                     : "text-amber-300 font-semibold"
                 }
               >
                 {cloudDbStatus?.provider === "CLOUDFLARE_D1"
-                  ? "Cloudflare D1"
-                  : cloudDbStatus?.provider === "GITHUB_GIST"
-                    ? "GitHub Gist"
-                    : "SQLite"}
+                  ? "Cloudflare R2+D1"
+                  : cloudDbStatus?.provider === "CLOUDFLARE_R2"
+                    ? "Cloudflare R2"
+                    : cloudDbStatus?.provider === "GITHUB_GIST"
+                      ? "GitHub Gist"
+                      : "SQLite"}
               </span>
             </p>
           </div>
@@ -1369,24 +1410,20 @@ export default function QuanTriPage() {
 
         {/* Main Content Area (#wpbody-content) */}
         <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-[1440px]">
-          {/* Cloudflare D1 Database Status Bar */}
+          {/* Cloudflare R2 / D1 Database Status Bar */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xs border border-[#BD9342]/45 bg-white px-4 py-2.5 text-xs text-[#1d2327] shadow-2xs">
             <div className="flex items-center gap-2.5">
               <span
                 className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${
-                  cloudDbStatus?.provider === "CLOUDFLARE_D1"
+                  cloudDbStatus?.provider === "CLOUDFLARE_D1" ||
+                  cloudDbStatus?.provider === "CLOUDFLARE_R2"
                     ? "bg-emerald-600"
                     : "bg-amber-500"
                 }`}
               />
               <span>
-                <strong>Database Đám mây hiện tại:</strong>{" "}
+                <strong>Lưu trữ &amp; Database Đám mây:</strong>{" "}
                 {cloudDbStatus?.label || "Đang kiểm tra..."}
-                {cloudDbStatus?.databaseIdMasked && (
-                  <span className="ml-1.5 text-[#50575e]">
-                    (ID: <code>{cloudDbStatus.databaseIdMasked}</code>)
-                  </span>
-                )}
               </span>
             </div>
             <button
@@ -1396,8 +1433,8 @@ export default function QuanTriPage() {
               className="rounded-xs bg-[#155132] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0e3b23] disabled:opacity-60 cursor-pointer"
             >
               {syncingD1
-                ? "Đang đồng bộ Cloudflare D1..."
-                : "Kiểm tra & Đồng bộ Cloudflare D1"}
+                ? "Đang đồng bộ Cloudflare..."
+                : "Kiểm tra & Đồng bộ Cloudflare R2 / D1"}
             </button>
           </div>
 

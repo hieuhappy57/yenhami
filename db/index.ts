@@ -2729,6 +2729,18 @@ const CLOUD_TABLES = [
 
 let lastCloudSyncAtMs = 0;
 let d1SchemaInitialized = false;
+let r2BucketInitialized = false;
+
+export function getCloudflareR2BucketName(): string {
+  return process.env.CLOUDFLARE_R2_BUCKET_NAME || "yenhami-storage";
+}
+
+export function isCloudflareR2Enabled(): boolean {
+  if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
+  return Boolean(
+    process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
+  );
+}
 
 export function isCloudflareD1Enabled(): boolean {
   if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
@@ -2745,35 +2757,57 @@ function isGistSyncEnabled(): boolean {
 }
 
 export function getCloudDatabaseStatus(): {
-  provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+  provider: "CLOUDFLARE_D1" | "CLOUDFLARE_R2" | "GITHUB_GIST" | "LOCAL_SQLITE";
   label: string;
   isCloudflareD1Configured: boolean;
+  isCloudflareR2Configured: boolean;
   databaseIdMasked: string | null;
+  r2BucketName: string | null;
 } {
-  if (isCloudflareD1Enabled()) {
+  const r2Enabled = isCloudflareR2Enabled();
+  const d1Enabled = isCloudflareD1Enabled();
+  const bucketName = r2Enabled ? getCloudflareR2BucketName() : null;
+
+  if (d1Enabled && r2Enabled) {
     const rawId = process.env.CLOUDFLARE_D1_DATABASE_ID || "";
     const masked =
       rawId.length > 12 ? `${rawId.slice(0, 8)}...${rawId.slice(-4)}` : rawId;
     return {
       provider: "CLOUDFLARE_D1",
-      label: "Cloudflare D1 SQL Database (Chuẩn Enterprise • Bảo mật 100%)",
+      label: `Cloudflare R2 (${bucketName}) + D1 SQL (Chuẩn Enterprise • Bảo mật 100%)`,
       isCloudflareD1Configured: true,
+      isCloudflareR2Configured: true,
       databaseIdMasked: masked,
+      r2BucketName: bucketName,
+    };
+  }
+  if (r2Enabled) {
+    return {
+      provider: "CLOUDFLARE_R2",
+      label: `Cloudflare R2 Object Storage (Bucket: ${bucketName} • Miễn phí 10GB • Bảo mật 100%)`,
+      isCloudflareD1Configured: false,
+      isCloudflareR2Configured: true,
+      databaseIdMasked: bucketName,
+      r2BucketName: bucketName,
     };
   }
   if (isGistSyncEnabled()) {
     return {
       provider: "GITHUB_GIST",
-      label: "GitHub Secret Gist (Chờ chuyển sang Cloudflare D1)",
+      label: "GitHub Secret Gist (Chờ chuyển sang Cloudflare R2 / D1)",
       isCloudflareD1Configured: false,
+      isCloudflareR2Configured: false,
       databaseIdMasked: null,
+      r2BucketName: null,
     };
   }
   return {
     provider: "LOCAL_SQLITE",
-    label: "SQLite Nội bộ (Chưa cấu hình Cloud Database)",
+    label: "SQLite Nội bộ (Chưa cấu hình Cloudflare R2 / D1)",
     isCloudflareD1Configured: false,
+    isCloudflareR2Configured: false,
     databaseIdMasked: null,
+    r2BucketName: null,
   };
 }
 
@@ -3153,32 +3187,235 @@ async function syncDbToCloudflareD1(): Promise<{ ok: boolean; error?: string }> 
   return { ok: true };
 }
 
+export async function ensureCloudflareR2Bucket(force = false): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  if (!isCloudflareR2Enabled()) {
+    return {
+      ok: false,
+      error: "Chưa cấu hình CLOUDFLARE_ACCOUNT_ID và CLOUDFLARE_API_TOKEN.",
+    };
+  }
+  if (r2BucketInitialized && !force) return { ok: true };
+
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const bucketName = getCloudflareR2BucketName();
+
+  try {
+    const checkUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${encodeURIComponent(bucketName)}`;
+    const checkRes = await fetch(checkUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+      },
+      cache: "no-store",
+    });
+    if (checkRes.ok) {
+      r2BucketInitialized = true;
+      return { ok: true };
+    }
+
+    // Attempt to create the R2 bucket automatically if it does not exist yet
+    const createUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`;
+    const createRes = await fetch(createUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: bucketName,
+        locationHint: "apac",
+      }),
+      cache: "no-store",
+    });
+
+    if (createRes.ok || createRes.status === 409) {
+      r2BucketInitialized = true;
+      return { ok: true };
+    }
+
+    const errData = (await createRes.json().catch(() => ({}))) as {
+      errors?: { message?: string }[];
+    };
+    const errMsg =
+      errData.errors?.map((e) => e.message).join("; ") ||
+      `HTTP ${createRes.status}`;
+    return { ok: false, error: errMsg };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi kết nối Cloudflare R2.",
+    };
+  }
+}
+
+export async function putCloudflareR2Object(
+  objectKey: string,
+  body: string | Uint8Array | ArrayBuffer,
+  contentType = "application/octet-stream"
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isCloudflareR2Enabled()) {
+    return { ok: false, error: "Cloudflare R2 chưa được bật." };
+  }
+  const bucketRes = await ensureCloudflareR2Bucket();
+  if (!bucketRes.ok) {
+    return { ok: false, error: bucketRes.error };
+  }
+
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const bucketName = getCloudflareR2BucketName();
+  const encodedKey = objectKey
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodedKey}`;
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      "Content-Type": contentType,
+    },
+    body: body as BodyInit,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    return {
+      ok: false,
+      error: `HTTP ${res.status} ${errText.slice(0, 180)}`,
+    };
+  }
+  return { ok: true };
+}
+
+export async function getCloudflareR2Object(objectKey: string): Promise<{
+  ok: boolean;
+  arrayBuffer?: ArrayBuffer;
+  contentType?: string;
+  error?: string;
+}> {
+  if (!isCloudflareR2Enabled()) {
+    return { ok: false, error: "Cloudflare R2 chưa được bật." };
+  }
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const bucketName = getCloudflareR2BucketName();
+  const encodedKey = objectKey
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodedKey}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    return { ok: false, error: `HTTP ${res.status}` };
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  const contentType =
+    res.headers.get("content-type") || "application/octet-stream";
+  return { ok: true, arrayBuffer, contentType };
+}
+
+async function syncDbToCloudflareR2(): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const payload = buildSnapshotsFromLocalSqlite();
+  const res = await putCloudflareR2Object(
+    "db/ha-mi-db-state.json",
+    JSON.stringify(payload),
+    "application/json; charset=utf-8"
+  );
+  if (res.ok) {
+    lastCloudSyncAtMs = Date.now();
+  }
+  return res;
+}
+
+async function pullFromCloudflareR2IntoLocalSqlite(): Promise<boolean> {
+  if (!isCloudflareR2Enabled()) return false;
+  try {
+    const res = await getCloudflareR2Object("db/ha-mi-db-state.json");
+    if (!res.ok || !res.arrayBuffer) return false;
+    const rawJson = Buffer.from(res.arrayBuffer).toString("utf-8");
+    if (!rawJson) return false;
+
+    const parsed = JSON.parse(rawJson) as {
+      tables?: Record<string, Record<string, unknown>[]>;
+    };
+    if (!parsed.tables) return false;
+
+    applyCloudTablesToLocalSqlite(parsed.tables);
+    r2BucketInitialized = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function testAndInitCloudflareD1(): Promise<{
   ok: boolean;
   message: string;
 }> {
-  if (!isCloudflareD1Enabled()) {
+  if (!isCloudflareR2Enabled() && !isCloudflareD1Enabled()) {
     return {
       ok: false,
       message:
-        "Chưa tìm thấy đủ 3 biến môi trường CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_API_TOKEN trên Vercel / môi trường hiện tại.",
+        "Chưa tìm thấy biến môi trường CLOUDFLARE_ACCOUNT_ID và CLOUDFLARE_API_TOKEN trên Vercel / môi trường hiện tại.",
     };
   }
+
   try {
-    const schemaRes = await ensureCloudflareD1Schema(true);
-    if (!schemaRes.ok) {
-      return {
-        ok: false,
-        message: `Không thể khởi tạo bảng trên Cloudflare D1: ${schemaRes.error}`,
-      };
+    const results: string[] = [];
+
+    if (isCloudflareR2Enabled()) {
+      const r2Res = await ensureCloudflareR2Bucket(true);
+      if (r2Res.ok) {
+        const r2Sync = await syncDbToCloudflareR2();
+        if (r2Sync.ok) {
+          results.push(
+            `Cloudflare R2 Bucket (${getCloudflareR2BucketName()}): Đã kết nối & lưu trữ thành công!`
+          );
+        } else {
+          results.push(`Cloudflare R2 lỗi ghi dữ liệu: ${r2Sync.error}`);
+        }
+      } else {
+        results.push(`Cloudflare R2: ${r2Res.error}`);
+      }
     }
-    const syncRes = await syncDbToCloudflareD1();
-    if (!syncRes.ok) {
-      return {
-        ok: false,
-        message: `Lỗi khi đồng bộ dữ liệu lên Cloudflare D1: ${syncRes.error}`,
-      };
+
+    if (isCloudflareD1Enabled()) {
+      const schemaRes = await ensureCloudflareD1Schema(true);
+      if (schemaRes.ok) {
+        const syncRes = await syncDbToCloudflareD1();
+        if (syncRes.ok) {
+          results.push(
+            "Cloudflare D1 SQL: Đã khởi tạo 10 bảng SQL & đồng bộ thành công!"
+          );
+        } else {
+          results.push(`Cloudflare D1 lỗi đồng bộ: ${syncRes.error}`);
+        }
+      } else {
+        results.push(`Cloudflare D1: ${schemaRes.error}`);
+      }
     }
+
     const db = getSqliteDb();
     const prodCount = (
       db.prepare("SELECT COUNT(*) as c FROM products").get() as { c: number }
@@ -3189,9 +3426,10 @@ export async function testAndInitCloudflareD1(): Promise<{
     const postCount = (
       db.prepare("SELECT COUNT(*) as c FROM posts").get() as { c: number }
     ).c;
+
     return {
       ok: true,
-      message: `Đã kết nối & khởi tạo chuẩn 10 bảng SQL trên Cloudflare D1 thành công! Đã đồng bộ ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng lên Cloudflare D1.`,
+      message: `${results.join(" • ")} (Đã đồng bộ ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng lên Cloudflare).`,
     };
   } catch (err) {
     return {
@@ -3199,18 +3437,17 @@ export async function testAndInitCloudflareD1(): Promise<{
       message:
         err instanceof Error
           ? err.message
-          : "Lỗi kết nối tới Cloudflare D1 API.",
+          : "Lỗi kết nối tới Cloudflare API.",
     };
   }
 }
 
 export async function syncDbToCloud(): Promise<void> {
-  if (isCloudflareD1Enabled()) {
-    try {
-      await syncDbToCloudflareD1();
-    } catch {
-      // Ignore transient network errors
-    }
+  if (isCloudflareD1Enabled() || isCloudflareR2Enabled()) {
+    await Promise.allSettled([
+      isCloudflareD1Enabled() ? syncDbToCloudflareD1() : Promise.resolve(),
+      isCloudflareR2Enabled() ? syncDbToCloudflareR2() : Promise.resolve(),
+    ]);
     return;
   }
 
@@ -3295,14 +3532,18 @@ export async function syncDbFromCloud(force = false): Promise<void> {
     return;
   }
 
-  // Primary Engine: Cloudflare D1 SQL Database
+  // 1. Try Cloudflare D1 SQL if configured
   if (isCloudflareD1Enabled()) {
     try {
       const queryRes = await executeCloudflareD1Query<{ payload_json: string }>(
         `SELECT payload_json FROM hami_cloud_state WHERE id = 'main' LIMIT 1;`
       );
 
-      if (queryRes.ok && queryRes.results.length > 0 && queryRes.results[0].payload_json) {
+      if (
+        queryRes.ok &&
+        queryRes.results.length > 0 &&
+        queryRes.results[0].payload_json
+      ) {
         d1SchemaInitialized = true;
         const parsed = JSON.parse(queryRes.results[0].payload_json) as {
           tables?: Record<string, Record<string, unknown>[]>;
@@ -3313,23 +3554,32 @@ export async function syncDbFromCloud(force = false): Promise<void> {
         lastCloudSyncAtMs = Date.now();
         return;
       }
-
-      // First-time initialization on Cloudflare D1:
-      // Pull existing data from GitHub Gist if available, then initialize schema & seed Cloudflare D1!
-      await pullFromGistIntoLocalSqlite();
-      await syncDbToCloudflareD1();
-      lastCloudSyncAtMs = Date.now();
-      return;
     } catch {
-      // Ignore transient network errors
-      return;
+      // Fall through to R2 / Gist
     }
   }
 
-  // Fallback Engine: GitHub Gist (while waiting for Cloudflare D1 env vars)
+  // 2. Try Cloudflare R2 Object Storage if configured
+  if (isCloudflareR2Enabled()) {
+    const pulledR2 = await pullFromCloudflareR2IntoLocalSqlite();
+    if (pulledR2) {
+      lastCloudSyncAtMs = Date.now();
+      return;
+    }
+
+    // First-time initialization on Cloudflare R2/D1:
+    // Pull existing data from GitHub Gist if available, then seed Cloudflare R2 & D1!
+    await pullFromGistIntoLocalSqlite();
+    await syncDbToCloud();
+    lastCloudSyncAtMs = Date.now();
+    return;
+  }
+
+  // 3. Fallback Engine: GitHub Gist
   if (isGistSyncEnabled()) {
     await pullFromGistIntoLocalSqlite();
     lastCloudSyncAtMs = Date.now();
   }
 }
+
 
