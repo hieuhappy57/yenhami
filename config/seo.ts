@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BRAND_CONFIG } from "./brand";
 
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.yenhami.com"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://yenhami.com"
 ).replace(/\/$/, "");
 
 export const GEO_CONFIG = {
