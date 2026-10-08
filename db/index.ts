@@ -2731,6 +2731,8 @@ let lastCloudSyncAtMs = 0;
 let d1SchemaInitialized = false;
 let r2BucketInitialized = false;
 let resolvedAccountIdCache: string | null = null;
+let cloudflareBackoffUntilMs = 0;
+let d1AuthFailed = false;
 
 function cleanEnvVal(v: string | undefined): string {
   let raw = (v || "").trim();
@@ -3265,29 +3267,7 @@ export async function ensureCloudflareR2Bucket(force = false): Promise<{
   if (r2BucketInitialized && !force) return { ok: true };
 
   const apiToken = getCloudflareApiToken();
-  let accountId = getCloudflareAccountId();
-
-  // Auto-discover Account ID from Cloudflare API if token has Account read access
-  try {
-    const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiToken}` },
-      cache: "no-store",
-    });
-    if (accRes.ok) {
-      const accData = (await accRes.json()) as {
-        result?: { id?: string }[];
-      };
-      const firstId = accData.result?.[0]?.id;
-      if (firstId && /^[a-f0-9]{32}$/i.test(firstId)) {
-        resolvedAccountIdCache = firstId.toLowerCase();
-        accountId = resolvedAccountIdCache;
-      }
-    }
-  } catch {
-    // ignore
-  }
-
+  const accountId = getCloudflareAccountId();
   const bucketName = getCloudflareR2BucketName();
 
   try {
@@ -3476,35 +3456,17 @@ export async function testAndInitCloudflareD1(): Promise<{
   }
 
   try {
+    cloudflareBackoffUntilMs = 0;
     const results: string[] = [];
-    const apiToken = getCloudflareApiToken();
 
-    // Verify token validity against Cloudflare /user/tokens/verify
-    const verifyRes = await fetch(
-      "https://api.cloudflare.com/client/v4/user/tokens/verify",
-      {
-        headers: { Authorization: `Bearer ${apiToken}` },
-        cache: "no-store",
-      }
-    );
-    const verifyJson = (await verifyRes.json().catch(() => ({}))) as {
-      success?: boolean;
-      result?: { status?: string };
-      errors?: { code?: number; message?: string }[];
-    };
-
-    if (!verifyJson.success) {
-      const diag = `[Chẩn đoán biến Vercel: ACCOUNT_ID=${maskDiag(process.env.CLOUDFLARE_ACCOUNT_ID)}, API_TOKEN=${maskDiag(process.env.CLOUDFLARE_API_TOKEN)}, D1_ID=${maskDiag(process.env.CLOUDFLARE_D1_DATABASE_ID)}]`;
-      results.push(
-        `Token xác thực: ${verifyJson.errors?.map((e) => e.message).join("; ") || "Không hợp lệ"} ${diag}`
-      );
-    }
-
+    // 1. Test & Sync Cloudflare R2 FIRST (so D1 auth errors never rate-limit the token)
+    let r2Succeeded = false;
     if (isCloudflareR2Enabled()) {
       const r2Res = await ensureCloudflareR2Bucket(true);
       if (r2Res.ok) {
         const r2Sync = await syncDbToCloudflareR2();
         if (r2Sync.ok) {
+          r2Succeeded = true;
           results.push(
             `Cloudflare R2 Bucket (${getCloudflareR2BucketName()}): Đã kết nối & lưu trữ thành công!`
           );
@@ -3512,11 +3474,13 @@ export async function testAndInitCloudflareD1(): Promise<{
           results.push(`Cloudflare R2 lỗi ghi dữ liệu: ${r2Sync.error}`);
         }
       } else {
-        results.push(`Cloudflare R2: ${r2Res.error}`);
+        const diag = `[Chẩn đoán biến Vercel: ACCOUNT_ID=${maskDiag(process.env.CLOUDFLARE_ACCOUNT_ID)}, API_TOKEN=${maskDiag(process.env.CLOUDFLARE_API_TOKEN)}]`;
+        results.push(`Cloudflare R2: ${r2Res.error} ${diag}`);
       }
     }
 
-    if (isCloudflareD1Enabled()) {
+    // 2. Only test D1 if configured and not previously rejected as R2-only token
+    if (isCloudflareD1Enabled() && !d1AuthFailed) {
       const schemaRes = await ensureCloudflareD1Schema(true);
       if (schemaRes.ok) {
         const syncRes = await syncDbToCloudflareD1();
@@ -3524,11 +3488,12 @@ export async function testAndInitCloudflareD1(): Promise<{
           results.push(
             "Cloudflare D1 SQL: Đã khởi tạo 10 bảng SQL & đồng bộ thành công!"
           );
-        } else {
-          results.push(`Cloudflare D1 lỗi đồng bộ: ${syncRes.error}`);
         }
-      } else {
-        results.push(`Cloudflare D1: ${schemaRes.error}`);
+      } else if (schemaRes.error?.includes("10000")) {
+        d1AuthFailed = true;
+        if (!r2Succeeded) {
+          results.push(`Cloudflare D1: ${schemaRes.error}`);
+        }
       }
     }
 
@@ -3544,8 +3509,8 @@ export async function testAndInitCloudflareD1(): Promise<{
     ).c;
 
     return {
-      ok: true,
-      message: `${results.join(" • ")} (Đã đồng bộ ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng lên Cloudflare).`,
+      ok: r2Succeeded || d1SchemaInitialized,
+      message: `${results.join(" • ")} (Đang quản lý ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng).`,
     };
   } catch (err) {
     return {
@@ -3559,11 +3524,23 @@ export async function testAndInitCloudflareD1(): Promise<{
 }
 
 export async function syncDbToCloud(): Promise<void> {
-  if (isCloudflareD1Enabled() || isCloudflareR2Enabled()) {
-    await Promise.allSettled([
-      isCloudflareD1Enabled() ? syncDbToCloudflareD1() : Promise.resolve(),
-      isCloudflareR2Enabled() ? syncDbToCloudflareR2() : Promise.resolve(),
-    ]);
+  if (
+    (isCloudflareR2Enabled() || (isCloudflareD1Enabled() && !d1AuthFailed)) &&
+    Date.now() >= cloudflareBackoffUntilMs
+  ) {
+    if (isCloudflareR2Enabled()) {
+      const r2Res = await syncDbToCloudflareR2();
+      if (!r2Res.ok) {
+        cloudflareBackoffUntilMs = Date.now() + 5 * 60 * 1000;
+        return;
+      }
+    }
+    if (isCloudflareD1Enabled() && !d1AuthFailed) {
+      const d1Res = await syncDbToCloudflareD1();
+      if (!d1Res.ok && d1Res.error?.includes("10000")) {
+        d1AuthFailed = true;
+      }
+    }
     return;
   }
 
@@ -3644,51 +3621,48 @@ async function pullFromGistIntoLocalSqlite(): Promise<boolean> {
 
 export async function syncDbFromCloud(force = false): Promise<void> {
   const now = Date.now();
-  if (!force && now - lastCloudSyncAtMs < 1500) {
+  if (!force && now - lastCloudSyncAtMs < 15000) {
     return;
   }
 
-  // 1. Try Cloudflare D1 SQL if configured
-  if (isCloudflareD1Enabled()) {
-    try {
-      const queryRes = await executeCloudflareD1Query<{ payload_json: string }>(
-        `SELECT payload_json FROM hami_cloud_state WHERE id = 'main' LIMIT 1;`
-      );
-
-      if (
-        queryRes.ok &&
-        queryRes.results.length > 0 &&
-        queryRes.results[0].payload_json
-      ) {
-        d1SchemaInitialized = true;
-        const parsed = JSON.parse(queryRes.results[0].payload_json) as {
-          tables?: Record<string, Record<string, unknown>[]>;
-        };
-        if (parsed.tables) {
-          applyCloudTablesToLocalSqlite(parsed.tables);
-        }
+  if (now >= cloudflareBackoffUntilMs) {
+    // 1. Primary Engine: Cloudflare R2 Object Storage
+    if (isCloudflareR2Enabled()) {
+      const pulledR2 = await pullFromCloudflareR2IntoLocalSqlite();
+      if (pulledR2) {
         lastCloudSyncAtMs = Date.now();
         return;
       }
-    } catch {
-      // Fall through to R2 / Gist
-    }
-  }
-
-  // 2. Try Cloudflare R2 Object Storage if configured
-  if (isCloudflareR2Enabled()) {
-    const pulledR2 = await pullFromCloudflareR2IntoLocalSqlite();
-    if (pulledR2) {
-      lastCloudSyncAtMs = Date.now();
-      return;
     }
 
-    // First-time initialization on Cloudflare R2/D1:
-    // Pull existing data from GitHub Gist if available, then seed Cloudflare R2 & D1!
-    await pullFromGistIntoLocalSqlite();
-    await syncDbToCloud();
-    lastCloudSyncAtMs = Date.now();
-    return;
+    // 2. Secondary Engine: Cloudflare D1 SQL if configured and authorized
+    if (isCloudflareD1Enabled() && !d1AuthFailed) {
+      try {
+        const queryRes = await executeCloudflareD1Query<{
+          payload_json: string;
+        }>(`SELECT payload_json FROM hami_cloud_state WHERE id = 'main' LIMIT 1;`);
+
+        if (!queryRes.ok && queryRes.error?.includes("10000")) {
+          d1AuthFailed = true;
+        } else if (
+          queryRes.ok &&
+          queryRes.results.length > 0 &&
+          queryRes.results[0].payload_json
+        ) {
+          d1SchemaInitialized = true;
+          const parsed = JSON.parse(queryRes.results[0].payload_json) as {
+            tables?: Record<string, Record<string, unknown>[]>;
+          };
+          if (parsed.tables) {
+            applyCloudTablesToLocalSqlite(parsed.tables);
+          }
+          lastCloudSyncAtMs = Date.now();
+          return;
+        }
+      } catch {
+        // Fall through
+      }
+    }
   }
 
   // 3. Fallback Engine: GitHub Gist
