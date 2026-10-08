@@ -132,6 +132,12 @@ export default async function TuyenDungPage() {
                     <Phone className="h-3.5 w-3.5 text-[#7C4D2B]" />
                     Gọi {site.hotlineDisplay}
                   </a>
+                  <a
+                    href="mailto:cskh@yenhami.com"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 font-bold text-[#1B4332]"
+                  >
+                    Email: cskh@yenhami.com
+                  </a>
                 </div>
               </div>
             </div>

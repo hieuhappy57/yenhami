@@ -20,6 +20,7 @@ export function OrganizationAndLocalBusinessJsonLd() {
         contactPoint: {
           "@type": "ContactPoint",
           telephone: BRAND_CONFIG.contact.hotlineTel || "0935052959",
+          email: BRAND_CONFIG.contact.emailDisplay || "cskh@yenhami.com",
           contactType: "customer service",
           areaServed: "VN",
           availableLanguage: ["Vietnamese"],
@@ -35,6 +36,7 @@ export function OrganizationAndLocalBusinessJsonLd() {
         image: absoluteUrl(SEO_CONFIG.defaultOgImage),
         url: SEO_CONFIG.siteUrl,
         telephone: BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959",
+        email: BRAND_CONFIG.contact.emailDisplay || "cskh@yenhami.com",
         priceRange: "295000VND - 5500000VND",
         servesCuisine: "Yến Tươi Chưng Nóng & Yến Sào Thượng Hạng",
         address: {

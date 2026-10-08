@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Phone, MapPin, Clock, ShieldCheck } from "lucide-react";
+import { Phone, MapPin, Clock, ShieldCheck, Mail } from "lucide-react";
 import { BRAND_CONFIG } from "@/config/brand";
 
 export function SiteFooter() {
@@ -31,15 +31,15 @@ export function SiteFooter() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/ha-mi-logo-mark-256.png"
-              alt="Logo Yến Sào Hà Mi"
+              alt="Logo YẾN SÀO HÀ MI"
               width={56}
               height={56}
               loading="lazy"
               className="w-14 h-14 object-contain rounded-2xl bg-white p-1.5 shadow-xs border border-[#E5D5B5] shrink-0"
             />
             <div>
-              <h2 className="font-serif-display text-xl font-bold text-[#1B4332]">
-                {BRAND_CONFIG.brandName}
+              <h2 className="font-brand-serif text-xl font-bold uppercase tracking-[0.06em] text-[#1B4332]">
+                YẾN SÀO HÀ MI
               </h2>
               <p className="text-xs font-medium text-[#7C4D2B]">
                 Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất
@@ -69,6 +69,18 @@ export function SiteFooter() {
                   className="font-bold text-[#1B4332] hover:underline"
                 >
                   {BRAND_CONFIG.contact.hotlineDisplay}
+                </a>
+              </span>
+            </p>
+            <p className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-[#7C4D2B] shrink-0" />
+              <span>
+                Email CSKH:{" "}
+                <a
+                  href={`mailto:${BRAND_CONFIG.contact.emailDisplay}`}
+                  className="font-bold text-[#1B4332] hover:underline"
+                >
+                  {BRAND_CONFIG.contact.emailDisplay}
                 </a>
               </span>
             </p>

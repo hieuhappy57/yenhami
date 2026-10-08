@@ -1,6 +1,7 @@
 export interface ContactChannelConfig {
   hotlineDisplay: string | null;
   hotlineTel: string | null;
+  emailDisplay: string;
   zaloUrl: string | null;
   messengerUrl: string | null;
   addressDisplay: string;
@@ -34,6 +35,7 @@ export const BRAND_CONFIG = {
   contact: {
     hotlineDisplay: process.env.NEXT_PUBLIC_HAMI_HOTLINE_DISPLAY || "0935 052 959",
     hotlineTel: process.env.NEXT_PUBLIC_HAMI_HOTLINE_TEL || "0935052959",
+    emailDisplay: process.env.NEXT_PUBLIC_HAMI_EMAIL || "cskh@yenhami.com",
     zaloUrl: process.env.NEXT_PUBLIC_HAMI_ZALO_URL || "https://zalo.me/0935052959",
     messengerUrl: process.env.NEXT_PUBLIC_HAMI_MESSENGER_URL || null,
     addressDisplay:
@@ -43,6 +45,6 @@ export const BRAND_CONFIG = {
       process.env.NEXT_PUBLIC_HAMI_HOURS || "08:00 – 21:00 hàng ngày",
     legalEntityDisplay:
       process.env.NEXT_PUBLIC_HAMI_LEGAL ||
-      "Yến Sào Hà Mi (yenhami.com) • Đạt chuẩn ISO 22000:2018 & FDA Hoa Kỳ • Hotline/Zalo: 0935 052 959",
+      "Yến Sào Hà Mi (yenhami.com) • Đạt chuẩn ISO 22000:2018 & FDA Hoa Kỳ • Hotline/Zalo: 0935 052 959 • Email: cskh@yenhami.com",
   } satisfies ContactChannelConfig,
 };

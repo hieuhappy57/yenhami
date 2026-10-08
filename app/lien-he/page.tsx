@@ -44,8 +44,8 @@ export default function LienHePage() {
           </p>
         </div>
 
-        {/* 4 Pastel Contact Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 5 Pastel Contact Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <a
             href={`tel:${BRAND_CONFIG.contact.hotlineTel}`}
             className="rounded-3xl bg-[#FFE9DD] p-5 space-y-1.5 transition hover:-translate-y-0.5"
@@ -72,6 +72,19 @@ export default function LienHePage() {
               Chat Zalo Giao 2H
             </p>
             <p className="text-xs text-[#4A4A4A]">Tư vấn vị yến & gửi ảnh thiệp quà</p>
+          </a>
+
+          <a
+            href={`mailto:${BRAND_CONFIG.contact.emailDisplay}`}
+            className="rounded-3xl bg-[#E5F0FA] p-5 space-y-1.5 transition hover:-translate-y-0.5"
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1B4332]">
+              Email CSKH & Quà Biếu
+            </span>
+            <p className="font-serif-display text-lg font-bold text-[#1B1B1B] break-all">
+              {BRAND_CONFIG.contact.emailDisplay}
+            </p>
+            <p className="text-xs text-[#4A4A4A]">Tiếp nhận đơn & hợp tác doanh nghiệp</p>
           </a>
 
           <div className="rounded-3xl bg-[#FAEFCA] p-5 space-y-1.5">
@@ -186,7 +199,15 @@ export default function LienHePage() {
             <p className="flex items-start gap-2 text-xs sm:text-sm text-[#2B433A] leading-relaxed">
               <MessageCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#7C4D2B]" />
               <span>
-                Đặt từ 2 thố yến tươi chưng nóng được miễn phí giao hàng trong bán kính 5km tại Đà Nẵng.
+                Đặt từ 2 thố yến tươi chưng nóng được miễn phí giao hàng trong bán kính 5km tại Đà Nẵng. Liên hệ nhanh qua Hotline/Zalo{" "}
+                <strong>{BRAND_CONFIG.contact.hotlineDisplay}</strong> hoặc Email{" "}
+                <a
+                  href={`mailto:${BRAND_CONFIG.contact.emailDisplay}`}
+                  className="font-bold text-[#1B4332] underline"
+                >
+                  {BRAND_CONFIG.contact.emailDisplay}
+                </a>
+                .
               </span>
             </p>
             <div className="pt-2">
