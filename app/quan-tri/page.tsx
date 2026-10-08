@@ -738,7 +738,7 @@ export default function QuanTriPage() {
 
   const handleQuickShareEmail = (order: AdminOrderRecord) => {
     const targetEmail =
-      notificationSettings?.notificationEmailTo || "cskh@yenhami.vn";
+      notificationSettings?.notificationEmailTo || "cskh@yenhami.com";
     const subject = encodeURIComponent(
       `[Yến Sào Hà Mi] Đơn đặt món mới ${order.referenceCode} - ${order.buyerName}`
     );

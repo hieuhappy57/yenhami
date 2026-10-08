@@ -2333,7 +2333,7 @@ export function deleteJobPostingByStaff(jobId: string) {
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enableEmail: true,
-  notificationEmailTo: process.env.HAMI_NOTIFY_EMAIL || "admin@lehami.vn",
+  notificationEmailTo: process.env.HAMI_NOTIFY_EMAIL || "cskh@yenhami.com",
   resendApiKey: process.env.RESEND_API_KEY || "",
   emailWebhookUrl: process.env.HAMI_EMAIL_WEBHOOK_URL || "",
   enableZalo: true,
@@ -2553,7 +2553,7 @@ export async function triggerOrderNotificationsAfterCommit(
       </div>
 
       <div style="background-color: #f6f7f7; padding: 14px 24px; font-size: 12px; color: #50575e; text-align: center; border-top: 1px solid #e5e0d0;">
-        Mở trang Quản trị để xác nhận đơn hàng: <a href="https://yenhami.vercel.app/quan-tri" style="color: #155132; font-weight: bold;">https://yenhami.vercel.app/quan-tri</a>
+        Mở trang Quản trị để xác nhận đơn hàng: <a href="https://yenhami.com/quan-tri" style="color: #155132; font-weight: bold;">https://yenhami.com/quan-tri</a>
       </div>
     </div>
   `;
