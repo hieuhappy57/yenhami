@@ -5,11 +5,13 @@ import {
   deleteProductByStaff,
   getAllJobPostings,
   getAllPosts,
+  getCloudDatabaseStatus,
   getNotificationLogs,
   getNotificationSettings,
   getSiteContentSettings,
   syncDbFromCloud,
   syncDbToCloud,
+  testAndInitCloudflareD1,
   triggerOrderNotificationsAfterCommit,
   updateNotificationSettings,
   updateSiteContentSettings,
@@ -38,6 +40,7 @@ export async function GET() {
     jobs: getAllJobPostings(false),
     notificationSettings: getNotificationSettings(),
     notificationLogs: getNotificationLogs(30),
+    cloudDbStatus: getCloudDatabaseStatus(),
   });
 }
 
@@ -259,6 +262,16 @@ export async function POST(request: Request) {
         ok: true,
         message: `Đã gửi lại thông báo cho đơn #${ord.referenceCode}: ${result.detail}`,
         notificationLogs: getNotificationLogs(30),
+      });
+    }
+
+    if (action === "test_init_cloudflare_d1") {
+      const res = await testAndInitCloudflareD1();
+      return NextResponse.json({
+        ok: res.ok,
+        message: res.message,
+        errorMessage: res.ok ? undefined : res.message,
+        cloudDbStatus: getCloudDatabaseStatus(),
       });
     }
 

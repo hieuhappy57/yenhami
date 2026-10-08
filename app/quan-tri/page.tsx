@@ -246,6 +246,13 @@ export default function QuanTriPage() {
   const [notificationLogs, setNotificationLogs] = useState<
     NotificationLogRecord[]
   >([]);
+  const [cloudDbStatus, setCloudDbStatus] = useState<{
+    provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+    label: string;
+    isCloudflareD1Configured: boolean;
+    databaseIdMasked: string | null;
+  } | null>(null);
+  const [syncingD1, setSyncingD1] = useState(false);
 
   const [loadingData, setLoadingData] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
@@ -389,6 +396,12 @@ export default function QuanTriPage() {
           jobs?: JobPostingRecord[];
           notificationSettings?: NotificationSettings;
           notificationLogs?: NotificationLogRecord[];
+          cloudDbStatus?: {
+            provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+            label: string;
+            isCloudflareD1Configured: boolean;
+            databaseIdMasked: string | null;
+          };
         };
         if (cmsData.siteSettings) setSiteSettings(cmsData.siteSettings);
         if (cmsData.posts) setPosts(cmsData.posts);
@@ -398,6 +411,9 @@ export default function QuanTriPage() {
         }
         if (cmsData.notificationLogs) {
           setNotificationLogs(cmsData.notificationLogs);
+        }
+        if (cmsData.cloudDbStatus) {
+          setCloudDbStatus(cmsData.cloudDbStatus);
         }
       }
     } finally {
@@ -769,6 +785,41 @@ export default function QuanTriPage() {
         `Đã kích hoạt gửi lại thông báo cho đơn #${order.referenceCode}.`
     );
     loadDashboardData();
+  };
+
+  const handleTestInitCloudflareD1 = async () => {
+    setSyncingD1(true);
+    setFeedbackMsg(
+      "Đang kết nối, khởi tạo 10 bảng SQL và đồng bộ toàn bộ dữ liệu lên Cloudflare D1..."
+    );
+    try {
+      const res = await fetch("/api/admin/cms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test_init_cloudflare_d1" }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        errorMessage?: string;
+        cloudDbStatus?: {
+          provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+          label: string;
+          isCloudflareD1Configured: boolean;
+          databaseIdMasked: string | null;
+        };
+      };
+      if (data.cloudDbStatus) {
+        setCloudDbStatus(data.cloudDbStatus);
+      }
+      setFeedbackMsg(
+        data.message ||
+          data.errorMessage ||
+          "Đã hoàn tất kiểm tra kết nối Cloudflare D1."
+      );
+    } finally {
+      setSyncingD1(false);
+    }
   };
 
   // Computed stats & filtered lists
@@ -1297,11 +1348,59 @@ export default function QuanTriPage() {
                 {notificationSettings?.enableZalo ? "Đang bật" : "Đang tắt"}
               </span>
             </p>
+            <p className="flex items-center justify-between pt-1 border-t border-[#2c3338]/70">
+              <span>Database:</span>
+              <span
+                className={
+                  cloudDbStatus?.provider === "CLOUDFLARE_D1"
+                    ? "text-emerald-400 font-semibold"
+                    : "text-amber-300 font-semibold"
+                }
+              >
+                {cloudDbStatus?.provider === "CLOUDFLARE_D1"
+                  ? "Cloudflare D1"
+                  : cloudDbStatus?.provider === "GITHUB_GIST"
+                    ? "GitHub Gist"
+                    : "SQLite"}
+              </span>
+            </p>
           </div>
         </aside>
 
         {/* Main Content Area (#wpbody-content) */}
         <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-[1440px]">
+          {/* Cloudflare D1 Database Status Bar */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xs border border-[#BD9342]/45 bg-white px-4 py-2.5 text-xs text-[#1d2327] shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${
+                  cloudDbStatus?.provider === "CLOUDFLARE_D1"
+                    ? "bg-emerald-600"
+                    : "bg-amber-500"
+                }`}
+              />
+              <span>
+                <strong>Database Đám mây hiện tại:</strong>{" "}
+                {cloudDbStatus?.label || "Đang kiểm tra..."}
+                {cloudDbStatus?.databaseIdMasked && (
+                  <span className="ml-1.5 text-[#50575e]">
+                    (ID: <code>{cloudDbStatus.databaseIdMasked}</code>)
+                  </span>
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={syncingD1}
+              onClick={handleTestInitCloudflareD1}
+              className="rounded-xs bg-[#155132] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0e3b23] disabled:opacity-60 cursor-pointer"
+            >
+              {syncingD1
+                ? "Đang đồng bộ Cloudflare D1..."
+                : "Kiểm tra & Đồng bộ Cloudflare D1"}
+            </button>
+          </div>
+
           {/* Live Pending Orders Banner */}
           {pendingOrdersCount > 0 && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xs border border-[#BD9342] border-l-4 border-l-[#d63638] bg-[#FFFCF4] px-4 py-3 text-xs text-[#1d2327] shadow-2xs">

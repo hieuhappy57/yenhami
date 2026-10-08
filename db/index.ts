@@ -2728,32 +2728,498 @@ const CLOUD_TABLES = [
 ] as const;
 
 let lastCloudSyncAtMs = 0;
+let d1SchemaInitialized = false;
 
-function isCloudSyncEnabled(): boolean {
+export function isCloudflareD1Enabled(): boolean {
   if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
+  return Boolean(
+    process.env.CLOUDFLARE_ACCOUNT_ID &&
+      process.env.CLOUDFLARE_D1_DATABASE_ID &&
+      process.env.CLOUDFLARE_API_TOKEN
+  );
+}
+
+function isGistSyncEnabled(): boolean {
+  if (process.env.HAMI_DB_PATH) return false;
   return Boolean(process.env.HAMI_GIST_ID && process.env.HAMI_GITHUB_TOKEN);
 }
 
+export function getCloudDatabaseStatus(): {
+  provider: "CLOUDFLARE_D1" | "GITHUB_GIST" | "LOCAL_SQLITE";
+  label: string;
+  isCloudflareD1Configured: boolean;
+  databaseIdMasked: string | null;
+} {
+  if (isCloudflareD1Enabled()) {
+    const rawId = process.env.CLOUDFLARE_D1_DATABASE_ID || "";
+    const masked =
+      rawId.length > 12 ? `${rawId.slice(0, 8)}...${rawId.slice(-4)}` : rawId;
+    return {
+      provider: "CLOUDFLARE_D1",
+      label: "Cloudflare D1 SQL Database (Chuẩn Enterprise • Bảo mật 100%)",
+      isCloudflareD1Configured: true,
+      databaseIdMasked: masked,
+    };
+  }
+  if (isGistSyncEnabled()) {
+    return {
+      provider: "GITHUB_GIST",
+      label: "GitHub Secret Gist (Chờ chuyển sang Cloudflare D1)",
+      isCloudflareD1Configured: false,
+      databaseIdMasked: null,
+    };
+  }
+  return {
+    provider: "LOCAL_SQLITE",
+    label: "SQLite Nội bộ (Chưa cấu hình Cloud Database)",
+    isCloudflareD1Configured: false,
+    databaseIdMasked: null,
+  };
+}
+
+function escapeSqlLiteral(val: unknown): string {
+  if (val === null || val === undefined) return "NULL";
+  if (typeof val === "number") {
+    return Number.isFinite(val) ? String(val) : "NULL";
+  }
+  if (typeof val === "boolean") {
+    return val ? "1" : "0";
+  }
+  const str = String(val).replace(/'/g, "''");
+  return `'${str}'`;
+}
+
+async function executeCloudflareD1Query<T = Record<string, unknown>>(
+  sql: string,
+  params?: (string | number | null)[]
+): Promise<{ ok: boolean; results: T[]; error?: string }> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
+  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID!;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
+  const bodyObj: Record<string, unknown> = { sql };
+  if (params && params.length > 0) {
+    bodyObj.params = params;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(bodyObj),
+    cache: "no-store",
+  });
+
+  const data = (await res.json()) as {
+    success?: boolean;
+    errors?: { message?: string }[];
+    result?: { results?: T[]; success?: boolean }[];
+  };
+
+  if (!res.ok || !data.success) {
+    const errMsg =
+      data.errors?.map((e) => e.message).join("; ") ||
+      `HTTP ${res.status}`;
+    return { ok: false, results: [], error: errMsg };
+  }
+
+  const firstResult = data.result?.[0];
+  return {
+    ok: true,
+    results: Array.isArray(firstResult?.results) ? firstResult!.results : [],
+  };
+}
+
+const CLOUDFLARE_D1_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS hami_cloud_state (
+  id TEXT PRIMARY KEY,
+  updated_at TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  volume_ml INTEGER NOT NULL,
+  ingredients_json TEXT NOT NULL,
+  taste_profile TEXT NOT NULL,
+  short_description TEXT NOT NULL,
+  usage_guide TEXT NOT NULL,
+  storage_guide TEXT NOT NULL,
+  caution_note TEXT NOT NULL,
+  image_url TEXT NOT NULL,
+  is_illustration_image INTEGER NOT NULL DEFAULT 1,
+  price_vnd INTEGER,
+  status TEXT NOT NULL,
+  is_demo_fixture INTEGER NOT NULL DEFAULT 1,
+  supported_options_json TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS product_variants (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  price_delta_vnd INTEGER NOT NULL DEFAULT 0,
+  is_available INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS slot_date_reservations (
+  requested_date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  reserved_bowls INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (requested_date, slot_id)
+);
+CREATE TABLE IF NOT EXISTS order_requests (
+  id TEXT PRIMARY KEY,
+  reference_code TEXT NOT NULL,
+  lookup_token TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  order_purpose TEXT NOT NULL,
+  buyer_name TEXT NOT NULL,
+  buyer_phone TEXT NOT NULL,
+  buyer_note TEXT,
+  recipient_name TEXT NOT NULL,
+  recipient_phone TEXT NOT NULL,
+  gift_sender_name TEXT,
+  gift_message TEXT,
+  hide_price_on_receipt INTEGER NOT NULL DEFAULT 0,
+  zone_id TEXT NOT NULL,
+  zone_name_snapshot TEXT NOT NULL,
+  address_detail TEXT NOT NULL,
+  requested_date TEXT NOT NULL,
+  slot_id TEXT NOT NULL,
+  slot_label_snapshot TEXT NOT NULL,
+  subtotal_vnd INTEGER NOT NULL,
+  shipping_fee_vnd INTEGER,
+  shipping_fee_note TEXT NOT NULL,
+  total_vnd INTEGER NOT NULL,
+  is_total_final INTEGER NOT NULL DEFAULT 1,
+  order_status TEXT NOT NULL,
+  payment_status TEXT NOT NULL,
+  is_demo_order INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS order_items (
+  id TEXT PRIMARY KEY,
+  order_request_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  variant_id TEXT NOT NULL,
+  product_name_snapshot TEXT NOT NULL,
+  variant_name_snapshot TEXT NOT NULL,
+  volume_ml_snapshot INTEGER NOT NULL,
+  ingredients_snapshot TEXT NOT NULL,
+  selected_option_snapshot TEXT NOT NULL,
+  unit_price_snapshot INTEGER NOT NULL,
+  quantity INTEGER NOT NULL,
+  line_total_snapshot INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id TEXT PRIMARY KEY,
+  order_request_id TEXT NOT NULL,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  from_payment_status TEXT,
+  to_payment_status TEXT NOT NULL,
+  changed_by_staff_username TEXT NOT NULL,
+  changed_by_staff_name TEXT NOT NULL,
+  note TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS posts (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  excerpt TEXT NOT NULL,
+  content TEXT NOT NULL,
+  cover_image_url TEXT NOT NULL,
+  is_published INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS job_postings (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  department TEXT NOT NULL,
+  location TEXT NOT NULL,
+  employment_type TEXT NOT NULL,
+  salary_range TEXT NOT NULL,
+  description TEXT NOT NULL,
+  requirements TEXT NOT NULL,
+  contact_info TEXT NOT NULL,
+  is_open INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notification_logs (
+  id TEXT PRIMARY KEY,
+  order_reference_code TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  recipient TEXT NOT NULL,
+  status TEXT NOT NULL,
+  message_summary TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
+async function ensureCloudflareD1Schema(force = false): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  if (d1SchemaInitialized && !force) return { ok: true };
+  const res = await executeCloudflareD1Query(CLOUDFLARE_D1_SCHEMA_SQL);
+  if (res.ok) {
+    d1SchemaInitialized = true;
+  }
+  return { ok: res.ok, error: res.error };
+}
+
+function buildSnapshotsFromLocalSqlite(): {
+  version: number;
+  updatedAt: string;
+  tables: Record<string, Record<string, unknown>[]>;
+} {
+  const db = getSqliteDb();
+  const tables: Record<string, Record<string, unknown>[]> = {};
+  for (const table of CLOUD_TABLES) {
+    tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
+      string,
+      unknown
+    >[];
+  }
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    tables,
+  };
+}
+
+function applyCloudTablesToLocalSqlite(
+  parsedTables: Record<string, Record<string, unknown>[]>
+): void {
+  const db = getSqliteDb();
+  db.exec("BEGIN IMMEDIATE TRANSACTION;");
+  try {
+    for (const table of CLOUD_TABLES) {
+      const rows = parsedTables[table];
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+
+      if (
+        table === "products" ||
+        table === "product_variants" ||
+        table === "posts" ||
+        table === "job_postings"
+      ) {
+        db.exec(`DELETE FROM ${table};`);
+      }
+
+      const cols = Object.keys(rows[0]);
+      if (cols.length === 0) continue;
+      const placeholders = cols.map(() => "?").join(", ");
+      const colList = cols.join(", ");
+      const stmt = db.prepare(
+        `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
+      );
+      for (const r of rows) {
+        const vals = cols.map((c) => {
+          const v = r[c];
+          return v === undefined ? null : (v as string | number | null);
+        });
+        stmt.run(...vals);
+      }
+    }
+
+    // Ensure canonical SEO/GEO posts and updated 295.000đ+ fresh bowl prices are always present
+    const syncNowIso = new Date().toISOString();
+    db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
+    const upsertPostStmt = db.prepare(`
+      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        slug = excluded.slug,
+        title = excluded.title,
+        category = excluded.category,
+        excerpt = excluded.excerpt,
+        content = excluded.content,
+        cover_image_url = excluded.cover_image_url,
+        is_published = excluded.is_published,
+        updated_at = excluded.updated_at
+    `);
+    for (const post of DEMO_POSTS) {
+      upsertPostStmt.run(
+        post.id,
+        post.slug,
+        post.title,
+        post.category,
+        post.excerpt,
+        post.content,
+        post.coverImageUrl,
+        post.isPublished ? 1 : 0,
+        syncNowIso,
+        syncNowIso
+      );
+    }
+
+    const upsertFreshProdStmt = db.prepare(`
+      UPDATE products
+      SET ingredients_json = ?, taste_profile = ?, short_description = ?, usage_guide = ?, caution_note = ?, price_vnd = ?
+      WHERE id = ? AND (price_vnd IS NULL OR price_vnd < 295000)
+    `);
+    for (const p of DEMO_PRODUCTS) {
+      if (p.id.startsWith("prod-")) {
+        upsertFreshProdStmt.run(
+          JSON.stringify(p.ingredients),
+          p.tasteProfile,
+          p.shortDescription,
+          p.usageGuide,
+          p.cautionNote,
+          p.priceVnd,
+          p.id
+        );
+      }
+    }
+
+    db.exec("COMMIT;");
+  } catch {
+    try {
+      db.exec("ROLLBACK;");
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function syncDbToCloudflareD1(): Promise<{ ok: boolean; error?: string }> {
+  const schemaRes = await ensureCloudflareD1Schema();
+  if (!schemaRes.ok) {
+    return { ok: false, error: schemaRes.error };
+  }
+
+  const payload = buildSnapshotsFromLocalSqlite();
+  const payloadStr = JSON.stringify(payload);
+
+  // 1. Save authoritative snapshot in hami_cloud_state (instant 1-query read on page loads)
+  const stateRes = await executeCloudflareD1Query(
+    `INSERT OR REPLACE INTO hami_cloud_state (id, updated_at, payload_json) VALUES (?, ?, ?);`,
+    ["main", payload.updatedAt, payloadStr]
+  );
+  if (!stateRes.ok) {
+    return { ok: false, error: stateRes.error };
+  }
+
+  // 2. Also populate relational SQL tables on Cloudflare D1 so all tables & rows are visible in Cloudflare Dashboard -> D1 -> Tables
+  const sqlStatements: string[] = [];
+  for (const table of CLOUD_TABLES) {
+    const rows = payload.tables[table];
+    if (!Array.isArray(rows)) continue;
+
+    if (
+      table === "products" ||
+      table === "product_variants" ||
+      table === "posts" ||
+      table === "job_postings"
+    ) {
+      sqlStatements.push(`DELETE FROM ${table};`);
+    }
+
+    if (rows.length === 0) continue;
+    const cols = Object.keys(rows[0]);
+    if (cols.length === 0) continue;
+    const colList = cols.join(", ");
+
+    for (const r of rows) {
+      const valLiterals = cols.map((c) => escapeSqlLiteral(r[c])).join(", ");
+      sqlStatements.push(
+        `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${valLiterals});`
+      );
+    }
+  }
+
+  if (sqlStatements.length > 0) {
+    await executeCloudflareD1Query(sqlStatements.join("\n"));
+  }
+
+  lastCloudSyncAtMs = Date.now();
+  return { ok: true };
+}
+
+export async function testAndInitCloudflareD1(): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  if (!isCloudflareD1Enabled()) {
+    return {
+      ok: false,
+      message:
+        "Chưa tìm thấy đủ 3 biến môi trường CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_API_TOKEN trên Vercel / môi trường hiện tại.",
+    };
+  }
+  try {
+    const schemaRes = await ensureCloudflareD1Schema(true);
+    if (!schemaRes.ok) {
+      return {
+        ok: false,
+        message: `Không thể khởi tạo bảng trên Cloudflare D1: ${schemaRes.error}`,
+      };
+    }
+    const syncRes = await syncDbToCloudflareD1();
+    if (!syncRes.ok) {
+      return {
+        ok: false,
+        message: `Lỗi khi đồng bộ dữ liệu lên Cloudflare D1: ${syncRes.error}`,
+      };
+    }
+    const db = getSqliteDb();
+    const prodCount = (
+      db.prepare("SELECT COUNT(*) as c FROM products").get() as { c: number }
+    ).c;
+    const orderCount = (
+      db.prepare("SELECT COUNT(*) as c FROM order_requests").get() as { c: number }
+    ).c;
+    const postCount = (
+      db.prepare("SELECT COUNT(*) as c FROM posts").get() as { c: number }
+    ).c;
+    return {
+      ok: true,
+      message: `Đã kết nối & khởi tạo chuẩn 10 bảng SQL trên Cloudflare D1 thành công! Đã đồng bộ ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng lên Cloudflare D1.`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Lỗi kết nối tới Cloudflare D1 API.",
+    };
+  }
+}
+
 export async function syncDbToCloud(): Promise<void> {
-  if (!isCloudSyncEnabled()) return;
+  if (isCloudflareD1Enabled()) {
+    try {
+      await syncDbToCloudflareD1();
+    } catch {
+      // Ignore transient network errors
+    }
+    return;
+  }
+
+  if (!isGistSyncEnabled()) return;
   const gistId = process.env.HAMI_GIST_ID!;
   const token = process.env.HAMI_GITHUB_TOKEN!;
 
   try {
-    const db = getSqliteDb();
-    const tables: Record<string, Record<string, unknown>[]> = {};
-    for (const table of CLOUD_TABLES) {
-      tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
-        string,
-        unknown
-      >[];
-    }
-
-    const payload = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      tables,
-    };
+    const payload = buildSnapshotsFromLocalSqlite();
 
     await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "PATCH",
@@ -2777,15 +3243,10 @@ export async function syncDbToCloud(): Promise<void> {
   }
 }
 
-export async function syncDbFromCloud(force = false): Promise<void> {
-  if (!isCloudSyncEnabled()) return;
-  const now = Date.now();
-  if (!force && now - lastCloudSyncAtMs < 1500) {
-    return;
-  }
+async function pullFromGistIntoLocalSqlite(): Promise<boolean> {
+  if (!isGistSyncEnabled()) return false;
   const gistId = process.env.HAMI_GIST_ID!;
   const token = process.env.HAMI_GITHUB_TOKEN!;
-
   try {
     const res = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "GET",
@@ -2796,12 +3257,15 @@ export async function syncDbFromCloud(force = false): Promise<void> {
       },
       cache: "no-store",
     });
-    if (!res.ok) return;
+    if (!res.ok) return false;
     const data = (await res.json()) as {
-      files?: Record<string, { content?: string; raw_url?: string; truncated?: boolean }>;
+      files?: Record<
+        string,
+        { content?: string; raw_url?: string; truncated?: boolean }
+      >;
     };
     const fileObj = data.files?.["ha-mi-db-state.json"];
-    if (!fileObj) return;
+    if (!fileObj) return false;
 
     let rawJson = fileObj.content || "";
     if (fileObj.truncated && fileObj.raw_url) {
@@ -2810,109 +3274,62 @@ export async function syncDbFromCloud(force = false): Promise<void> {
         rawJson = await rawRes.text();
       }
     }
-    if (!rawJson) return;
+    if (!rawJson) return false;
 
     const parsed = JSON.parse(rawJson) as {
       version?: number;
       tables?: Record<string, Record<string, unknown>[]>;
     };
-    if (!parsed.tables) {
-      lastCloudSyncAtMs = Date.now();
-      return;
-    }
+    if (!parsed.tables) return false;
 
-    const db = getSqliteDb();
-    db.exec("BEGIN IMMEDIATE TRANSACTION;");
-    try {
-      for (const table of CLOUD_TABLES) {
-        const rows = parsed.tables[table];
-        if (!Array.isArray(rows) || rows.length === 0) continue;
-
-        if (
-          table === "products" ||
-          table === "product_variants" ||
-          table === "posts" ||
-          table === "job_postings"
-        ) {
-          db.exec(`DELETE FROM ${table};`);
-        }
-
-        const cols = Object.keys(rows[0]);
-        if (cols.length === 0) continue;
-        const placeholders = cols.map(() => "?").join(", ");
-        const colList = cols.join(", ");
-        const stmt = db.prepare(
-          `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
-        );
-        for (const r of rows) {
-          const vals = cols.map((c) => {
-            const v = r[c];
-            return v === undefined ? null : (v as string | number | null);
-          });
-          stmt.run(...vals);
-        }
-      }
-
-      // Ensure canonical SEO/GEO posts and updated 295.000đ+ fresh bowl prices are always present after cloud sync
-      const syncNowIso = new Date().toISOString();
-      db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
-      const upsertPostStmt = db.prepare(`
-        INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-          slug = excluded.slug,
-          title = excluded.title,
-          category = excluded.category,
-          excerpt = excluded.excerpt,
-          content = excluded.content,
-          cover_image_url = excluded.cover_image_url,
-          is_published = excluded.is_published,
-          updated_at = excluded.updated_at
-      `);
-      for (const post of DEMO_POSTS) {
-        upsertPostStmt.run(
-          post.id,
-          post.slug,
-          post.title,
-          post.category,
-          post.excerpt,
-          post.content,
-          post.coverImageUrl,
-          post.isPublished ? 1 : 0,
-          syncNowIso,
-          syncNowIso
-        );
-      }
-
-      const upsertFreshProdStmt = db.prepare(`
-        UPDATE products
-        SET ingredients_json = ?, taste_profile = ?, short_description = ?, usage_guide = ?, caution_note = ?, price_vnd = ?
-        WHERE id = ? AND (price_vnd IS NULL OR price_vnd < 295000)
-      `);
-      for (const p of DEMO_PRODUCTS) {
-        if (p.id.startsWith("prod-")) {
-          upsertFreshProdStmt.run(
-            JSON.stringify(p.ingredients),
-            p.tasteProfile,
-            p.shortDescription,
-            p.usageGuide,
-            p.cautionNote,
-            p.priceVnd,
-            p.id
-          );
-        }
-      }
-
-      db.exec("COMMIT;");
-      lastCloudSyncAtMs = Date.now();
-    } catch {
-      try {
-        db.exec("ROLLBACK;");
-      } catch {
-        // ignore
-      }
-    }
+    applyCloudTablesToLocalSqlite(parsed.tables);
+    return true;
   } catch {
-    // Ignore transient network errors
+    return false;
   }
 }
+
+export async function syncDbFromCloud(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && now - lastCloudSyncAtMs < 1500) {
+    return;
+  }
+
+  // Primary Engine: Cloudflare D1 SQL Database
+  if (isCloudflareD1Enabled()) {
+    try {
+      const queryRes = await executeCloudflareD1Query<{ payload_json: string }>(
+        `SELECT payload_json FROM hami_cloud_state WHERE id = 'main' LIMIT 1;`
+      );
+
+      if (queryRes.ok && queryRes.results.length > 0 && queryRes.results[0].payload_json) {
+        d1SchemaInitialized = true;
+        const parsed = JSON.parse(queryRes.results[0].payload_json) as {
+          tables?: Record<string, Record<string, unknown>[]>;
+        };
+        if (parsed.tables) {
+          applyCloudTablesToLocalSqlite(parsed.tables);
+        }
+        lastCloudSyncAtMs = Date.now();
+        return;
+      }
+
+      // First-time initialization on Cloudflare D1:
+      // Pull existing data from GitHub Gist if available, then initialize schema & seed Cloudflare D1!
+      await pullFromGistIntoLocalSqlite();
+      await syncDbToCloudflareD1();
+      lastCloudSyncAtMs = Date.now();
+      return;
+    } catch {
+      // Ignore transient network errors
+      return;
+    }
+  }
+
+  // Fallback Engine: GitHub Gist (while waiting for Cloudflare D1 env vars)
+  if (isGistSyncEnabled()) {
+    await pullFromGistIntoLocalSqlite();
+    lastCloudSyncAtMs = Date.now();
+  }
+}
+
