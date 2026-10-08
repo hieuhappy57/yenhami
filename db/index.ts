@@ -2730,24 +2730,89 @@ const CLOUD_TABLES = [
 let lastCloudSyncAtMs = 0;
 let d1SchemaInitialized = false;
 let r2BucketInitialized = false;
+let resolvedAccountIdCache: string | null = null;
+
+function cleanEnvVal(v: string | undefined): string {
+  let raw = (v || "").trim();
+  const bearerMatch = raw.match(/Bearer\s+([A-Za-z0-9_-]+)/i);
+  if (bearerMatch) {
+    raw = bearerMatch[1];
+  }
+  return raw.replace(/^["']|["']$/g, "").trim();
+}
+
+export function getCloudflareApiToken(): string {
+  const candidates = [
+    cleanEnvVal(process.env.CLOUDFLARE_API_TOKEN),
+    cleanEnvVal(process.env.CLOUDFLARE_ACCOUNT_ID),
+    cleanEnvVal(process.env.CLOUDFLARE_D1_DATABASE_ID),
+  ].filter(Boolean);
+
+  // Standard Cloudflare API Tokens are ~40 chars and contain non-hex letters or _ / -
+  const apiTokenCandidate = candidates.find(
+    (c) =>
+      c.length >= 35 &&
+      !/^[a-f0-9]{32}$/i.test(c) &&
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+        c
+      ) &&
+      !/^https?:\/\//i.test(c)
+  );
+  if (apiTokenCandidate) return apiTokenCandidate;
+
+  return cleanEnvVal(process.env.CLOUDFLARE_API_TOKEN);
+}
+
+export function getCloudflareAccountId(): string {
+  if (resolvedAccountIdCache) return resolvedAccountIdCache;
+  const candidates = [
+    cleanEnvVal(process.env.CLOUDFLARE_ACCOUNT_ID),
+    cleanEnvVal(process.env.CLOUDFLARE_D1_DATABASE_ID),
+    cleanEnvVal(process.env.CLOUDFLARE_API_TOKEN),
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    const hexMatch = c.match(/(?:^|\/)([a-f0-9]{32})(?:$|\/|\?)/i);
+    if (hexMatch) {
+      return hexMatch[1].toLowerCase();
+    }
+  }
+  return cleanEnvVal(process.env.CLOUDFLARE_ACCOUNT_ID);
+}
+
+export function getCloudflareD1DatabaseId(): string {
+  const candidates = [
+    cleanEnvVal(process.env.CLOUDFLARE_D1_DATABASE_ID),
+    cleanEnvVal(process.env.CLOUDFLARE_ACCOUNT_ID),
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    const uuidMatch = c.match(
+      /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+    );
+    if (uuidMatch) {
+      return uuidMatch[0].toLowerCase();
+    }
+  }
+  // Only return a D1 Database ID if it actually looks like a UUID with hyphens
+  return "";
+}
 
 export function getCloudflareR2BucketName(): string {
-  return process.env.CLOUDFLARE_R2_BUCKET_NAME || "yenhami-storage";
+  return (process.env.CLOUDFLARE_R2_BUCKET_NAME || "yenhami-storage").trim();
 }
 
 export function isCloudflareR2Enabled(): boolean {
   if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
-  return Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
-  );
+  return Boolean(getCloudflareAccountId() && getCloudflareApiToken());
 }
 
 export function isCloudflareD1Enabled(): boolean {
   if (process.env.HAMI_DB_PATH) return false; // Never sync during isolated unit tests
   return Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID &&
-      process.env.CLOUDFLARE_D1_DATABASE_ID &&
-      process.env.CLOUDFLARE_API_TOKEN
+    getCloudflareAccountId() &&
+      getCloudflareD1DatabaseId() &&
+      getCloudflareApiToken()
   );
 }
 
@@ -2769,7 +2834,7 @@ export function getCloudDatabaseStatus(): {
   const bucketName = r2Enabled ? getCloudflareR2BucketName() : null;
 
   if (d1Enabled && r2Enabled) {
-    const rawId = process.env.CLOUDFLARE_D1_DATABASE_ID || "";
+    const rawId = getCloudflareD1DatabaseId();
     const masked =
       rawId.length > 12 ? `${rawId.slice(0, 8)}...${rawId.slice(-4)}` : rawId;
     return {
@@ -2827,9 +2892,9 @@ async function executeCloudflareD1Query<T = Record<string, unknown>>(
   sql: string,
   params?: (string | number | null)[]
 ): Promise<{ ok: boolean; results: T[]; error?: string }> {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID!;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const accountId = getCloudflareAccountId();
+  const databaseId = getCloudflareD1DatabaseId();
+  const apiToken = getCloudflareApiToken();
 
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
   const bodyObj: Record<string, unknown> = { sql };
@@ -2849,13 +2914,13 @@ async function executeCloudflareD1Query<T = Record<string, unknown>>(
 
   const data = (await res.json()) as {
     success?: boolean;
-    errors?: { message?: string }[];
+    errors?: { code?: number; message?: string }[];
     result?: { results?: T[]; success?: boolean }[];
   };
 
   if (!res.ok || !data.success) {
     const errMsg =
-      data.errors?.map((e) => e.message).join("; ") ||
+      data.errors?.map((e) => `${e.message} (code ${e.code})`).join("; ") ||
       `HTTP ${res.status}`;
     return { ok: false, results: [], error: errMsg };
   }
@@ -3199,8 +3264,30 @@ export async function ensureCloudflareR2Bucket(force = false): Promise<{
   }
   if (r2BucketInitialized && !force) return { ok: true };
 
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const apiToken = getCloudflareApiToken();
+  let accountId = getCloudflareAccountId();
+
+  // Auto-discover Account ID from Cloudflare API if token has Account read access
+  try {
+    const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiToken}` },
+      cache: "no-store",
+    });
+    if (accRes.ok) {
+      const accData = (await accRes.json()) as {
+        result?: { id?: string }[];
+      };
+      const firstId = accData.result?.[0]?.id;
+      if (firstId && /^[a-f0-9]{32}$/i.test(firstId)) {
+        resolvedAccountIdCache = firstId.toLowerCase();
+        accountId = resolvedAccountIdCache;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   const bucketName = getCloudflareR2BucketName();
 
   try {
@@ -3238,10 +3325,10 @@ export async function ensureCloudflareR2Bucket(force = false): Promise<{
     }
 
     const errData = (await createRes.json().catch(() => ({}))) as {
-      errors?: { message?: string }[];
+      errors?: { code?: number; message?: string }[];
     };
     const errMsg =
-      errData.errors?.map((e) => e.message).join("; ") ||
+      errData.errors?.map((e) => `${e.message} (code ${e.code})`).join("; ") ||
       `HTTP ${createRes.status}`;
     return { ok: false, error: errMsg };
   } catch (err) {
@@ -3265,8 +3352,8 @@ export async function putCloudflareR2Object(
     return { ok: false, error: bucketRes.error };
   }
 
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const accountId = getCloudflareAccountId();
+  const apiToken = getCloudflareApiToken();
   const bucketName = getCloudflareR2BucketName();
   const encodedKey = objectKey
     .split("/")
@@ -3304,8 +3391,8 @@ export async function getCloudflareR2Object(objectKey: string): Promise<{
   if (!isCloudflareR2Enabled()) {
     return { ok: false, error: "Cloudflare R2 chưa được bật." };
   }
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
+  const accountId = getCloudflareAccountId();
+  const apiToken = getCloudflareApiToken();
   const bucketName = getCloudflareR2BucketName();
   const encodedKey = objectKey
     .split("/")
@@ -3369,6 +3456,13 @@ async function pullFromCloudflareR2IntoLocalSqlite(): Promise<boolean> {
   }
 }
 
+function maskDiag(val: string | undefined): string {
+  const s = (val || "").trim();
+  if (!s) return "empty";
+  if (s.length <= 8) return `${s.length}chars`;
+  return `${s.slice(0, 4)}...${s.slice(-4)}(${s.length}c)`;
+}
+
 export async function testAndInitCloudflareD1(): Promise<{
   ok: boolean;
   message: string;
@@ -3383,6 +3477,28 @@ export async function testAndInitCloudflareD1(): Promise<{
 
   try {
     const results: string[] = [];
+    const apiToken = getCloudflareApiToken();
+
+    // Verify token validity against Cloudflare /user/tokens/verify
+    const verifyRes = await fetch(
+      "https://api.cloudflare.com/client/v4/user/tokens/verify",
+      {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        cache: "no-store",
+      }
+    );
+    const verifyJson = (await verifyRes.json().catch(() => ({}))) as {
+      success?: boolean;
+      result?: { status?: string };
+      errors?: { code?: number; message?: string }[];
+    };
+
+    if (!verifyJson.success) {
+      const diag = `[Chẩn đoán biến Vercel: ACCOUNT_ID=${maskDiag(process.env.CLOUDFLARE_ACCOUNT_ID)}, API_TOKEN=${maskDiag(process.env.CLOUDFLARE_API_TOKEN)}, D1_ID=${maskDiag(process.env.CLOUDFLARE_D1_DATABASE_ID)}]`;
+      results.push(
+        `Token xác thực: ${verifyJson.errors?.map((e) => e.message).join("; ") || "Không hợp lệ"} ${diag}`
+      );
+    }
 
     if (isCloudflareR2Enabled()) {
       const r2Res = await ensureCloudflareR2Bucket(true);
