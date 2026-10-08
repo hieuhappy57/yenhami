@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
+import { BRAND_CONFIG } from "@/config/brand";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Về Yến Sào Hà Mi — Chuẩn ISO 22000:2018 & FDA Hoa Kỳ",
@@ -185,8 +186,10 @@ export default function VeHaMiPage() {
             <div className="flex items-start gap-3 bg-white rounded-2xl p-4">
               <MapPin className="w-5 h-5 text-[#7C4D2B] shrink-0 mt-0.5" />
               <div>
-                <strong className="block text-[#1B4332]">Địa chỉ sản xuất & phục vụ:</strong>
-                <span>Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng</span>
+                <strong className="block text-[#1B4332]">Địa chỉ chính:</strong>
+                <span>{BRAND_CONFIG.contact.addressDisplay}</span>
+                <strong className="block text-[#1B4332] mt-2">Xưởng sản xuất:</strong>
+                <span>{BRAND_CONFIG.workshopAddressDisplay}</span>
               </div>
             </div>
             <div className="flex items-start gap-3 bg-white rounded-2xl p-4">

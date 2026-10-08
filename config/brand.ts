@@ -32,6 +32,7 @@ export const BRAND_CONFIG = {
   isDemoMode: true,
   demoNoticeBanner:
     "✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨",
+  workshopAddressDisplay: "Thôn Bà Rén, Xã Xuân Phú, Đà Nẵng",
   contact: {
     hotlineDisplay: process.env.NEXT_PUBLIC_HAMI_HOTLINE_DISPLAY || "0935 052 959",
     hotlineTel: process.env.NEXT_PUBLIC_HAMI_HOTLINE_TEL || "0935052959",
@@ -40,7 +41,7 @@ export const BRAND_CONFIG = {
     messengerUrl: process.env.NEXT_PUBLIC_HAMI_MESSENGER_URL || null,
     addressDisplay:
       process.env.NEXT_PUBLIC_HAMI_ADDRESS ||
-      "Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
+      "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
     serviceHoursDisplay:
       process.env.NEXT_PUBLIC_HAMI_HOURS || "08:00 – 21:00 hàng ngày",
     legalEntityDisplay:

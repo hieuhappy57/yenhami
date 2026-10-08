@@ -2,6 +2,7 @@ import React from "react";
 import { BRAND_CONFIG } from "@/config/brand";
 import { GEO_CONFIG, SEO_CONFIG, absoluteUrl } from "@/config/seo";
 import type { PostRecord, ProductRecord } from "@/db/schema";
+import { buildProductOffer } from "@/lib/product-offer";
 
 export function OrganizationAndLocalBusinessJsonLd() {
   const schema = {
@@ -67,11 +68,6 @@ export function OrganizationAndLocalBusinessJsonLd() {
           postalCode: "550000",
           addressCountry: "VN",
         },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: GEO_CONFIG.latitude,
-          longitude: GEO_CONFIG.longitude,
-        },
         areaServed: [
           {
             "@type": "City",
@@ -82,15 +78,6 @@ export function OrganizationAndLocalBusinessJsonLd() {
             "@type": "AdministrativeArea",
             name: `${district}, Đà Nẵng`,
           })),
-          {
-            "@type": "GeoCircle",
-            geoMidpoint: {
-              "@type": "GeoCoordinates",
-              latitude: GEO_CONFIG.latitude,
-              longitude: GEO_CONFIG.longitude,
-            },
-            geoRadius: GEO_CONFIG.serviceRadiusMeters,
-          },
         ],
         hasOfferCatalog: {
           "@type": "OfferCatalog",
@@ -199,10 +186,7 @@ export function FaqJsonLd({
 
 export function ProductJsonLd({ product }: { product: ProductRecord }) {
   const productUrl = absoluteUrl(`/san-pham/${product.slug}`);
-  const availability =
-    product.status === "AVAILABLE"
-      ? "https://schema.org/InStock"
-      : "https://schema.org/OutOfStock";
+  const offer = buildProductOffer(product, productUrl, BRAND_CONFIG.brandName);
 
   const schema = {
     "@context": "https://schema.org",
@@ -219,22 +203,7 @@ export function ProductJsonLd({ product }: { product: ProductRecord }) {
           "@type": "Brand",
           name: BRAND_CONFIG.brandName,
         },
-        offers: {
-          "@type": "Offer",
-          url: productUrl,
-          priceCurrency: "VND",
-          price: product.priceVnd ?? 295000,
-          availability,
-          itemCondition: "https://schema.org/NewCondition",
-          areaServed: {
-            "@type": "City",
-            name: "Đà Nẵng",
-          },
-          seller: {
-            "@type": "Organization",
-            name: BRAND_CONFIG.brandName,
-          },
-        },
+        ...(offer ? { offers: offer } : {}),
       },
       {
         "@type": "BreadcrumbList",

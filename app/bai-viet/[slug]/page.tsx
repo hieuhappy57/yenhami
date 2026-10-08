@@ -19,13 +19,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = getPostBySlug(slug);
 
-  if (!post) {
-    return buildPageMetadata({
-      title: "Bài viết & Cẩm nang Yến Sào",
-      description:
-        "Chia sẻ kiến thức dinh dưỡng yến tươi chưng nóng, cách dùng tổ yến hiệu quả và gợi ý chọn quà biếu sức khỏe từ Yến Sào Hà Mi.",
-      path: `/bai-viet/${slug}`,
-    });
+  if (!post || !post.isPublished) {
+    notFound();
   }
 
   return buildPageMetadata({
@@ -49,7 +44,7 @@ export default async function BaiVietDetailPage({
   const { slug } = await params;
   const post = getPostBySlug(slug);
 
-  if (!post) {
+  if (!post || !post.isPublished) {
     notFound();
   }
 
