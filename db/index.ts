@@ -1740,14 +1740,18 @@ export function verifyStaffCredentials(username: string, password: string) {
   if (!row) return null;
   const cleanPwd = password.trim();
   const computed = hashPassword(cleanPwd);
-  const allowedHashes = new Set([
-    String(row.password_hash),
-    hashPassword("hami2026"),
-    hashPassword("HaMi@2026!"),
-    ...(process.env.HAMI_ADMIN_PASSWORD
-      ? [hashPassword(process.env.HAMI_ADMIN_PASSWORD)]
-      : []),
-  ]);
+  const allowedHashes = new Set(
+    process.env.HAMI_ADMIN_PASSWORD
+      ? [
+          String(row.password_hash),
+          hashPassword(process.env.HAMI_ADMIN_PASSWORD),
+        ]
+      : [
+          String(row.password_hash),
+          hashPassword("HaMi@2026!"),
+          hashPassword("hami2026"),
+        ]
+  );
   if (!allowedHashes.has(computed)) return null;
   return {
     id: String(row.id),
