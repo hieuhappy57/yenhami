@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hà Mi | Demo quản trị bán hàng</title>
+  <style>
+    :root {
+      --bg-app: #f8fafc;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #15803d;
+      --primary-hover: #166534;
+      --primary-light: #f0fdf4;
+      --accent-cyan: #0891b2;
+      --accent-cyan-bg: #ecfeff;
+      --status-amber: #b45309;
+      --status-amber-bg: #fef3c7;
+      --status-red: #b91c1c;
+      --status-red-bg: #fee2e2;
+      --status-blue: #1d4ed8;
+      --status-blue-bg: #dbeafe;
+      --radius: 8px;
+      --font-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-base);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-main);
+      background-color: var(--bg-app);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    button, input, select, textarea {
+      font: inherit;
+    }
+    button, .btn {
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-main);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover, .btn:hover { background: #f1f5f9; }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger {
+      background: #ffffff;
+      color: var(--status-red);
+      border-color: #fca5a5;
+    }
+    .btn-danger:hover { background: var(--status-red-bg); }
+    .btn-sm {
+      min-height: 36px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    /* Top bar & demo banner */
+    .top-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0;
+    }
+    .demo-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      background: #fef08a;
+      color: #854d0e;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 999px;
+      border: 1px solid #facc15;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+    .simulated-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .role-selector-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .role-selector-wrap label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .role-select {
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      color: var(--primary);
+      min-height: 38px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Layout */
+    .app-body {
+      display: flex;
+      flex: 1;
+      width: 100%;
+    }
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-align: left;
+      justify-content: flex-start;
+    }
+    .nav-btn:hover { background: #f8fafc; color: var(--text-main); }
+    .nav-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: #bbf7d0;
+      font-weight: 600;
+    }
+    .nav-btn[disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+      overflow-y: auto;
+    }
+
+    /* Cards & Containers */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.1s;
+    }
+    .kpi-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .kpi-card.selected { border-color: var(--primary); background: var(--primary-light); }
+    .kpi-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Bar Chart Component */
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      height: 160px;
+      padding-top: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .chart-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .chart-bar-rect {
+      width: 100%;
+      max-width: 38px;
+      background: var(--accent-cyan);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s ease;
+      min-height: 4px;
+    }
+    .chart-bar-rect.empty { background: #cbd5e1; }
+    .chart-tooltip {
+      position: absolute;
+      top: -24px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+    .chart-axis-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      background: #f1f5f9;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+    }
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      min-width: 0;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    .filter-input, .filter-select {
+      min-height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      font-size: 13px;
+    }
+
+    /* Tables */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      background: #ffffff;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fbfcfe; }
+
+    /* Badges */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-pending { background: var(--status-amber-bg); color: var(--status-amber); }
+    .badge-confirmed { background: var(--status-blue-bg); color: var(--status-blue); }
+    .badge-preparing { background: #fae8ff; color: #86198f; }
+    .badge-delivering { background: var(--accent-cyan-bg); color: var(--accent-cyan); }
+    .badge-completed { background: var(--primary-light); color: var(--primary); }
+    .badge-cancelled { background: var(--status-red-bg); color: var(--status-red); }
+    .badge-source {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Modal / Dialog */
+    dialog {
+      border: none;
+      border-radius: var(--radius);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 0;
+      max-width: 650px;
+      width: 95vw;
+      margin: auto;
+      background: #ffffff;
+    }
+    dialog::backdrop {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+    }
+    .modal-box {
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: #f8fafc;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-control {
+      min-height: 42px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #ffffff;
+    }
+
+    /* Product Showcase Images */
+    .product-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+    }
+
+    /* Toast */
+    #toastContainer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      pointer-events: auto;
+      animation: slideIn 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast-success { background: #15803d; }
+    .toast-error { background: #b91c1c; }
+    @keyframes slideIn {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Mobile Nav */
+    .mobile-nav-bar {
+      display: none;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+      width: 100%;
+      z-index: 30;
+      overflow-x: auto;
+    }
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .mobile-nav-bar {
+        display: flex;
+        justify-content: space-around;
+        padding: 6px 4px;
+      }
+      .mobile-nav-bar .nav-btn {
+        flex-direction: column;
+        font-size: 11px;
+        min-height: 48px;
+        padding: 4px 6px;
+        gap: 2px;
+        justify-content: center;
+      }
+      .main-content { padding: 12px; }
+    }
+    .tab-content > .card { border: 0; background: transparent; box-shadow: none; padding: 0; }
+    .brand-section { flex-wrap: wrap; min-width: 0; }
+    .main-content { min-width: 0; }
+    .nav-btn[disabled] { display: none; }
+    select, input, textarea { max-width: 100%; }
+    button:focus-visible, select:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+    .source-summary { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+    .source-summary span { font-size: 14px; }
+    @media(max-width: 640px) {
+      .filter-group { width: 100%; }
+      #tab-dashboard .filter-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #tab-dashboard .filter-label { display: none; }
+      #tab-dashboard .filter-select, #tab-dashboard .filter-input { width: 100%; min-width: 0; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .kpi-card { padding: 12px 10px; min-width: 0; }
+      .kpi-label { font-size: 11px; }
+      .kpi-value { font-size: 18px; overflow-wrap: anywhere; }
+      .kpi-sub { font-size: 12px; }
+      .top-header, .header-actions { width: 100%; }
+      .role-selector-wrap { flex: 1; min-width: 0; }
+      .role-select { width: 100%; min-width: 0; font-size: 16px; }
+      .btn-sm, select, input, button { min-height: 44px; }
+      .simulated-info { display: none; }
+      .brand-title { white-space: nowrap; }
+    }
+  </style>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="brand-section">
+      <img src="/assets/brand/ha-mi-logo-mark-256.png" width="36" height="36" alt="Hà Mi" />
+      <span class="brand-title">HÀ MI ADMIN</span>
+      <span class="demo-badge">DEMO - DỮ LIỆU GIẢ LẬP</span>
+      <span class="simulated-info">Ngày mô phỏng: <strong>09/10/2026</strong></span>
+    </div>
+    <div class="header-actions">
+      <div class="role-selector-wrap">
+        <label for="activeRoleSelect">Mô phỏng vai trò:</label>
+        <select id="activeRoleSelect" class="role-select" onchange="handleRoleSwitch(this.value)">
+          <option value="OWNER">Chủ thương hiệu (OWNER)</option>
+          <option value="MANAGER">Quản lý (MANAGER)</option>
+          <option value="SALES">Bán hàng (SALES)</option>
+          <option value="KITCHEN">Bếp / Pha chế (KITCHEN)</option>
+          <option value="MARKETING">Nội dung (MARKETING)</option>
+        </select>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="confirmResetDemo()">
+        <span>Khôi phục mẫu</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Sidebar Nav (Desktop) -->
+    <aside class="sidebar" id="desktopSidebar">
+      <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <i data-lucide="layout-dashboard"></i> <span>Tổng quan</span>
+      </button>
+      <button class="nav-btn" data-tab="orders" onclick="switchTab('orders')">
+        <i data-lucide="shopping-cart"></i> <span>Đơn hàng</span>
+      </button>
+      <button class="nav-btn" data-tab="kitchen" onclick="switchTab('kitchen')">
+        <i data-lucide="soup"></i> <span>Hàng đợi bếp</span>
+      </button>
+      <button class="nav-btn" data-tab="customers" onclick="switchTab('customers')">
+        <i data-lucide="users"></i> <span>Khách hàng</span>
+      </button>
+      <button class="nav-btn" data-tab="content" onclick="switchTab('content')">
+        <i data-lucide="file-text"></i> <span>Nội dung SP</span>
+      </button>
+      <button class="nav-btn" data-tab="staff" onclick="switchTab('staff')">
+        <i data-lucide="shield-check"></i> <span>Nhân sự & Vai trò</span>
+      </button>
+    </aside>
+
+    <!-- Main Screen Area -->
+    <main class="main-content">
+      <!-- TAB: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Tổng quan bán hàng</h2>
+            <div class="filter-group">
+              <label class="filter-label">Kỳ:</label>
+              <select id="dashPeriod" class="filter-select" aria-label="Kỳ báo cáo" onchange="updateDashboard()">
+                <option value="7days">7 ngày qua (03 - 09/10)</option>
+                <option value="today">Hôm nay (09/10/2026)</option>
+                <option value="custom">Khoảng ngày</option>
+              </select>
+              <input id="dashStart" class="filter-input" type="date" value="2026-10-03" aria-label="Từ ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
+              <input id="dashEnd" class="filter-input" type="date" value="2026-10-09" aria-label="Đến ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
+              <label class="filter-label" style="margin-left: 8px;">Nguồn:</label>
+              <select id="dashSource" class="filter-select" aria-label="Nguồn đơn" onchange="updateDashboard()">
+                <option value="ALL">Tất cả nguồn</option>
+                <option value="Website">Website</option>
+                <option value="Zalo">Zalo</option>
+                <option value="Messenger">Messenger</option>
+                <option value="Phone">Điện thoại</option>
+                <option value="Store">Tại cửa hàng</option>
+                <option value="Other">Khác</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 6 KPIs -->
+          <div class="kpi-grid">
+            <div class="kpi-card" onclick="drilldownStatus('pending')">
+              <div class="kpi-label">1. Yêu cầu mới</div>
+              <div class="kpi-value" id="kpiNewRequests">0</div>
+              <div class="kpi-sub">Chờ tiếp nhận</div>
+            </div>
+            <div class="kpi-card" onclick="drilldownStatus('in_progress')">
+              <div class="kpi-label">2. Đang xử lý</div>
+              <div class="kpi-value" id="kpiPending">0</div>
+              <div class="kpi-sub">Xác nhận/Bếp/Giao</div>
+            </div>
+            <div class="kpi-card" onclick="drilldownStatus('completed')">
+              <div class="kpi-label">3. Đã hoàn tất</div>
+              <div class="kpi-value" id="kpiCompleted">0</div>
+              <div class="kpi-sub">Giao thành công</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">4. Doanh số hoàn tất</div>
+              <div class="kpi-value" id="kpiSales">0 ₫</div>
+              <div class="kpi-sub">Tiền hàng - giảm (Trừ ship/hủy)</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">5. Thực thu ròng</div>
+              <div class="kpi-value" id="kpiNetCollected">0 ₫</div>
+              <div class="kpi-sub">Đã thu sổ quỹ - hoàn tiền</div>
+            </div>
+            <div class="kpi-card" onclick="drilldownStatus('cancelled')">
+              <div class="kpi-label">6. Đã huỷ</div>
+              <div class="kpi-value" id="kpiCancelled">0</div>
+              <div class="kpi-sub">Đơn không thành</div>
+            </div>
+          </div>
+
+          <!-- Daily Sales / Collection Bar Chart -->
+          <div class="card-header" style="margin-top: 16px;">
+            <h3 style="font-size: 15px; font-weight: 600;">Doanh số hoàn tất theo ngày</h3>
+          </div>
+          <div class="chart-container">
+            <div class="chart-bars" id="chartBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: ORDERS -->
+      <section id="tab-orders" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Danh sách đơn hàng</h2>
+            <button class="btn btn-primary btn-sm" onclick="openManualOrderModal()">
+              <i data-lucide="plus"></i> <span>Tạo đơn mẫu mới</span>
+            </button>
+          </div>
+
+          <div class="filter-bar">
+            <input type="text" id="orderSearchInput" class="filter-input" placeholder="Tìm mã đơn, tên người mua..." oninput="renderOrdersTable()" style="min-width: 220px;" />
+            <select id="orderStatusFilter" class="filter-select" onchange="renderOrdersTable()">
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="pending">Chờ tiếp nhận</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="preparing">Đang nấu / Chuẩn bị</option>
+              <option value="delivering">Đang giao</option>
+              <option value="in_progress">Đang xử lý</option>
+              <option value="completed">Đã hoàn tất</option>
+              <option value="cancelled">Đã huỷ</option>
+            </select>
+            <select id="orderSourceFilter" class="filter-select" onchange="renderOrdersTable()">
+              <option value="ALL">Tất cả nguồn</option>
+              <option value="Website">Website</option>
+              <option value="Zalo">Zalo</option>
+              <option value="Messenger">Messenger</option>
+              <option value="Phone">Điện thoại</option>
+              <option value="Store">Tại cửa hàng</option>
+            </select>
+            <button class="btn btn-sm" onclick="resetOrderFilters()">Đặt lại lọc</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Ngày đặt</th>
+                  <th>Người mua (SĐT Mẫu)</th>
+                  <th>Người nhận</th>
+                  <th>Kênh</th>
+                  <th>Tổng tiền</th>
+                  <th>Còn thiếu</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: KITCHEN QUEUE -->
+      <section id="tab-kitchen" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Hàng đợi bếp chế biến (Chế độ Bếp: Không hiển thị giá/thông tin người mua)</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Món chế biến</th>
+                  <th>Số lượng</th>
+                  <th>Yêu cầu / Ghi chú</th>
+                  <th>Thời gian đặt</th>
+                  <th>Trạng thái đơn</th>
+                </tr>
+              </thead>
+              <tbody id="kitchenTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: CUSTOMERS -->
+      <section id="tab-customers" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Danh sách khách hàng (Chỉ người đặt, không gộp người nhận quà)</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Khách hàng</th>
+                  <th>SĐT Mẫu</th>
+                  <th>Tổng số đơn</th>
+                  <th>Chi tiêu hoàn tất</th>
+                  <th>Đơn gần nhất</th>
+                  <th>Hồ sơ</th>
+                </tr>
+              </thead>
+              <tbody id="customersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: CONTENT -->
+      <section id="tab-content" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Quản lý nội dung sản phẩm & Bài viết (Marketing)</h2>
+          </div>
+          <h3 style="font-size: 15px; margin-bottom: 10px;">Sản phẩm Hà Mi</h3>
+          <div class="table-wrap" style="margin-bottom: 24px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ảnh</th>
+                  <th>Tên sản phẩm</th>
+                  <th>Mô tả hiển thị</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="productContentTableBody"></tbody>
+            </table>
+          </div>
+
+          <h3 style="font-size: 15px; margin-bottom: 10px;">Bài viết giới thiệu</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tiêu đề bài viết</th>
+                  <th>Trạng thái</th>
+                  <th>Ngày sửa</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="articleTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: STAFF (OWNER ONLY) -->
+      <section id="tab-staff" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Phân quyền nhân sự nội bộ (Dành riêng cho OWNER)</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Họ tên nhân sự</th>
+                  <th>Email mẫu</th>
+                  <th>Các vai trò phân quyền</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="staffTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Mobile Nav -->
+  <nav class="mobile-nav-bar" id="mobileNavBar">
+    <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <i data-lucide="layout-dashboard"></i> <span>Tổng quan</span>
+    </button>
+    <button class="nav-btn" data-tab="orders" onclick="switchTab('orders')">
+      <i data-lucide="shopping-cart"></i> <span>Đơn hàng</span>
+    </button>
+    <button class="nav-btn" data-tab="kitchen" onclick="switchTab('kitchen')">
+      <i data-lucide="soup"></i> <span>Bếp</span>
+    </button>
+    <button class="nav-btn" data-tab="customers" onclick="switchTab('customers')">
+      <i data-lucide="users"></i> <span>Khách</span>
+    </button>
+    <button class="nav-btn" data-tab="content" onclick="switchTab('content')">
+      <i data-lucide="file-text"></i> <span>Nội dung</span>
+    </button>
+    <button class="nav-btn" data-tab="staff" onclick="switchTab('staff')">
+      <i data-lucide="shield-check"></i> <span>Nhân sự</span>
+    </button>
+  </nav>
+
+  <!-- MODALS -->
+
+  <!-- Order Detail & Settlement Modal -->
+  <dialog id="orderDetailModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalOrderTitle">Chi tiết đơn hàng</h3>
+        <button class="btn btn-sm" onclick="closeDialog('orderDetailModal')">✕ Đóng</button>
+      </div>
+      <div class="modal-body" id="orderDetailContent">
+        <!-- Dynamic details loaded by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeDialog('orderDetailModal')">Đóng</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Manual Order Modal -->
+  <dialog id="manualOrderModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Tạo đơn hàng mẫu mới</h3>
+        <button class="btn btn-sm" onclick="closeDialog('manualOrderModal')">✕ Đóng</button>
+      </div>
+      <form onsubmit="handleCreateManualOrder(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="mSource">Nguồn đơn hàng *</label>
+            <select id="mSource" class="form-control" required>
+              <option value="Website">Website</option>
+              <option value="Zalo">Zalo</option>
+              <option value="Messenger">Messenger</option>
+              <option value="Phone">Điện thoại</option>
+              <option value="Store">Tại cửa hàng</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="mBuyerName">Tên người mua *</label>
+            <input type="text" id="mBuyerName" class="form-control" placeholder="Ví dụ: Nguyễn Văn Demo" required />
+          </div>
+          <div class="form-group">
+            <label for="mBuyerPhone">Số điện thoại mẫu *</label>
+            <input type="text" id="mBuyerPhone" class="form-control" value="SĐT mẫu 0900-DEMO-99" required />
+          </div>
+          <div class="form-group">
+            <label for="mRecipientName">Tên người nhận (Để trống nếu chính người mua nhận)</label>
+            <input type="text" id="mRecipientName" class="form-control" placeholder="Ví dụ: Bà ngoại Nguyễn Thị Mẫu" />
+          </div>
+          <div class="form-group">
+            <label for="mProduct">Sản phẩm *</label>
+            <select id="mProduct" class="form-control" required>
+              <option value="P1">Yến chưng Tứ Quý An Nhiên (185.000 ₫)</option>
+              <option value="P2">Hũ Yến 75ml Đường Phèn V2 (145.000 ₫)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="mQuantity">Số lượng *</label>
+            <input type="number" id="mQuantity" class="form-control" min="1" max="50" value="2" required />
+          </div>
+          <div class="form-group">
+            <label for="mDeliveryText">Địa chỉ giao hàng / Ghi chú</label>
+            <textarea id="mDeliveryText" class="form-control" rows="2" placeholder="Giao buổi sáng, đóng hộp quà..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeDialog('manualOrderModal')">Huỷ</button>
+          <button type="submit" class="btn btn-primary">Lưu vào demo</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Customer Profile Modal -->
+  <dialog id="customerProfileModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="custProfileTitle">Hồ sơ khách hàng</h3>
+        <button class="btn btn-sm" onclick="closeDialog('customerProfileModal')">✕ Đóng</button>
+      </div>
+      <div class="modal-body" id="customerProfileContent">
+        <!-- Dynamic customer details -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeDialog('customerProfileModal')">Đóng</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Edit Product Content Modal -->
+  <dialog id="editProductModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="editProductTitle">Chỉnh sửa mô tả sản phẩm</h3>
+        <button class="btn btn-sm" onclick="closeDialog('editProductModal')">✕ Đóng</button>
+      </div>
+      <form onsubmit="handleSaveProductDesc(event)">
+        <input type="hidden" id="editProductId" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Tên sản phẩm</label>
+            <input type="text" id="editProductName" class="form-control" disabled />
+          </div>
+          <div class="form-group">
+            <label for="editProductDesc">Mô tả sản phẩm (Marketing có quyền sửa)</label>
+            <textarea id="editProductDesc" class="form-control" rows="4" required></textarea>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted);">
+            Lưu ý: Giá và cấu hình tồn kho được khóa chặt, chỉ nhân sự có thẩm quyền mới được điều chỉnh.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeDialog('editProductModal')">Huỷ</button>
+          <button type="submit" class="btn btn-primary">Lưu vào demo</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Edit Staff Roles Modal -->
+  <dialog id="editStaffModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="editStaffTitle">Phân quyền nhân sự</h3>
+        <button class="btn btn-sm" onclick="closeDialog('editStaffModal')">✕ Đóng</button>
+      </div>
+      <form onsubmit="handleSaveStaffRoles(event)">
+        <input type="hidden" id="editStaffId" />
+        <div class="modal-body">
+          <p id="editStaffName" style="font-weight: 600; margin-bottom: 8px;"></p>
+          <div class="form-group">
+            <label>Chọn các vai trò áp dụng:</label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
+              <input type="checkbox" id="roleChkOWNER" value="OWNER" /> Chủ thương hiệu (OWNER)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
+              <input type="checkbox" id="roleChkMANAGER" value="MANAGER" /> Quản lý chung (MANAGER)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
+              <input type="checkbox" id="roleChkSALES" value="SALES" /> Bán hàng & Thu ngân (SALES)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
+              <input type="checkbox" id="roleChkKITCHEN" value="KITCHEN" /> Bếp & Điều phối (KITCHEN)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
+              <input type="checkbox" id="roleChkMARKETING" value="MARKETING" /> Tiếp thị & Nội dung (MARKETING)
+            </label>
+          </div>
+          <p id="staffWarningMsg" style="font-size: 12px; color: var(--status-red); display: none;">
+            Không thể bỏ vai trò OWNER cuối cùng của hệ thống.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="closeDialog('editStaffModal')">Huỷ</button>
+          <button type="submit" class="btn btn-primary">Lưu vào demo</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Live Toast Container -->
+  <div id="toastContainer" aria-live="polite"></div>
+
+  <script>
+    /* --- 1. CONFIG & UTILS --- */
+    const SIMULATED_TODAY = '2026-10-09';
+
+    const PRODUCTS = {
+      P1: {
+        id: 'P1',
+        name: 'Yến chưng Tứ Quý An Nhiên',
+        price: 185000,
+        image: '/assets/brand/dishes/tu-quy-an-nhien-v2.webp',
+        description: 'Mô tả mẫu cho món yến chưng Tứ Quý An Nhiên.'
+      },
+      P2: {
+        id: 'P2',
+        name: 'Hũ Yến 75ml Đường Phèn V2',
+        price: 145000,
+        image: '/assets/brand/catalog/hu-75ml-duong-phen-v2.webp',
+        description: 'Mô tả mẫu cho hũ yến đường phèn 75ml.'
+      }
+    };
+
+    const INITIAL_FIXTURES = {
+      orders: [
+        {
+          id: 'HM-1001',
+          createdAt: '2026-10-03 09:15',
+          completedAt: '2026-10-03 14:00',
+          source: 'Website',
+          buyerName: 'Nguyễn Văn Mẫu A',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-01',
+          recipientName: 'Bà ngoại Nguyễn Thị Mẫu',
+          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
+          discount: 20000,
+          shippingFee: 25000,
+          status: 'completed',
+          notes: 'Đóng gói túi quà tặng trang nhã',
+          ledger: [
+            { id: 'L-1', date: '2026-10-03', type: 'collection', amount: 375000, method: 'Chuyển khoản' }
+          ]
+        },
+        {
+          id: 'HM-1002',
+          createdAt: '2026-10-04 10:30',
+          completedAt: '2026-10-04 16:45',
+          source: 'Zalo',
+          buyerName: 'Trần Thị Thử Nghiệm B',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-02',
+          recipientName: null,
+          items: [{ productId: 'P2', quantity: 3, unitPrice: 145000 }],
+          discount: 0,
+          shippingFee: 20000,
+          status: 'completed',
+          notes: 'Giao giờ hành chính',
+          ledger: [
+            { id: 'L-2', date: '2026-10-04', type: 'collection', amount: 455000, method: 'Tiền mặt' }
+          ]
+        },
+        {
+          id: 'HM-1003',
+          createdAt: '2026-10-05 14:20',
+          completedAt: null,
+          source: 'Messenger',
+          buyerName: 'Lê Demo C',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-03',
+          recipientName: 'Mẹ Lê Thị Mẫu',
+          items: [{ productId: 'P1', quantity: 1, unitPrice: 185000 }],
+          discount: 0,
+          shippingFee: 20000,
+          status: 'delivering',
+          notes: 'Giao hỏa tốc',
+          ledger: [
+            { id: 'L-3', date: '2026-10-05', type: 'collection', amount: 205000, method: 'Chuyển khoản' }
+          ]
+        },
+        {
+          id: 'HM-1004',
+          createdAt: '2026-10-06 08:45',
+          completedAt: '2026-10-06 11:30',
+          source: 'Store',
+          buyerName: 'Phạm Văn Mẫu D',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-04',
+          recipientName: null,
+          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }, { productId: 'P2', quantity: 1, unitPrice: 145000 }],
+          discount: 30000,
+          shippingFee: 0,
+          status: 'completed',
+          notes: 'Khách mua dùng trực tiếp',
+          ledger: [
+            { id: 'L-4', date: '2026-10-06', type: 'collection', amount: 485000, method: 'Tiền mặt' }
+          ]
+        },
+        {
+          id: 'HM-1005',
+          createdAt: '2026-10-06 16:10',
+          completedAt: null,
+          source: 'Phone',
+          buyerName: 'Hoàng Thị Demo E',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-05',
+          recipientName: null,
+          items: [{ productId: 'P2', quantity: 2, unitPrice: 145000 }],
+          discount: 0,
+          shippingFee: 20000,
+          status: 'cancelled',
+          cancelReason: 'Khách báo bận đi công tác đột xuất',
+          notes: 'Đã gọi xác nhận huỷ',
+          ledger: []
+        },
+        {
+          id: 'HM-1006',
+          createdAt: '2026-10-07 11:00',
+          completedAt: '2026-10-07 15:30',
+          source: 'Website',
+          buyerName: 'Vũ Minh Mẫu F',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-06',
+          recipientName: 'Bạn Vũ Thuỳ Demo',
+          items: [{ productId: 'P1', quantity: 4, unitPrice: 185000 }],
+          discount: 40000,
+          shippingFee: 0,
+          status: 'completed',
+          notes: 'Ghi thiệp chúc mừng',
+          ledger: [
+            { id: 'L-5', date: '2026-10-07', type: 'collection', amount: 700000, method: 'Chuyển khoản' },
+            { id: 'L-6', date: '2026-10-08', type: 'refund', amount: 50000, method: 'Chuyển khoản', reason: 'Hoàn ưu đãi thành viên bù' }
+          ]
+        },
+        {
+          id: 'HM-1007',
+          createdAt: '2026-10-08 10:15',
+          completedAt: null,
+          source: 'Zalo',
+          buyerName: 'Đỗ Lan Demo G',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-07',
+          recipientName: null,
+          items: [{ productId: 'P2', quantity: 4, unitPrice: 145000 }],
+          discount: 20000,
+          shippingFee: 20000,
+          status: 'preparing',
+          notes: 'Ít đường, không đá',
+          ledger: [
+            { id: 'L-7', date: '2026-10-08', type: 'collection', amount: 300000, method: 'Chuyển khoản' }
+          ]
+        },
+        {
+          id: 'HM-1008',
+          createdAt: '2026-10-08 17:30',
+          completedAt: null,
+          source: 'Messenger',
+          buyerName: 'Bùi Tuấn Mẫu H',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-08',
+          recipientName: null,
+          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
+          discount: 0,
+          shippingFee: 25000,
+          status: 'confirmed',
+          notes: 'Gọi trước khi giao',
+          ledger: []
+        },
+        {
+          id: 'HM-1009',
+          createdAt: '2026-10-09 08:30',
+          completedAt: null,
+          source: 'Website',
+          buyerName: 'Ngô Quỳnh Demo I',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-09',
+          recipientName: 'Anh Ngô Văn Mẫu',
+          items: [{ productId: 'P1', quantity: 1, unitPrice: 185000 }, { productId: 'P2', quantity: 2, unitPrice: 145000 }],
+          discount: 0,
+          shippingFee: 20000,
+          status: 'pending',
+          notes: 'Yêu cầu đơn mới tạo sáng nay',
+          ledger: []
+        },
+        {
+          id: 'HM-1010',
+          createdAt: '2026-10-09 10:45',
+          completedAt: '2026-10-09 12:15',
+          source: 'Store',
+          buyerName: 'Đặng Hữu Mẫu K',
+          buyerPhone: 'SĐT mẫu 0900-DEMO-10',
+          recipientName: null,
+          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
+          discount: 10000,
+          shippingFee: 0,
+          status: 'completed',
+          notes: 'Khách thanh toán tại quầy 09/10',
+          ledger: [
+            { id: 'L-8', date: '2026-10-09', type: 'collection', amount: 360000, method: 'Chuyển khoản' }
+          ]
+        }
+      ],
+      articles: [
+        {
+          id: 'ART-1',
+          title: 'Quy trình chưng yến tươi Hà Mi',
+          status: 'published',
+          updatedAt: '2026-10-07'
+        },
+        {
+          id: 'ART-2',
+          title: 'Bí quyết chọn yến sào nguyên chất bồi bổ gia đình',
+          status: 'draft',
+          updatedAt: '2026-10-08'
+        }
+      ],
+      staff: [
+        {
+          id: 'ST-1',
+          name: 'Chủ Hà Mi (mẫu)',
+          email: 'founder@example.test',
+          roles: ['OWNER', 'MANAGER']
+        },
+        {
+          id: 'ST-2',
+          name: 'Trần Quản Lý',
+          email: 'manager@example.test',
+          roles: ['MANAGER', 'SALES']
+        },
+        {
+          id: 'ST-3',
+          name: 'Lê Tư Vấn Bán Hàng',
+          email: 'sales@example.test',
+          roles: ['SALES']
+        },
+        {
+          id: 'ST-4',
+          name: 'Bác Bếp Trưởng Mẫu',
+          email: 'kitchen@example.test',
+          roles: ['KITCHEN']
+        },
+        {
+          id: 'ST-5',
+          name: 'Phạm Truyền Thông',
+          email: 'marketing@example.test',
+          roles: ['MARKETING']
+        }
+      ]
+    };
+
+    // State
+    let appState = {
+      currentRole: 'OWNER',
+      activeTab: 'dashboard',
+      orders: JSON.parse(JSON.stringify(INITIAL_FIXTURES.orders)),
+      articles: JSON.parse(JSON.stringify(INITIAL_FIXTURES.articles)),
+      staff: JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff)),
+      products: JSON.parse(JSON.stringify(PRODUCTS))
+    };
+
+    // Role permissions mapping
+    const ROLE_PERMISSIONS = {
+      OWNER: ['dashboard', 'orders', 'kitchen', 'customers', 'content', 'staff'],
+      MANAGER: ['dashboard', 'orders', 'kitchen', 'customers', 'content'],
+      SALES: ['orders', 'customers'],
+      KITCHEN: ['kitchen'],
+      MARKETING: ['content']
+    };
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatVND(amount) {
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const item = document.createElement('div');
+      item.className = `toast-item ${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : ''}`;
+      item.innerText = message;
+      container.appendChild(item);
+      setTimeout(() => {
+        item.remove();
+      }, 3500);
+    }
+
+    /* --- 2. CALCULATIONS --- */
+    function computeOrderFinancials(order) {
+      const merchandiseTotal = order.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+      const netGoods = Math.max(0, merchandiseTotal - (order.discount || 0));
+      const orderTotal = netGoods + (order.shippingFee || 0);
+      
+      let totalCollected = 0;
+      let totalRefunded = 0;
+      (order.ledger || []).forEach(tx => {
+        if (tx.type === 'collection') totalCollected += tx.amount;
+        if (tx.type === 'refund') totalRefunded += tx.amount;
+      });
+      const netCollected = totalCollected - totalRefunded;
+      const outstanding = Math.max(0, orderTotal - netCollected);
+
+      return {
+        merchandiseTotal,
+        netGoods,
+        orderTotal,
+        totalCollected,
+        totalRefunded,
+        netCollected,
+        outstanding
+      };
+    }
+
+    /* --- 3. ROLE NAVIGATION & GUARDS --- */
+    function handleRoleSwitch(newRole) {
+      appState.currentRole = newRole;
+      closeAllDialogs();
+      const allowedTabs = ROLE_PERMISSIONS[newRole] || [];
+      
+      // Update nav UI
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const tab = btn.getAttribute('data-tab');
+        if (!allowedTabs.includes(tab)) {
+          btn.setAttribute('disabled', 'true');
+        } else {
+          btn.removeAttribute('disabled');
+        }
+      });
+
+      if (!allowedTabs.includes(appState.activeTab)) {
+        switchTab(allowedTabs[0]);
+      } else {
+        switchTab(appState.activeTab);
+      }
+      showToast(`Đã đổi sang chế độ vai trò: ${newRole}`);
+    }
+
+    function switchTab(tabId) {
+      const allowedTabs = ROLE_PERMISSIONS[appState.currentRole] || [];
+      if (!allowedTabs.includes(tabId)) {
+        showToast('Bạn không có quyền truy cập màn hình này!', 'error');
+        return;
+      }
+      appState.activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      const activeEl = document.getElementById(`tab-${tabId}`);
+      if (activeEl) activeEl.style.display = 'block';
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // Refresh views
+      if (tabId === 'dashboard') updateDashboard();
+      if (tabId === 'orders') renderOrdersTable();
+      if (tabId === 'kitchen') renderKitchenTable();
+      if (tabId === 'customers') renderCustomersTable();
+      if (tabId === 'content') renderContentTables();
+      if (tabId === 'staff') renderStaffTable();
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeAllDialogs() {
+      document.querySelectorAll('dialog').forEach(d => { if (d.open) d.close(); });
+    }
+
+    function closeDialog(id) {
+      const dlg = document.getElementById(id);
+      if (dlg) dlg.close();
+    }
+
+    /* --- 4. DASHBOARD --- */
+    function updateDashboard() {
+      const period = document.getElementById('dashPeriod').value;
+      const source = document.getElementById('dashSource').value;
+      const start = document.getElementById('dashStart');
+      const end = document.getElementById('dashEnd');
+      if (period !== 'custom') {
+        start.value = period === 'today' ? SIMULATED_TODAY : '2026-10-03';
+        end.value = SIMULATED_TODAY;
+      }
+      if (!start.value || !end.value || start.value > end.value) {
+        showToast('Khoảng ngày không hợp lệ', 'error');
+        return;
+      }
+      if ((Date.parse(end.value) - Date.parse(start.value)) / 86400000 > 30) {
+        showToast('Demo hỗ trợ khoảng ngày tối đa 31 ngày', 'error');
+        return;
+      }
+      const inPeriod = date => date && date.slice(0, 10) >= start.value && date.slice(0, 10) <= end.value;
+      const sourceOrders = appState.orders.filter(o => source === 'ALL' || o.source === source);
+
+      // Filter orders
+      let filtered = sourceOrders.filter(ord => inPeriod(ord.createdAt));
+
+      const newRequests = filtered.filter(o => o.status === 'pending').length;
+      const inProgress = filtered.filter(o => ['confirmed', 'preparing', 'delivering'].includes(o.status)).length;
+      const completedOrders = sourceOrders.filter(o => o.status === 'completed' && inPeriod(o.completedAt));
+      const cancelled = filtered.filter(o => o.status === 'cancelled').length;
+
+      // Sales: Completed merchandise less discount by completedAt in period
+      let completedSales = 0;
+      completedOrders.forEach(ord => {
+        const fin = computeOrderFinancials(ord);
+        completedSales += fin.netGoods;
+      });
+
+      // Net collected: All ledger collections minus refunds within period regardless of completion
+      let netCollectedSum = 0;
+      appState.orders.forEach(ord => {
+        if (source !== 'ALL' && ord.source !== source) return;
+        (ord.ledger || []).forEach(tx => {
+          if (!inPeriod(tx.date)) return;
+          if (tx.type === 'collection') netCollectedSum += tx.amount;
+          if (tx.type === 'refund') netCollectedSum -= tx.amount;
+        });
+      });
+
+      document.getElementById('kpiNewRequests').innerText = newRequests;
+      document.getElementById('kpiPending').innerText = inProgress;
+      document.getElementById('kpiCompleted').innerText = completedOrders.length;
+      document.getElementById('kpiSales').innerText = formatVND(completedSales);
+      document.getElementById('kpiNetCollected').innerText = formatVND(netCollectedSum);
+      document.getElementById('kpiCancelled').innerText = cancelled;
+
+      renderDailyChart(source);
+      let summary = document.getElementById('sourceSummary');
+      if (!summary) {
+        summary = document.createElement('div'); summary.id = 'sourceSummary'; summary.className = 'source-summary';
+        document.getElementById('chartBars').parentElement.appendChild(summary);
+      }
+      summary.innerHTML = ['Website','Zalo','Messenger','Phone','Store','Other'].map(s =>
+        `<span>${esc({Phone:'Điện thoại',Store:'Cửa hàng',Other:'Khác'}[s] || s)}: <strong>${filtered.filter(o=>o.source===s).length}</strong></span>`).join('');
+    }
+
+    function renderDailyChart(sourceFilter) {
+      const chartContainer = document.getElementById('chartBars');
+      chartContainer.innerHTML = '';
+      const start = document.getElementById('dashStart').value;
+      const end = document.getElementById('dashEnd').value;
+      const days = [];
+      for (let date = new Date(start + 'T00:00:00Z'); date.toISOString().slice(0,10) <= end && days.length < 31; date.setUTCDate(date.getUTCDate()+1)) {
+        days.push(date.toISOString().slice(0,10));
+      }
+
+      let maxVal = 1;
+      const dailyData = days.map(day => {
+        let totalSales = 0;
+        appState.orders.forEach(ord => {
+          if (sourceFilter !== 'ALL' && ord.source !== sourceFilter) return;
+          if (ord.status === 'completed' && ord.completedAt && ord.completedAt.startsWith(day)) {
+            const fin = computeOrderFinancials(ord);
+            totalSales += fin.netGoods;
+          }
+        });
+        if (totalSales > maxVal) maxVal = totalSales;
+        return { day, totalSales };
+      });
+
+      dailyData.forEach(item => {
+        const heightPct = item.totalSales === 0 ? 0 : Math.round((item.totalSales / maxVal) * 100);
+        const shortDate = item.day.slice(8, 10) + '/10';
+        const col = document.createElement('div');
+        col.className = 'chart-col';
+        col.innerHTML = `
+          <div class="chart-tooltip">${item.totalSales > 0 ? (item.totalSales / 1000) + 'k' : '0'}</div>
+          <div class="chart-bar-rect ${item.totalSales === 0 ? 'empty' : ''}" style="height: ${heightPct}%;"></div>
+          <div class="chart-axis-label">${shortDate}</div>
+        `;
+        chartContainer.appendChild(col);
+      });
+    }
+
+    function drilldownStatus(statusGroup) {
+      document.getElementById('orderSourceFilter').value = document.getElementById('dashSource').value;
+      switchTab('orders');
+      const statusSelect = document.getElementById('orderStatusFilter');
+      if (statusGroup === 'pending') statusSelect.value = 'pending';
+      else if (statusGroup === 'completed') statusSelect.value = 'completed';
+      else if (statusGroup === 'cancelled') statusSelect.value = 'cancelled';
+      else statusSelect.value = 'in_progress';
+      renderOrdersTable();
+    }
+
+    /* --- 5. ORDERS TABLE & DETAILS --- */
+    function renderOrdersTable() {
+      const tbody = document.getElementById('ordersTableBody');
+      const q = (document.getElementById('orderSearchInput').value || '').toLowerCase().trim();
+      const statusFilter = document.getElementById('orderStatusFilter').value;
+      const sourceFilter = document.getElementById('orderSourceFilter').value;
+
+      const filtered = appState.orders.filter(ord => {
+        if (statusFilter === 'in_progress' && !['confirmed', 'preparing', 'delivering'].includes(ord.status)) return false;
+        if (statusFilter !== 'ALL' && statusFilter !== 'in_progress' && ord.status !== statusFilter) return false;
+        if (sourceFilter !== 'ALL' && ord.source !== sourceFilter) return false;
+        if (q) {
+          const matchId = ord.id.toLowerCase().includes(q);
+          const matchBuyer = ord.buyerName.toLowerCase().includes(q);
+          if (!matchId && !matchBuyer) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy đơn hàng phù hợp</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(ord => {
+        const fin = computeOrderFinancials(ord);
+        const statusLabels = {
+          pending: '<span class="status-badge badge-pending">Chờ tiếp nhận</span>',
+          confirmed: '<span class="status-badge badge-confirmed">Đã xác nhận</span>',
+          preparing: '<span class="status-badge badge-preparing">Đang nấu/chuẩn bị</span>',
+          delivering: '<span class="status-badge badge-delivering">Đang giao</span>',
+          completed: '<span class="status-badge badge-completed">Hoàn tất</span>',
+          cancelled: '<span class="status-badge badge-cancelled">Đã huỷ</span>'
+        };
+
+        return `
+          <tr>
+            <td><strong>${esc(ord.id)}</strong></td>
+            <td>${esc(ord.createdAt)}</td>
+            <td>
+              <div><strong>${esc(ord.buyerName)}</strong></div>
+              <div style="font-size: 11px; color: var(--text-muted);">${esc(ord.buyerPhone)}</div>
+            </td>
+            <td>${ord.recipientName ? `<span style="color: #0369a1;">🎁 ${esc(ord.recipientName)}</span>` : '<span style="color: var(--text-muted);">Chính người mua</span>'}</td>
+            <td><span class="badge-source">${esc(ord.source)}</span></td>
+            <td><strong>${formatVND(fin.orderTotal)}</strong></td>
+            <td style="color: ${fin.outstanding > 0 ? 'var(--status-amber)' : 'var(--primary)'}; font-weight: 600;">
+              ${fin.outstanding > 0 ? formatVND(fin.outstanding) : 'Đã thu đủ'}
+            </td>
+            <td>${statusLabels[ord.status] || ord.status}</td>
+            <td>
+              <button class="btn btn-sm" onclick="openOrderDetail('${ord.id}')">
+                Xem & Xử lý
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function resetOrderFilters() {
+      document.getElementById('orderSearchInput').value = '';
+      document.getElementById('orderStatusFilter').value = 'ALL';
+      document.getElementById('orderSourceFilter').value = 'ALL';
+      renderOrdersTable();
+    }
+
+    function openOrderDetail(orderId) {
+      const ord = appState.orders.find(o => o.id === orderId);
+      if (!ord) return;
+      const fin = computeOrderFinancials(ord);
+      const isStaffManagerOrOwner = ['OWNER', 'MANAGER'].includes(appState.currentRole);
+
+      document.getElementById('modalOrderTitle').innerText = `Đơn hàng ${ord.id} - ${ord.buyerName}`;
+      
+      let itemsHtml = ord.items.map(it => {
+        const p = appState.products[it.productId] || { name: 'Món yến', image: '' };
+        return `
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed var(--border); padding: 8px 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="${esc(p.image)}" alt="" class="product-thumb" onerror="this.style.display='none'" />
+              <div>
+                <div style="font-weight: 600;">${esc(p.name)}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${formatVND(it.unitPrice)} x ${it.quantity}</div>
+              </div>
+            </div>
+            <div style="font-weight: 600;">${formatVND(it.unitPrice * it.quantity)}</div>
+          </div>
+        `;
+      }).join('');
+
+      let ledgerHtml = (ord.ledger && ord.ledger.length > 0) 
+        ? ord.ledger.map(tx => `
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0;">
+              <span>${esc(tx.date)} - <strong>${tx.type === 'collection' ? 'Thu tiền' : 'Hoàn tiền'}</strong> (${esc(tx.method)})${tx.reason ? ' - ' + esc(tx.reason) : ''}</span>
+              <strong style="color: ${tx.type === 'collection' ? 'var(--primary)' : 'var(--status-red)'};">
+                ${tx.type === 'collection' ? '+' : '-'}${formatVND(tx.amount)}
+              </strong>
+            </div>
+          `).join('')
+        : '<div style="font-size: 13px; color: var(--text-muted);">Chưa có giao dịch ghi nhận trong sổ quỹ</div>';
+
+      // Status progression
+      const nextStatusMap = {
+        pending: { next: 'confirmed', label: 'Xác nhận đơn hàng' },
+        confirmed: { next: 'preparing', label: 'Chuyển sang Bếp pha chế' },
+        preparing: { next: 'delivering', label: 'Xuất giao vận chuyển' },
+        delivering: { next: 'completed', label: 'Xác nhận hoàn tất đơn' }
+      };
+
+      let actionButtonsHtml = '';
+      if (nextStatusMap[ord.status]) {
+        actionButtonsHtml += `
+          <button class="btn btn-primary" onclick="progressOrderStatus('${ord.id}', '${nextStatusMap[ord.status].next}')">
+            ${nextStatusMap[ord.status].label}
+          </button>
+        `;
+      } else if (ord.status === 'completed') {
+        actionButtonsHtml += `<span style="color: var(--primary); font-weight: 600;">✓ Đơn hàng đã hoàn tất - Không mở lại đơn</span>`;
+      }
+
+      if (['pending', 'confirmed'].includes(ord.status)) {
+        actionButtonsHtml += `
+          <button class="btn btn-danger" onclick="promptCancelOrder('${ord.id}')">
+            Huỷ đơn hàng
+          </button>
+        `;
+      }
+
+      const contentEl = document.getElementById('orderDetailContent');
+      contentEl.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc; padding: 12px; border-radius: var(--radius);">
+          <div>
+            <div style="font-size: 12px; color: var(--text-muted);">Người đặt hàng:</div>
+            <strong>${esc(ord.buyerName)}</strong>
+            <div style="font-size: 12px;">${esc(ord.buyerPhone)}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-muted);">Người nhận quà / Giao đến:</div>
+            <strong>${ord.recipientName ? '🎁 ' + esc(ord.recipientName) : 'Chính người mua'}</strong>
+            <div style="font-size: 12px;">Kênh: ${esc(ord.source)}</div>
+          </div>
+          ${ord.notes ? `<div style="grid-column: 1 / -1; font-size: 12px; color: #475569;"><strong>Ghi chú:</strong> ${esc(ord.notes)}</div>` : ''}
+          ${ord.cancelReason ? `<div style="grid-column: 1 / -1; font-size: 12px; color: var(--status-red);"><strong>Lý do huỷ:</strong> ${esc(ord.cancelReason)}</div>` : ''}
+        </div>
+
+        <div>
+          <h4 style="font-size: 14px; margin-bottom: 8px;">Sản phẩm đặt mua</h4>
+          ${itemsHtml}
+          <div style="margin-top: 10px; font-size: 13px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between;"><span>Tiền hàng:</span> <span>${formatVND(fin.merchandiseTotal)}</span></div>
+            <div style="display: flex; justify-content: space-between; color: var(--status-red);"><span>Giảm giá:</span> <span>-${formatVND(ord.discount)}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Phí vận chuyển:</span> <span>${formatVND(ord.shippingFee)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 15px; border-top: 1px solid var(--border); padding-top: 4px;">
+              <span>Tổng thanh toán:</span> <span>${formatVND(fin.orderTotal)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sổ quỹ & Ghi nhận thu / Hoàn -->
+        <div style="background: #fdfefe; border: 1px solid var(--border); padding: 12px; border-radius: var(--radius);">
+          <h4 style="font-size: 14px; margin-bottom: 6px;">Lịch sử sổ quỹ & Thanh toán</h4>
+          <div style="margin-bottom: 10px;">${ledgerHtml}</div>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--border);">
+            <span>Thực thu: <strong>${formatVND(fin.netCollected)}</strong></span>
+            <span style="color: ${fin.outstanding > 0 ? 'var(--status-amber)' : 'var(--primary)'}; font-weight: 700;">
+              Còn thiếu: ${formatVND(fin.outstanding)}
+            </span>
+          </div>
+
+          <!-- Collection Form -->
+          ${fin.outstanding > 0 && ord.status !== 'cancelled' ? `
+            <form onsubmit="handleRecordCollection(event, '${ord.id}', ${fin.outstanding})" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;">
+              <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 11px; font-weight: 600;">Số tiền thu (VND):</label>
+                <input type="number" id="colAmount_${ord.id}" class="form-control" value="${fin.outstanding}" min="1" max="${fin.outstanding}" step="1" required />
+              </div>
+              <div style="width: 140px;">
+                <label style="font-size: 11px; font-weight: 600;">Hình thức:</label>
+                <select id="colMethod_${ord.id}" class="form-control">
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Tiền mặt">Tiền mặt</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm" style="margin-bottom: 2px;">Lưu vào demo</button>
+            </form>
+          ` : ''}
+
+          <!-- Refund Form (Owner / Manager only) -->
+          ${isStaffManagerOrOwner && fin.netCollected > 0 ? `
+            <details style="margin-top: 10px; font-size: 12px;">
+              <summary style="cursor: pointer; color: var(--status-red); font-weight: 600;">Hoàn tiền đơn hàng (Quản lý/Chủ)</summary>
+              <form onsubmit="handleRecordRefund(event, '${ord.id}', ${fin.netCollected})" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; gap: 8px;">
+                  <input type="number" id="refAmount_${ord.id}" class="form-control" placeholder="Số tiền hoàn" min="1" max="${fin.netCollected}" required style="flex: 1;" />
+                  <select id="refMethod_${ord.id}" class="form-control" style="width: 140px;">
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Tiền mặt">Tiền mặt</option>
+                  </select>
+                </div>
+                <input type="text" id="refReason_${ord.id}" class="form-control" placeholder="Bắt buộc nhập lý do hoàn tiền..." required />
+                <button type="submit" class="btn btn-danger btn-sm" style="align-self: flex-start;">Lưu vào demo</button>
+              </form>
+            </details>
+          ` : ''}
+        </div>
+
+        <!-- Status Action Bar -->
+        <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px;">
+          ${actionButtonsHtml}
+        </div>
+      `;
+
+      document.getElementById('orderDetailModal').showModal();
+    }
+
+    function progressOrderStatus(orderId, nextStatus) {
+      if (!['OWNER', 'MANAGER', 'SALES'].includes(appState.currentRole)) return;
+      const ord = appState.orders.find(o => o.id === orderId);
+      if (!ord) return;
+      const next = { pending: 'confirmed', confirmed: 'preparing', preparing: 'delivering', delivering: 'completed' };
+      if (next[ord.status] !== nextStatus) return;
+      ord.status = nextStatus;
+      if (nextStatus === 'completed') {
+        ord.completedAt = `${SIMULATED_TODAY} 14:00`;
+      }
+      showToast(`Đã chuyển đơn ${orderId} sang: ${nextStatus}`, 'success');
+      openOrderDetail(orderId);
+      renderOrdersTable();
+      updateDashboard();
+    }
+
+    function promptCancelOrder(orderId) {
+      if (!['OWNER', 'MANAGER', 'SALES'].includes(appState.currentRole)) return;
+      const currentOrder = appState.orders.find(o => o.id === orderId);
+      if (!currentOrder || ['completed', 'cancelled'].includes(currentOrder.status)) return;
+      const reason = window.prompt('Nhập lý do huỷ đơn hàng (bắt buộc):');
+      if (!reason || !reason.trim()) {
+        showToast('Huỷ thao tác: Chưa nhập lý do huỷ', 'error');
+        return;
+      }
+      const ord = appState.orders.find(o => o.id === orderId);
+      if (ord) {
+        ord.status = 'cancelled';
+        ord.cancelReason = reason.trim();
+        showToast(`Đơn ${orderId} đã được huỷ thành công`, 'info');
+        openOrderDetail(orderId);
+        renderOrdersTable();
+        updateDashboard();
+      }
+    }
+
+    function handleRecordCollection(event, orderId, maxOutstanding) {
+      event.preventDefault();
+      if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole)) return;
+      const amountInput = document.getElementById(`colAmount_${orderId}`);
+      const methodInput = document.getElementById(`colMethod_${orderId}`);
+      const amount = Number(amountInput.value);
+      const method = methodInput.value;
+
+      if (!Number.isSafeInteger(amount) || amount <= 0) {
+        showToast('Số tiền thu phải là số nguyên dương!', 'error');
+        return;
+      }
+      const currentOrder = appState.orders.find(o => o.id === orderId);
+      maxOutstanding = currentOrder ? computeOrderFinancials(currentOrder).outstanding : 0;
+      if (amount > maxOutstanding) {
+        showToast(`Số tiền thu vượt quá số dư còn thiếu (${formatVND(maxOutstanding)})`, 'error');
+        return;
+      }
+
+      const ord = appState.orders.find(o => o.id === orderId);
+      if (ord) {
+        ord.ledger.push({
+          id: `L-${Date.now()}`,
+          date: SIMULATED_TODAY,
+          type: 'collection',
+          amount,
+          method
+        });
+        showToast(`Đã ghi nhận thu ${formatVND(amount)} vào demo`, 'success');
+        openOrderDetail(orderId);
+        renderOrdersTable();
+        updateDashboard();
+      }
+    }
+
+    function handleRecordRefund(event, orderId, maxRefundable) {
+      event.preventDefault();
+      if (!['OWNER','MANAGER'].includes(appState.currentRole)) return;
+      const amountInput = document.getElementById(`refAmount_${orderId}`);
+      const methodInput = document.getElementById(`refMethod_${orderId}`);
+      const reasonInput = document.getElementById(`refReason_${orderId}`);
+      const amount = Number(amountInput.value);
+      const method = methodInput.value;
+      const reason = reasonInput.value.trim();
+
+      const currentOrder = appState.orders.find(o => o.id === orderId);
+      maxRefundable = currentOrder ? computeOrderFinancials(currentOrder).netCollected : 0;
+      if (!Number.isSafeInteger(amount) || amount <= 0 || amount > maxRefundable) {
+        showToast(`Số tiền hoàn không hợp lệ (Tối đa ${formatVND(maxRefundable)})`, 'error');
+        return;
+      }
+      if (!reason) {
+        showToast('Bắt buộc nhập lý do hoàn tiền!', 'error');
+        return;
+      }
+
+      const ord = appState.orders.find(o => o.id === orderId);
+      if (ord) {
+        ord.ledger.push({
+          id: `L-REF-${Date.now()}`,
+          date: SIMULATED_TODAY,
+          type: 'refund',
+          amount,
+          method,
+          reason
+        });
+        showToast(`Đã ghi nhận hoàn tiền ${formatVND(amount)}`, 'info');
+        openOrderDetail(orderId);
+        renderOrdersTable();
+        updateDashboard();
+      }
+    }
+
+    /* --- 6. MANUAL ORDER CREATION --- */
+    function openManualOrderModal() {
+      document.getElementById('manualOrderModal').showModal();
+    }
+
+    function handleCreateManualOrder(event) {
+      event.preventDefault();
+      const source = document.getElementById('mSource').value;
+      const buyerName = document.getElementById('mBuyerName').value.trim();
+      const buyerPhone = document.getElementById('mBuyerPhone').value.trim();
+      const recipientName = document.getElementById('mRecipientName').value.trim() || null;
+      const productId = document.getElementById('mProduct').value;
+      const quantity = Number(document.getElementById('mQuantity').value);
+      const deliveryText = document.getElementById('mDeliveryText').value.trim();
+
+      const p = appState.products[productId];
+      if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole) || !source || !buyerName || !p || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) {
+        showToast('Thông tin đơn mẫu không hợp lệ', 'error'); return;
+      }
+      const newOrder = {
+        id: `DEMO-${appState.orders.length + 1}`,
+        createdAt: `${SIMULATED_TODAY} 11:30`,
+        completedAt: null,
+        source,
+        buyerName,
+        buyerPhone,
+        recipientName,
+        items: [{ productId, quantity, unitPrice: p.price }],
+        discount: 0,
+        shippingFee: source === 'Store' ? 0 : 20000,
+        status: 'pending',
+        notes: deliveryText,
+        ledger: []
+      };
+
+      appState.orders.unshift(newOrder);
+      closeDialog('manualOrderModal');
+      showToast(`Đã tạo đơn mẫu ${newOrder.id} thành công!`, 'success');
+      renderOrdersTable();
+      updateDashboard();
+    }
+
+    /* --- 7. KITCHEN QUEUE --- */
+    function renderKitchenTable() {
+      const tbody = document.getElementById('kitchenTableBody');
+      const activeKitchenOrders = appState.orders.filter(o => ['confirmed', 'preparing'].includes(o.status));
+
+      if (activeKitchenOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Không có đơn hàng nào trong hàng đợi bếp</td></tr>`;
+        return;
+      }
+
+      let rows = [];
+      activeKitchenOrders.forEach(ord => {
+        ord.items.forEach(it => {
+          const p = appState.products[it.productId] || { name: 'Món yến' };
+          rows.push(`
+            <tr>
+              <td><strong>${esc(ord.id)}</strong></td>
+              <td><strong>${esc(p.name)}</strong></td>
+              <td><span style="font-size: 16px; font-weight: 700; color: var(--primary);">x${it.quantity}</span></td>
+              <td>${esc(it.option || 'Tiêu chuẩn')}</td>
+              <td>${esc(ord.createdAt)}</td>
+              <td><span class="status-badge badge-${ord.status}">${ord.status === 'confirmed' ? 'Đã xác nhận' : 'Đang chế biến'}</span></td>
+            </tr>
+          `);
+        });
+      });
+      tbody.innerHTML = rows.join('');
+    }
+
+    /* --- 8. CUSTOMERS TAB --- */
+    function renderCustomersTable() {
+      const tbody = document.getElementById('customersTableBody');
+      const customerMap = {};
+
+      appState.orders.forEach(ord => {
+        // ONLY buyer counts as customer, NOT gift recipient
+        const key = ord.buyerName;
+        if (!customerMap[key]) {
+          customerMap[key] = {
+            name: ord.buyerName,
+            phone: ord.buyerPhone,
+            orderCount: 0,
+            totalSpent: 0,
+            lastOrderDate: ord.createdAt
+          };
+        }
+        customerMap[key].orderCount += 1;
+        if (ord.status === 'completed') {
+          const fin = computeOrderFinancials(ord);
+          customerMap[key].totalSpent += fin.netGoods;
+        }
+        if (ord.createdAt > customerMap[key].lastOrderDate) {
+          customerMap[key].lastOrderDate = ord.createdAt;
+        }
+      });
+
+      const list = Object.values(customerMap);
+      tbody.innerHTML = list.map(c => `
+        <tr>
+          <td><strong>${esc(c.name)}</strong></td>
+          <td>${esc(c.phone)}</td>
+          <td>${c.orderCount} đơn</td>
+          <td><strong>${formatVND(c.totalSpent)}</strong></td>
+          <td>${esc(c.lastOrderDate)}</td>
+          <td>
+              <button class="btn btn-sm" onclick="openCustomerProfile(appState.orders[${appState.orders.findIndex(o => o.buyerName === c.name)}].buyerName)">
+              Xem hồ sơ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openCustomerProfile(buyerName) {
+      const custOrders = appState.orders.filter(o => o.buyerName === buyerName);
+      document.getElementById('custProfileTitle').innerText = `Hồ sơ: ${buyerName}`;
+      
+      let historyHtml = custOrders.map(o => {
+        const fin = computeOrderFinancials(o);
+        return `
+          <div style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${esc(o.id)}</strong>
+              <span class="status-badge badge-${o.status}">${o.status}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+              Ngày đặt: ${esc(o.createdAt)} | Tổng: ${formatVND(fin.orderTotal)}
+              ${o.recipientName ? ` | Người nhận quà: 🎁 ${esc(o.recipientName)}` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('customerProfileContent').innerHTML = `
+        <div style="margin-bottom: 12px;">
+          <div><strong>Họ tên:</strong> ${esc(buyerName)}</div>
+          <div><strong>SĐT mẫu:</strong> ${esc(custOrders[0]?.buyerPhone || '')}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            Lưu ý: Hệ thống chỉ ghi nhận dữ liệu người thanh toán/người mua, các thông tin người nhận quà được lưu riêng theo từng đơn hàng.
+          </div>
+        </div>
+        <h4 style="font-size: 14px; margin-bottom: 8px;">Lịch sử đơn hàng (${custOrders.length} đơn)</h4>
+        <div>${historyHtml}</div>
+      `;
+      document.getElementById('customerProfileModal').showModal();
+    }
+
+    /* --- 9. CONTENT TAB --- */
+    function renderContentTables() {
+      const pBody = document.getElementById('productContentTableBody');
+      pBody.innerHTML = Object.values(appState.products).map(p => `
+        <tr>
+          <td><img src="${esc(p.image)}" class="product-thumb" alt="" onerror="this.style.display='none'" /></td>
+          <td><strong>${esc(p.name)}</strong></td>
+          <td style="max-width: 320px; font-size: 13px; color: var(--text-muted);">${esc(p.description)}</td>
+          <td>
+            <button class="btn btn-sm" onclick="openEditProduct('${p.id}')">
+              Sửa mô tả
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      const aBody = document.getElementById('articleTableBody');
+      aBody.innerHTML = appState.articles.map(art => `
+        <tr>
+          <td><strong>${esc(art.title)}</strong></td>
+          <td>
+            <span class="status-badge ${art.status === 'published' ? 'badge-completed' : 'badge-pending'}">
+              ${art.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+            </span>
+          </td>
+          <td>${esc(art.updatedAt)}</td>
+          <td>
+            <button class="btn btn-sm" onclick="toggleArticleStatus('${art.id}')">
+              Đổi trạng thái
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditProduct(productId) {
+      const p = appState.products[productId];
+      if (!p) return;
+      document.getElementById('editProductId').value = p.id;
+      document.getElementById('editProductName').value = p.name;
+      document.getElementById('editProductDesc').value = p.description;
+      document.getElementById('editProductModal').showModal();
+    }
+
+    function handleSaveProductDesc(event) {
+      event.preventDefault();
+      const pId = document.getElementById('editProductId').value;
+      const desc = document.getElementById('editProductDesc').value.trim();
+      if (appState.products[pId]) {
+        appState.products[pId].description = desc;
+        showToast('Đã lưu mô tả sản phẩm vào demo', 'success');
+        closeDialog('editProductModal');
+        renderContentTables();
+      }
+    }
+
+    function toggleArticleStatus(articleId) {
+      const art = appState.articles.find(a => a.id === articleId);
+      if (art) {
+        art.status = art.status === 'published' ? 'draft' : 'published';
+        art.updatedAt = SIMULATED_TODAY;
+        showToast(`Đã cập nhật bài viết thành ${art.status === 'published' ? 'Xuất bản' : 'Bản nháp'}`, 'info');
+        renderContentTables();
+      }
+    }
+
+    /* --- 10. STAFF TAB (OWNER ONLY) --- */
+    function renderStaffTable() {
+      const tbody = document.getElementById('staffTableBody');
+      tbody.innerHTML = appState.staff.map(st => `
+        <tr>
+          <td><strong>${esc(st.name)}</strong></td>
+          <td>${esc(st.email)}</td>
+          <td>
+            ${st.roles.map(r => `<span class="status-badge badge-confirmed" style="margin-right: 4px;">${r}</span>`).join('')}
+          </td>
+          <td>
+            <button class="btn btn-sm" onclick="openEditStaff('${st.id}')">
+              Phân quyền
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditStaff(staffId) {
+      const st = appState.staff.find(s => s.id === staffId);
+      if (!st) return;
+      document.getElementById('editStaffId').value = st.id;
+      document.getElementById('editStaffName').innerText = `${st.name} (${st.email})`;
+      
+      ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
+        const chk = document.getElementById(`roleChk${r}`);
+        if (chk) chk.checked = st.roles.includes(r);
+      });
+      document.getElementById('staffWarningMsg').style.display = 'none';
+      document.getElementById('editStaffModal').showModal();
+    }
+
+    function handleSaveStaffRoles(event) {
+      event.preventDefault();
+      const staffId = document.getElementById('editStaffId').value;
+      const st = appState.staff.find(s => s.id === staffId);
+      if (!st) return;
+
+      const selectedRoles = [];
+      ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
+        const chk = document.getElementById(`roleChk${r}`);
+        if (chk && chk.checked) selectedRoles.push(r);
+      });
+
+      // Last owner guard
+      const isRemovingOwner = st.roles.includes('OWNER') && !selectedRoles.includes('OWNER');
+      if (isRemovingOwner) {
+        const totalOwners = appState.staff.filter(s => s.roles.includes('OWNER')).length;
+        if (totalOwners <= 1) {
+          document.getElementById('staffWarningMsg').style.display = 'block';
+          showToast('Hệ thống bắt buộc phải duy trì ít nhất 1 tài khoản OWNER!', 'error');
+          return;
+        }
+      }
+
+      st.roles = selectedRoles;
+      showToast(`Đã cập nhật vai trò cho ${st.name} vào demo`, 'success');
+      closeDialog('editStaffModal');
+      renderStaffTable();
+    }
+
+    /* --- 11. RESET DEMO --- */
+    function confirmResetDemo() {
+      if (window.confirm('Khôi phục dữ liệu mẫu Hà Mi? Các thay đổi demo sẽ được đặt lại.')) {
+        appState.orders = JSON.parse(JSON.stringify(INITIAL_FIXTURES.orders));
+        appState.articles = JSON.parse(JSON.stringify(INITIAL_FIXTURES.articles));
+        appState.staff = JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff));
+        appState.products = JSON.parse(JSON.stringify(PRODUCTS));
+        showToast('Đã khôi phục dữ liệu mẫu gốc thành công!', 'info');
+        updateDashboard();
+        renderOrdersTable();
+        renderKitchenTable();
+        renderCustomersTable();
+        renderContentTables();
+        renderStaffTable();
+      }
+    }
+
+    // Initial boot
+    window.addEventListener('DOMContentLoaded', () => {
+      handleRoleSwitch('OWNER');
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

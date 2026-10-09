@@ -31,6 +31,10 @@ Do not dispatch further tasks without task-specific model approval. No repeated 
 
 See admin-a1-storage-feasibility.md. Worker conversation 22f76154-befb-4bc5-b39d-a670759d73c9. Leader repaired proposal defects and verified an isolated adapter with actual simultaneous worker-thread commands. Full tests 38/38 and TypeScript pass; not a deployed payment repository. Cloud staging and versioned migration gate unresolved, so A2 is not dispatched.
 
+## Isolated interface preview on 2026-10-09
+
+Owner requested a visible demo before production and asked to continue. A5 demo-only preview delivered using Antigravity Gemini 3.8 Flash Medium, reviewed and repaired by leader. See admin-demo-delivery.md for evidence, scope and scores. Local preview: http://127.0.0.1:3018/. Tests now 41/41; TypeScript passed. This does not complete A5/A6, resolve the A1 cloud gate, or authorize deployment. Fixtures and UI role switching are not real customer storage or authentication.
+
 ## A1 worker brief
 
 Input: admin-mvp-spec.md, relevant cloud-sync/schema/order transaction code and synthetic tests only. Do not pass .env, cloud tokens, customer DB or full unrelated source.
