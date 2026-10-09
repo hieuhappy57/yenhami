@@ -34,6 +34,8 @@ import {
   ShoppingBag,
   Trash2,
   Upload,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import type {
@@ -248,9 +250,11 @@ export default function QuanTriPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // WordPress-style navigation state
-  const [activeSection, setActiveSection] = useState<AdminSection>("orders");
+  // Admin navigation & mobile state
+  const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Data state
   const [orders, setOrders] = useState<AdminOrderRecord[]>([]);
@@ -345,6 +349,7 @@ export default function QuanTriPage() {
   } | null>(null);
 
   const playNewOrderChime = useCallback(() => {
+    if (!soundEnabled) return;
     try {
       const AudioCtx =
         window.AudioContext ||
@@ -366,7 +371,7 @@ export default function QuanTriPage() {
     } catch {
       // ignore audio context restriction
     }
-  }, []);
+  }, [soundEnabled]);
 
   const loadDashboardData = useCallback(async () => {
     setLoadingData(true);
@@ -1154,139 +1159,422 @@ export default function QuanTriPage() {
   return (
     <div className="min-h-screen bg-[#f0f0f1] text-[#1d2327] flex flex-col">
       {/* ===================================================================== */}
-      {/* 1. WORDPRESS TOP ADMIN BAR (#wpadminbar)                              */}
+      {/* 1. MODERN WHITE TOP ADMIN HEADER                                      */}
       {/* ===================================================================== */}
-      <header className="sticky top-0 z-50 h-11 bg-[#1d2327] text-[#f0f0f1] px-3 flex items-center justify-between text-xs select-none shadow-xs">
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-3 sm:px-6 py-2 flex items-center justify-between text-xs select-none shadow-xs">
         <div className="flex items-center gap-2 sm:gap-4">
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="lg:hidden p-1.5 rounded hover:bg-[#2c3338] text-white cursor-pointer"
+            className="lg:hidden p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
             aria-label="Mở menu quản trị"
           >
             {mobileSidebarOpen ? (
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5 text-slate-700" />
             ) : (
-              <Menu className="h-4 w-4" />
+              <Menu className="h-5 w-5 text-slate-700" />
             )}
           </button>
 
           <Link
             href="/"
             target="_blank"
-            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#2c3338] hover:text-[#72aee6] transition"
+            className="flex items-center gap-2 group"
             title="Mở trang chủ YẾN SÀO HÀ MI trong tab mới"
           >
-            <Home className="h-4 w-4 text-[#BD9342]" />
-            <span className="font-brand-serif font-bold uppercase tracking-[0.06em]">
-              YẾN SÀO HÀ MI
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-[#a7aaad]">
-              (Xem trang web <ExternalLink className="h-3 w-3" />)
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/ha-mi-logo-web-640.png"
+              alt="Logo Hà Mi"
+              className="h-8 w-8 rounded-lg bg-emerald-50 object-contain p-0.5 border border-emerald-100 shadow-2xs"
+            />
+            <div className="flex flex-col">
+              <span className="font-brand-serif font-bold text-sm tracking-wide text-[#15803d] group-hover:text-[#166534] transition">
+                HÀ MI ADMIN
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">
+                CMS &amp; Điều phối Bếp Chưng Nóng
+              </span>
+            </div>
           </Link>
 
-          {/* Quick "+ Tạo mới (New)" actions like WordPress */}
-          <div className="hidden md:flex items-center gap-1 border-l border-[#3c434a] pl-3">
+          {/* Quick "+ Tạo mới" shortcuts on desktop */}
+          <div className="hidden xl:flex items-center gap-1 border-l border-slate-200 pl-3 ml-1">
             <button
               type="button"
               onClick={openNewProductForm}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <Plus className="h-3.5 w-3.5 text-emerald-600" />
               <span>Thêm Món</span>
             </button>
             <button
               type="button"
               onClick={openNewPostForm}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <Plus className="h-3.5 w-3.5 text-emerald-600" />
               <span>Viết Bài</span>
             </button>
             <button
               type="button"
               onClick={openNewJobForm}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded hover:bg-[#2c3338] text-[#f0f0f1] hover:text-[#BD9342] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5 text-[#BD9342]" />
+              <Plus className="h-3.5 w-3.5 text-emerald-600" />
               <span>Tuyển Dụng</span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* In-App Notification Center Bell with Live Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setNotifDropdownOpen((v) => !v)}
+              className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
+              title="Trung tâm thông báo đơn hàng"
+              aria-label="Trung tâm thông báo đơn hàng"
+            >
+              <Bell className="h-4.5 w-4.5" />
+              {pendingOrdersCount > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white shadow-xs animate-pulse">
+                  {pendingOrdersCount}
+                </span>
+              )}
+            </button>
+
+            {/* Dropdown Menu */}
+            {notifDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-slate-200 bg-white p-3 shadow-xl z-50">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                  <span className="font-bold text-xs text-slate-900">
+                    Thông báo đơn hàng ({pendingOrdersCount} đơn chờ)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection("orders");
+                      setOrderFilterStatus("PENDING_CONFIRMATION");
+                      setNotifDropdownOpen(false);
+                    }}
+                    className="text-[11px] font-semibold text-[#15803d] hover:underline cursor-pointer"
+                  >
+                    Xem tất cả đơn chờ →
+                  </button>
+                </div>
+                {/* List recent pending orders */}
+                <div className="max-h-64 overflow-y-auto space-y-1.5">
+                  {orders.filter((o) => o.orderStatus === "PENDING_CONFIRMATION").length === 0 ? (
+                    <p className="text-center py-6 text-slate-500 text-xs">
+                      Không có đơn hàng nào đang chờ xác nhận.
+                    </p>
+                  ) : (
+                    orders
+                      .filter((o) => o.orderStatus === "PENDING_CONFIRMATION")
+                      .slice(0, 5)
+                      .map((o) => (
+                        <div
+                          key={o.id}
+                          onClick={() => {
+                            setActiveSection("orders");
+                            setOrderSearch(o.referenceCode);
+                            setNotifDropdownOpen(false);
+                          }}
+                          className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100/70 border border-amber-200/60 cursor-pointer transition text-left"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold font-mono text-slate-900">
+                              #{o.referenceCode}
+                            </span>
+                            <span className="font-semibold text-emerald-800 text-[11px]">
+                              {formatVnd(o.totalVnd)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-700 mt-0.5">
+                            {o.buyerName} • {o.buyerPhone}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            Giao {o.requestedDate} ({o.slotLabelSnapshot})
+                          </p>
+                        </div>
+                      ))
+                  )}
+                </div>
+                <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection("notifications");
+                      setNotifDropdownOpen(false);
+                    }}
+                    className="text-[11px] text-slate-600 hover:text-emerald-700 font-medium cursor-pointer"
+                  >
+                    Cài đặt Email &amp; Zalo →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifDropdownOpen(false)}
+                    className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sound alert chime toggle button */}
+          <button
+            type="button"
+            onClick={() => setSoundEnabled((v) => !v)}
+            className={`p-2 rounded-lg transition cursor-pointer ${
+              soundEnabled
+                ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                : "text-slate-400 bg-slate-100 hover:bg-slate-200"
+            }`}
+            title={soundEnabled ? "Đang bật chuông báo đơn mới" : "Đã tắt chuông báo đơn"}
+            aria-label="Bật tắt âm thanh báo đơn"
+          >
+            {soundEnabled ? (
+              <Volume2 className="h-4.5 w-4.5" />
+            ) : (
+              <VolumeX className="h-4.5 w-4.5" />
+            )}
+          </button>
+
+          {/* Auto Refresh Toggle on Desktop */}
           <button
             type="button"
             onClick={() => setAutoRefreshOrders((v) => !v)}
-            className={`hidden md:inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium cursor-pointer transition ${
+            className={`hidden md:inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium cursor-pointer transition ${
               autoRefreshOrders
-                ? "bg-emerald-900/70 text-emerald-200 border border-emerald-600/50"
-                : "bg-[#2c3338] text-[#a7aaad]"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-slate-100 text-slate-500 border border-slate-200"
             }`}
             title="Tự động kiểm tra và đổ chuông báo khi có đơn hàng mới mỗi 20 giây"
           >
-            <Bell className="h-3 w-3 text-[#BD9342]" />
+            <Bell className="h-3 w-3 text-emerald-700" />
             <span>
               Tự động nhận đơn:{" "}
               <strong>{autoRefreshOrders ? "BẬT" : "TẮT"}</strong>
             </span>
           </button>
 
+          {/* Manual Refresh Button */}
           <button
             type="button"
             onClick={loadDashboardData}
-            className="inline-flex items-center gap-1.5 rounded bg-[#2c3338] px-2.5 py-1 text-[11px] font-medium text-[#f0f0f1] hover:bg-[#3c434a] cursor-pointer"
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 cursor-pointer"
+            title="Làm mới dữ liệu từ server"
           >
             <RefreshCw
-              className={`h-3 w-3 ${loadingData ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${loadingData ? "animate-spin text-emerald-600" : ""}`}
             />
-            <span className="hidden sm:inline">Làm mới</span>
+            <span className="hidden sm:inline font-medium text-xs">Làm mới</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#c3c4c7]">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#BD9342]" />
-            <span>
-              Xin chào, <strong className="text-white">{staff.displayName}</strong>
-            </span>
+          {/* User Profile */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-xs font-semibold">{staff.displayName}</span>
           </div>
 
+          {/* Logout */}
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center gap-1 rounded bg-rose-700/80 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-600 cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+            title="Đăng xuất khỏi hệ thống quản trị"
           >
-            <LogOut className="h-3 w-3" />
-            <span>Đăng xuất</span>
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Thoát</span>
           </button>
         </div>
       </header>
 
       {/* ===================================================================== */}
-      {/* 2. BODY: LEFT SIDEBAR (#adminmenuwrap) + MAIN WORKSPACE (#wpbody)     */}
+      {/* 1.5. MOBILE TOP QUICK TAB STRIP (Sticky Horizontal Scrolling Chips)    */}
+      {/* ===================================================================== */}
+      <nav
+        className="lg:hidden sticky top-[53px] z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-2 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none select-none shadow-xs"
+        aria-label="Thanh chuyển tab nhanh"
+      >
+        <button
+          type="button"
+          onClick={() => setActiveSection("dashboard")}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "dashboard"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <LayoutDashboard className="h-3.5 w-3.5" />
+          <span>Tổng quan</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("orders")}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer relative ${
+            activeSection === "orders"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <ShoppingBag className="h-3.5 w-3.5" />
+          <span>Đơn hàng</span>
+          {pendingOrdersCount > 0 && (
+            <span className="ml-0.5 rounded-full bg-rose-600 px-1.5 py-0.2 text-[10px] font-bold text-white">
+              {pendingOrdersCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("catalog");
+            setEditingProduct(null);
+          }}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "catalog"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <Package className="h-3.5 w-3.5" />
+          <span>Sản phẩm</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("slots")}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "slots"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          <span>Khung giờ</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("posts");
+            setEditingPost(null);
+          }}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "posts"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          <span>Bài viết</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("jobs");
+            setEditingJob(null);
+          }}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "jobs"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <Briefcase className="h-3.5 w-3.5" />
+          <span>Tuyển dụng</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("site")}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "site"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <Palette className="h-3.5 w-3.5" />
+          <span>Giao diện</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("notifications")}
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeSection === "notifications"
+              ? "bg-[#15803d] text-white shadow-xs font-semibold"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          <Bell className="h-3.5 w-3.5" />
+          <span>Thông báo &amp; Mail</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileSidebarOpen(true)}
+          className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+        >
+          <Menu className="h-3.5 w-3.5" />
+          <span>Tất cả tab ▾</span>
+        </button>
+      </nav>
+
+      {/* ===================================================================== */}
+      {/* 2. BODY: SIDEBAR + MAIN WORKSPACE                                    */}
       {/* ===================================================================== */}
       <div className="flex flex-1 relative">
-        {/* Left Sidebar Navigation */}
+        {/* Mobile Backdrop Overlay */}
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Sidebar Navigation */}
         <aside
           className={`${
-            mobileSidebarOpen ? "fixed inset-y-11 left-0 z-40 flex" : "hidden"
-          } lg:flex w-60 shrink-0 flex-col bg-[#1d2327] text-[#f0f0f1] border-r border-[#2c3338] select-none`}
+            mobileSidebarOpen
+              ? "fixed inset-y-0 left-0 z-50 flex shadow-2xl"
+              : "hidden"
+          } lg:flex w-64 shrink-0 flex-col bg-[#1d2327] text-[#f0f0f1] border-r border-[#2c3338] select-none transition-transform duration-200`}
         >
-          <div className="p-3 border-b border-[#2c3338] flex items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/ha-mi-logo-web-640.png"
-              alt="Logo Hà Mi"
-              className="h-9 w-9 rounded bg-white p-0.5 object-contain"
-            />
-            <div>
-              <p className="text-xs font-bold text-white leading-tight">
-                QUẢN TRỊ HÀ MI
-              </p>
-              <p className="text-[10px] text-[#a7aaad]">
-                CMS & Điều phối Đơn hàng
-              </p>
+          <div className="p-3.5 border-b border-[#2c3338] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/ha-mi-logo-web-640.png"
+                alt="Logo Hà Mi"
+                className="h-8 w-8 rounded-lg bg-white p-0.5 object-contain"
+              />
+              <div>
+                <p className="text-xs font-bold text-white leading-tight">
+                  QUẢN TRỊ HÀ MI
+                </p>
+                <p className="text-[10px] text-[#a7aaad]">
+                  CMS &amp; Điều phối Đơn
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-md text-[#a7aaad] hover:text-white hover:bg-[#2c3338] cursor-pointer"
+              aria-label="Đóng menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
@@ -1409,21 +1697,21 @@ export default function QuanTriPage() {
           </div>
         </aside>
 
-        {/* Main Content Area (#wpbody-content) */}
-        <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 max-w-[1440px]">
-          {/* Cloudflare R2 / D1 Database Status Bar */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xs border border-[#BD9342]/45 bg-white px-4 py-2.5 text-xs text-[#1d2327] shadow-2xs">
-            <div className="flex items-center gap-2.5">
+        {/* Main Content Area */}
+        <div className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 max-w-[1440px] pb-24 lg:pb-8">
+          {/* Compact Cloudflare R2 / D1 Status Bar */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-800 shadow-2xs">
+            <div className="flex items-center gap-2">
               <span
-                className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${
+                className={`inline-block h-2 w-2 rounded-full shrink-0 ${
                   cloudDbStatus?.provider === "CLOUDFLARE_D1" ||
                   cloudDbStatus?.provider === "CLOUDFLARE_R2"
-                    ? "bg-emerald-600"
+                    ? "bg-emerald-500 animate-pulse"
                     : "bg-amber-500"
                 }`}
               />
-              <span>
-                <strong>Lưu trữ &amp; Database Đám mây:</strong>{" "}
+              <span className="text-[11px] sm:text-xs">
+                <strong className="text-slate-900">Cloud Storage &amp; DB:</strong>{" "}
                 {cloudDbStatus?.label || "Đang kiểm tra..."}
               </span>
             </div>
@@ -1431,11 +1719,11 @@ export default function QuanTriPage() {
               type="button"
               disabled={syncingD1}
               onClick={handleTestInitCloudflareD1}
-              className="rounded-xs bg-[#155132] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0e3b23] disabled:opacity-60 cursor-pointer"
+              className="rounded-md bg-emerald-800 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-900 disabled:opacity-60 cursor-pointer transition"
             >
               {syncingD1
-                ? "Đang đồng bộ Cloudflare..."
-                : "Kiểm tra & Đồng bộ Cloudflare R2 / D1"}
+                ? "Đang đồng bộ..."
+                : "Đồng bộ Cloudflare"}
             </button>
           </div>
 
@@ -1522,95 +1810,155 @@ export default function QuanTriPage() {
                 </div>
               </div>
 
-              {/* KPI Metaboxes */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* 6 Modern KPI Bento Cards */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
                 <button
                   type="button"
                   onClick={() => setActiveSection("orders")}
-                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                  className="text-left rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#50575e]">
-                      Tổng đơn đặt hàng
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Tổng đơn hàng
                     </span>
-                    <ShoppingBag className="h-4 w-4 text-[#155132]" />
+                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#15803d]">
+                      <ShoppingBag className="h-4 w-4" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
-                    {orders.length} đơn
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#50575e]">
-                    Doanh thu tạm tính:{" "}
-                    <strong className="text-[#155132]">
-                      {formatVnd(totalRevenueVnd)}
-                    </strong>
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {orders.length}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      Thu tạm: <strong className="text-[#15803d]">{formatVnd(totalRevenueVnd)}</strong>
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection("orders");
+                    setOrderFilterStatus("PENDING_CONFIRMATION");
+                  }}
+                  className={`text-left rounded-xl border p-3.5 sm:p-4 shadow-2xs hover:shadow-md transition cursor-pointer flex flex-col justify-between ${
+                    pendingOrdersCount > 0
+                      ? "border-amber-300 bg-amber-50/60"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Chờ xác nhận
+                    </span>
+                    <div className={`h-7 w-7 rounded-lg flex items-center justify-center ${
+                      pendingOrdersCount > 0 ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+                    }`}>
+                      <Bell className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className={`text-xl sm:text-2xl font-bold ${
+                      pendingOrdersCount > 0 ? "text-amber-800" : "text-slate-900"
+                    }`}>
+                      {pendingOrdersCount}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      {pendingOrdersCount > 0 ? "Cần xử lý ngay" : "Đã xác nhận hết"}
+                    </p>
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveSection("catalog")}
-                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                  className="text-left rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#50575e]">
-                      Sản phẩm & Món ăn
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Sản phẩm &amp; Món
                     </span>
-                    <Package className="h-4 w-4 text-[#155132]" />
+                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#15803d]">
+                      <Package className="h-4 w-4" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
-                    {products.length} món
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#50575e]">
-                    Đang mở bán:{" "}
-                    <strong className="text-emerald-700">
-                      {products.filter((p) => p.status === "AVAILABLE").length}{" "}
-                      món
-                    </strong>
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {products.length}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      Đang bán: <strong className="text-emerald-700">{products.filter((p) => p.status === "AVAILABLE").length} món</strong>
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("slots")}
+                  className="text-left rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Khung giờ giao
+                    </span>
+                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#15803d]">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {slots.length}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      Đang bật: <strong className="text-emerald-700">{slots.filter((s) => s.isActive).length} slot</strong>
+                    </p>
+                  </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveSection("posts")}
-                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                  className="text-left rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#50575e]">
-                      Bài viết & Cẩm nang
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Bài viết Blog
                     </span>
-                    <FileText className="h-4 w-4 text-[#155132]" />
+                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#15803d]">
+                      <FileText className="h-4 w-4" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
-                    {posts.length} bài
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#50575e]">
-                    Đã xuất bản:{" "}
-                    <strong className="text-[#155132]">
-                      {posts.filter((p) => p.isPublished).length} bài viết
-                    </strong>
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {posts.length}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      Xuất bản: <strong className="text-[#15803d]">{posts.filter((p) => p.isPublished).length} bài</strong>
+                    </p>
+                  </div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setActiveSection("jobs")}
-                  className="text-left rounded-xs border border-[#c3c4c7] bg-white p-4 shadow-2xs hover:border-[#155132] transition cursor-pointer"
+                  onClick={() => setActiveSection("notifications")}
+                  className="text-left rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#50575e]">
-                      Tin tuyển dụng
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Thông báo &amp; Mail
                     </span>
-                    <Briefcase className="h-4 w-4 text-[#155132]" />
+                    <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#15803d]">
+                      <Send className="h-4 w-4" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-[#1d2327]">
-                    {jobs.length} vị trí
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#50575e]">
-                    Đang nhận hồ sơ:{" "}
-                    <strong className="text-emerald-700">
-                      {jobs.filter((j) => j.isOpen).length} vị trí
-                    </strong>
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {notificationLogs.length}
+                    </p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 truncate">
+                      Email &amp; Zalo: <strong className="text-emerald-700">Tự động</strong>
+                    </p>
+                  </div>
                 </button>
               </div>
 
@@ -3889,6 +4237,101 @@ function doPost(e) {
           )}
         </div>
       </div>
+
+      {/* ===================================================================== */}
+      {/* 3. MOBILE FIXED BOTTOM NAVIGATION BAR                                */}
+      {/* ===================================================================== */}
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 px-1 py-1 flex items-center justify-around shadow-lg select-none"
+        aria-label="Thanh điều hướng dưới di động"
+      >
+        <button
+          type="button"
+          onClick={() => setActiveSection("dashboard")}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition cursor-pointer ${
+            activeSection === "dashboard"
+              ? "text-[#15803d] font-bold"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <LayoutDashboard className={`h-5 w-5 mb-0.5 ${activeSection === "dashboard" ? "stroke-[2.5]" : ""}`} />
+          <span>Tổng quan</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("orders")}
+          className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition cursor-pointer ${
+            activeSection === "orders"
+              ? "text-[#15803d] font-bold"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <div className="relative">
+            <ShoppingBag className={`h-5 w-5 mb-0.5 ${activeSection === "orders" ? "stroke-[2.5]" : ""}`} />
+            {pendingOrdersCount > 0 && (
+              <span className="absolute -top-1 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-600 px-0.5 text-[9px] font-bold text-white">
+                {pendingOrdersCount}
+              </span>
+            )}
+          </div>
+          <span>Đơn</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("catalog");
+            setEditingProduct(null);
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition cursor-pointer ${
+            activeSection === "catalog"
+              ? "text-[#15803d] font-bold"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <Package className={`h-5 w-5 mb-0.5 ${activeSection === "catalog" ? "stroke-[2.5]" : ""}`} />
+          <span>Sản phẩm</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("posts");
+            setEditingPost(null);
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition cursor-pointer ${
+            activeSection === "posts"
+              ? "text-[#15803d] font-bold"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <FileText className={`h-5 w-5 mb-0.5 ${activeSection === "posts" ? "stroke-[2.5]" : ""}`} />
+          <span>Bài viết</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("notifications")}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition cursor-pointer ${
+            activeSection === "notifications"
+              ? "text-[#15803d] font-bold"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <Bell className={`h-5 w-5 mb-0.5 ${activeSection === "notifications" ? "stroke-[2.5]" : ""}`} />
+          <span>Thông báo</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileSidebarOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium text-slate-500 hover:text-slate-900 transition cursor-pointer"
+        >
+          <Menu className="h-5 w-5 mb-0.5" />
+          <span>Tất cả</span>
+        </button>
+      </nav>
     </div>
   );
 }
