@@ -2500,11 +2500,11 @@
               <form onsubmit="handleSaveNotificationSettings(event)" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="form-group">
                   <label for="cfgEmailTo1">Email nhận thông báo chính (Email 1) *</label>
-                  <input type="email" id="cfgEmailTo1" class="form-control" placeholder="vd: cskh@yenhami.com" value="cskh@yenhami.com" required />
+                  <input type="email" id="cfgEmailTo1" class="form-control" placeholder="vd: hieunv@yenhami.com" value="hieunv@yenhami.com" required />
                 </div>
                 <div class="form-group">
                   <label for="cfgEmailTo2">Email nhận đồng thời (Email 2 - Tùy chọn)</label>
-                  <input type="text" id="cfgEmailTo2" class="form-control" placeholder="vd: founder@lehami.vn (hoặc nhiều email cách dấu phẩy)" value="founder@yenhami.com" />
+                  <input type="text" id="cfgEmailTo2" class="form-control" placeholder="vd: vietdh1985@gmail.com (hoặc nhiều email cách dấu phẩy)" value="vietdh1985@gmail.com" />
                   <small style="color: var(--text-muted); font-size: 11px;">Hệ thống hỗ trợ gửi cùng lúc cho 2 hoặc nhiều người nhận.</small>
                 </div>
 
@@ -3321,8 +3321,8 @@
       ],
       notificationSettings: {
         enableEmail: true,
-        emailTo1: 'cskh@yenhami.com',
-        emailTo2: 'founder@yenhami.com',
+        emailTo1: 'hieunv@yenhami.com',
+        emailTo2: 'vietdh1985@gmail.com',
         webhookUrl: '',
         resendApiKey: '',
         enableSound: true
@@ -3332,7 +3332,7 @@
           id: 'LOG-1',
           createdAt: '10:45 09/10/2026',
           channel: 'EMAIL',
-          recipient: 'cskh@yenhami.com, founder@yenhami.com',
+          recipient: 'hieunv@yenhami.com, vietdh1985@gmail.com',
           orderId: 'HM-1010',
           subject: '[Yến Sào Hà Mi] Đơn đặt món mới #HM-1010 — Đặng Hữu Mẫu K (360.000đ)',
           status: 'SENT',
@@ -3342,7 +3342,7 @@
           id: 'LOG-2',
           createdAt: '08:30 09/10/2026',
           channel: 'EMAIL',
-          recipient: 'cskh@yenhami.com, founder@yenhami.com',
+          recipient: 'hieunv@yenhami.com, vietdh1985@gmail.com',
           orderId: 'HM-1009',
           subject: '[Yến Sào Hà Mi] Đơn đặt món mới #HM-1009 — Ngô Quỳnh Demo I (495.000đ)',
           status: 'SENT',
@@ -5325,7 +5325,7 @@
       }
 
       const recipientsList = [cfg.emailTo1, cfg.emailTo2].filter(e => e && e.trim());
-      const recipientString = recipientsList.join(', ') || 'cskh@yenhami.com';
+      const recipientString = recipientsList.join(', ') || 'hieunv@yenhami.com, vietdh1985@gmail.com';
       const fin = computeOrderFinancials(order);
       const subject = `[Yến Sào Hà Mi] ${isResend ? '[GỬI LẠI] ' : ''}Đơn đặt món #${order.id} — ${order.buyerName} (${formatVND(fin.orderTotal)})`;
       const htmlBody = generateOrderEmailHtml(order, fin);
@@ -5387,10 +5387,10 @@
       if (elEmail) elEmail.checked = cfg.enableEmail !== false;
 
       const elTo1 = document.getElementById('cfgEmailTo1');
-      if (elTo1) elTo1.value = cfg.emailTo1 || 'cskh@yenhami.com';
+      if (elTo1) elTo1.value = cfg.emailTo1 || 'hieunv@yenhami.com';
 
       const elTo2 = document.getElementById('cfgEmailTo2');
-      if (elTo2) elTo2.value = cfg.emailTo2 || '';
+      if (elTo2) elTo2.value = cfg.emailTo2 !== undefined ? cfg.emailTo2 : 'vietdh1985@gmail.com';
 
       const elWebhook = document.getElementById('cfgEmailWebhookUrl');
       if (elWebhook) elWebhook.value = cfg.webhookUrl || '';
@@ -5445,7 +5445,7 @@
 
       const res = sendOrderEmailNotification(sampleOrder);
       if (res.success) {
-        showToast(`Đã gửi thử nghiệm Email thông báo tới ${appState.notificationSettings.emailTo1 || 'CSKH'}!`, 'success');
+        showToast(`Đã gửi thử nghiệm Email thông báo tới ${appState.notificationSettings.emailTo1 || 'hieunv@yenhami.com'}!`, 'success');
       } else {
         showToast('Không thể gửi thử do tính năng Email đang tắt', 'error');
       }

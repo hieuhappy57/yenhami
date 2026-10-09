@@ -2337,7 +2337,9 @@ export function deleteJobPostingByStaff(jobId: string) {
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enableEmail: true,
-  notificationEmailTo: process.env.HAMI_NOTIFY_EMAIL || "cskh@yenhami.com",
+  notificationEmailTo:
+    process.env.HAMI_NOTIFY_EMAIL ||
+    "hieunv@yenhami.com, vietdh1985@gmail.com",
   resendApiKey: process.env.RESEND_API_KEY || "",
   emailWebhookUrl: process.env.HAMI_EMAIL_WEBHOOK_URL || "",
   enableZalo: true,
