@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hà Mi | Demo quản trị bán hàng</title>
+  <title>HÀ MI ADMIN | Quản trị Hệ thống Yến Sào Hà Mi</title>
   <style>
     :root {
       --bg-app: #f8fafc;
@@ -1671,7 +1671,7 @@
   <aside class="mobile-drawer" id="mobileDrawer" aria-label="Menu quản trị di động">
     <div class="drawer-header">
       <div class="drawer-brand">
-        <img src="/assets/brand/ha-mi-logo-mark-256.png" width="32" height="32" alt="Hà Mi" />
+        <img src="/brand/ha-mi-logo-mark-256.png" width="32" height="32" alt="Hà Mi" style="border-radius: 6px; background: #f0fdf4; padding: 2px;" />
         <div>
           <div class="drawer-title">HÀ MI ADMIN</div>
           <div class="drawer-subtitle" id="drawerRoleText">Chủ thương hiệu (OWNER)</div>
@@ -1715,7 +1715,7 @@
       </nav>
     </div>
     <div class="drawer-footer">
-      <span>Dữ liệu mô phỏng: 09/10/2026</span>
+      <span>Hệ thống Quản trị Yến Sào Hà Mi</span>
     </div>
   </aside>
 
@@ -1726,14 +1726,14 @@
         <i data-lucide="menu"></i>
         <span>Menu</span>
       </button>
-      <img src="/assets/brand/ha-mi-logo-mark-256.png" width="36" height="36" alt="Hà Mi" />
+      <img src="/brand/ha-mi-logo-mark-256.png" width="36" height="36" alt="Hà Mi" style="border-radius: 8px; background: #f0fdf4; padding: 2px;" />
       <span class="brand-title">HÀ MI ADMIN</span>
-      <span class="demo-badge">DEMO - DỮ LIỆU GIẢ LẬP</span>
-      <span class="simulated-info">Ngày mô phỏng: <strong>09/10/2026</strong></span>
+      <span class="demo-badge" style="background:#dcfce7; color:#15803d; border-color:#86efac;">HỆ THỐNG QUẢN TRỊ CHÍNH THỨC</span>
+      <span class="simulated-info">Hôm nay: <strong id="todayDisplayDate"></strong></span>
     </div>
     <div class="header-actions">
       <div class="role-selector-wrap">
-        <label for="activeRoleSelect">Mô phỏng vai trò:</label>
+        <label for="activeRoleSelect">Vai trò:</label>
         <select id="activeRoleSelect" class="role-select" onchange="handleRoleSwitch(this.value)">
           <option value="OWNER">Chủ thương hiệu (OWNER)</option>
           <option value="MANAGER">Quản lý (MANAGER)</option>
@@ -1773,8 +1773,12 @@
         <i data-lucide="sparkles"></i> <span>+ Đơn mới</span>
       </button>
 
-      <button class="btn btn-sm btn-danger" onclick="confirmResetDemo()">
-        <span>Khôi phục mẫu</span>
+      <a href="/" target="_blank" class="btn btn-sm" title="Mở trang chủ Yến Sào Hà Mi trong tab mới" style="text-decoration: none;">
+        <i data-lucide="external-link"></i> <span class="hidden sm:inline">Trang chủ</span>
+      </a>
+
+      <button class="btn btn-sm" onclick="confirmResetDemo()" title="Đặt lại dữ liệu mặc định">
+        <span>Khôi phục mặc định</span>
       </button>
     </div>
   </header>
@@ -4170,6 +4174,7 @@
         ord.completedAt = `${SIMULATED_TODAY} 14:00`;
       }
       showToast(`Đã chuyển đơn ${orderId} sang: ${nextStatus}`, 'success');
+      persistAppState();
       openOrderDetail(orderId);
       renderOrdersTable();
       updateDashboard();
@@ -4189,6 +4194,7 @@
         ord.status = 'cancelled';
         ord.cancelReason = reason.trim();
         showToast(`Đơn ${orderId} đã được huỷ thành công`, 'info');
+        persistAppState();
         openOrderDetail(orderId);
         renderOrdersTable();
         updateDashboard();
@@ -5609,6 +5615,7 @@
 
       // 6. Update current screen
       showToast(`Đã nhận đơn hàng mới #${newOrder.id} (${newOrder.buyerName})!`, 'success');
+      persistAppState();
       updateDashboard();
       renderOrdersTable();
       renderKitchenTable();
@@ -5618,9 +5625,53 @@
       }
     }
 
+    /* --- 14.5. PERSISTENCE --- */
+    function persistAppState() {
+      try {
+        localStorage.setItem('ha_mi_admin_state_v1', JSON.stringify({
+          orders: appState.orders,
+          posts: appState.posts,
+          jobs: appState.jobs,
+          site: appState.site,
+          staff: appState.staff,
+          products: appState.products,
+          notificationSettings: appState.notificationSettings,
+          notificationLogs: appState.notificationLogs,
+          inAppNotifications: appState.inAppNotifications
+        }));
+      } catch (e) {
+        console.warn('LocalStorage save failed', e);
+      }
+    }
+
+    function loadSavedAppState() {
+      try {
+        const saved = localStorage.getItem('ha_mi_admin_state_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.orders) && parsed.orders.length > 0) appState.orders = parsed.orders;
+            if (Array.isArray(parsed.posts) && parsed.posts.length > 0) appState.posts = parsed.posts;
+            if (Array.isArray(parsed.jobs) && parsed.jobs.length > 0) appState.jobs = parsed.jobs;
+            if (parsed.site) appState.site = parsed.site;
+            if (Array.isArray(parsed.staff) && parsed.staff.length > 0) appState.staff = parsed.staff;
+            if (parsed.products) appState.products = parsed.products;
+            if (parsed.notificationSettings) appState.notificationSettings = parsed.notificationSettings;
+            if (Array.isArray(parsed.notificationLogs)) appState.notificationLogs = parsed.notificationLogs;
+            if (Array.isArray(parsed.inAppNotifications)) appState.inAppNotifications = parsed.inAppNotifications;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load saved state', e);
+      }
+    }
+
     /* --- 15. RESET DEMO --- */
     function confirmResetDemo() {
-      if (window.confirm('Khôi phục dữ liệu mẫu Hà Mi? Các thay đổi demo sẽ được đặt lại.')) {
+      if (window.confirm('Khôi phục dữ liệu mặc định Hà Mi? Các thay đổi sẽ được đặt lại về mẫu chuẩn.')) {
+        try {
+          localStorage.removeItem('ha_mi_admin_state_v1');
+        } catch (e) {}
         appState.orders = JSON.parse(JSON.stringify(INITIAL_FIXTURES.orders));
         appState.posts = JSON.parse(JSON.stringify(INITIAL_FIXTURES.posts));
         appState.jobs = JSON.parse(JSON.stringify(INITIAL_FIXTURES.jobs));
@@ -5666,10 +5717,16 @@
 
     // Initial boot
     window.addEventListener('DOMContentLoaded', () => {
+      loadSavedAppState();
+      const todayEl = document.getElementById('todayDisplayDate');
+      if (todayEl) {
+        todayEl.textContent = new Date().toLocaleDateString('vi-VN');
+      }
       handleRoleSwitch('OWNER');
       renderNotificationBadge();
       updateAudioToggleBtn();
       updateBrowserPushBadge();
+      window.addEventListener('beforeunload', persistAppState);
 
       // Close notification center when clicking outside
       document.addEventListener('click', (e) => {

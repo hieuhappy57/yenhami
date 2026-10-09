@@ -12,6 +12,20 @@ const nextConfig: NextConfig = {
       headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
     }] : [];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/quan-tri",
+          destination: "/admin.html",
+        },
+        {
+          source: "/admin",
+          destination: "/admin.html",
+        },
+      ],
+    };
+  },
 };
 
 export default nextConfig;
