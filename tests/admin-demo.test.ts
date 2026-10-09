@@ -54,3 +54,67 @@ test("admin demo dashboard uses completion date for sales and ledger date for re
 test("admin demo collection supports integer VND amounts without step offset", () => {
   assert.match(html, /id="colAmount_\$\{ord.id\}"[^>]*step="1"/);
 });
+
+test("admin demo preserves CMS tabs: products, posts, jobs, site with appropriate role access", () => {
+  assert.ok(html.includes('id="tab-products"'), "Missing tab-products");
+  assert.ok(html.includes('id="tab-posts"'), "Missing tab-posts");
+  assert.ok(html.includes('id="tab-jobs"'), "Missing tab-jobs");
+  assert.ok(html.includes('id="tab-site"'), "Missing tab-site");
+
+  // Verify ROLE_PERMISSIONS in script
+  const roleMatch = html.match(/const ROLE_PERMISSIONS\s*=\s*({[\s\S]*?});/);
+  assert.ok(roleMatch, "ROLE_PERMISSIONS not found");
+  const rolePermissions = runInNewContext(`(${roleMatch[1]})`);
+
+  assert.deepEqual([...rolePermissions.MARKETING].sort(), ['jobs', 'posts', 'products', 'site'].sort());
+  assert.ok(!rolePermissions.MARKETING.includes('dashboard'));
+  assert.ok(!rolePermissions.MARKETING.includes('orders'));
+  assert.ok(!rolePermissions.MARKETING.includes('staff'));
+
+  assert.ok(rolePermissions.OWNER.includes('posts'));
+  assert.ok(rolePermissions.OWNER.includes('jobs'));
+  assert.ok(rolePermissions.OWNER.includes('site'));
+  assert.ok(rolePermissions.OWNER.includes('products'));
+});
+
+test("admin demo provides post, job, product, site editing forms and drilldown date preservation", () => {
+  assert.ok(html.includes('id="editPostModal"'), "Missing editPostModal");
+  assert.ok(html.includes('id="editJobModal"'), "Missing editJobModal");
+  assert.ok(html.includes('id="editProductModal"'), "Missing editProductModal");
+  assert.ok(html.includes('id="priceLockNotice"'), "Missing priceLockNotice");
+  assert.ok(html.includes('id="orderStartDate"'), "Missing orderStartDate");
+  assert.ok(html.includes('id="orderEndDate"'), "Missing orderEndDate");
+  assert.ok(html.includes('id="custStartDate"'), "Missing custStartDate");
+  assert.ok(html.includes('id="custEndDate"'), "Missing custEndDate");
+});
+
+test("admin demo provides order notifications, audio bell, web push and email dispatch features", () => {
+  // Navigation & Control elements
+  assert.ok(html.includes('id="tab-notifications"'), "Missing tab-notifications");
+  assert.ok(html.includes('id="notifBellBtn"'), "Missing notifBellBtn");
+  assert.ok(html.includes('id="notifBadge"'), "Missing notifBadge");
+  assert.ok(html.includes('id="notifDropdown"'), "Missing notifDropdown");
+  assert.ok(html.includes('id="audioToggleBtn"'), "Missing audioToggleBtn");
+  assert.ok(html.includes('id="floatingOrderBanner"'), "Missing floatingOrderBanner");
+  assert.ok(html.includes('id="previewEmailModal"'), "Missing previewEmailModal");
+  assert.ok(html.includes('id="previewEmailIframe"'), "Missing previewEmailIframe");
+  assert.ok(html.includes('id="orderDetailResendEmailBtn"'), "Missing orderDetailResendEmailBtn");
+
+  // Notification settings controls
+  assert.ok(html.includes('id="cfgEnableSound"'), "Missing cfgEnableSound");
+  assert.ok(html.includes('id="cfgEnableEmail"'), "Missing cfgEnableEmail");
+  assert.ok(html.includes('id="cfgEmailTo1"'), "Missing cfgEmailTo1");
+  assert.ok(html.includes('id="cfgEmailTo2"'), "Missing cfgEmailTo2");
+  assert.ok(html.includes('id="cfgEmailWebhookUrl"'), "Missing cfgEmailWebhookUrl");
+  assert.ok(html.includes('id="cfgResendApiKey"'), "Missing cfgResendApiKey");
+  assert.ok(html.includes('id="notifLogsTableBody"'), "Missing notifLogsTableBody");
+
+  // Verify Role Permissions include notifications for OWNER and MANAGER but exclude MARKETING
+  const roleMatch = html.match(/const ROLE_PERMISSIONS\s*=\s*({[\s\S]*?});/);
+  assert.ok(roleMatch, "ROLE_PERMISSIONS not found");
+  const rolePermissions = runInNewContext(`(${roleMatch[1]})`);
+  assert.ok(rolePermissions.OWNER.includes('notifications'), "OWNER should have notifications permission");
+  assert.ok(rolePermissions.MANAGER.includes('notifications'), "MANAGER should have notifications permission");
+  assert.ok(!rolePermissions.MARKETING.includes('notifications'), "MARKETING should not have notifications permission");
+});
+
