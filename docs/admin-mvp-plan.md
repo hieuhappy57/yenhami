@@ -1,7 +1,7 @@
 # Ha Mi Admin: execution plan
 
 Date: 2026-10-09. Depends on admin-mvp-spec.md.
-Leader completed source review/specification only. No worker has been dispatched for this project.
+Leader completed source review/specification. Owner's subsequent "trien khai" approved dispatch of A1 to the proposed Gemini 3.8 Flash Medium; no blanket approval for later worker tasks is inferred.
 Owner requested no further business-content questions; defaults are documented in the spec.
 Per-task model approval from the established team agreement still applies; do not infer worker model approval from requirements approval.
 
@@ -13,7 +13,7 @@ Sequential milestones, not guaranteed calendar completion dates. Each milestone 
 | Milestone | Deliverable | Proposed worker | Gate |
 | --- | --- | --- | --- |
 | A0 - done | Source audit, permission matrix, money semantics, acceptance spec | Leader | Docs checked against source, no production changes |
-| A1 | Storage transport spike + migration design in isolated test adapter; document authoritative D1 cutover and all legacy writers | Gemini 3.8 Flash Medium | Two concurrent writers/retries cannot lose data; transaction and failure proof; no live migration |
+| A1 - local proof done, cloud gate pending | Storage transport spike + migration design in isolated test adapter; document authoritative D1 cutover and all legacy writers | Gemini 3.8 Flash Medium (approved for this dispatch) | Local two-writer/retry and rollback proof passed; cloud transport/migration acceptance still pending; no live migration |
 | A2 | Per-user authentication, session revocation, multi-role authorization and restricted projections across ALL admin APIs | Gemini 3.8 Flash Medium | Role/field permission matrix tests, no fallback credentials, no PII leaks |
 | A3 | Order source/manual entry, safe transitions, assignment, append-only collections/refunds and atomic audit | Gemini 3.8 Flash Medium | Payment/capacity concurrency tests, legacy reconciliation explicit |
 | A4 | Customer profiles, normalized-phone lookup, addresses and time-filtered history | Gemini 3.8 Flash Medium | Buyer vs recipient separation, no silent ambiguous merges |
@@ -25,7 +25,11 @@ Sequential milestones, not guaranteed calendar completion dates. Each milestone 
 
 Gemini 3.8 Flash Medium is proposed for continuity with the installed Antigravity workflow, not as a proven superior/security-specialist model. Leader supplies narrowly scoped source and acceptance cases and independently reviews code. GPT 5.6 is not assumed available in the CLI. Priority is completion quality; token benchmarking deferred by owner.
 
-Do not dispatch A1 or later without task-specific model approval. No repeated approval reminders from heartbeat when unchanged. No business-content questions are needed for this spec. Do not silently replace models or bypass permissions.
+Do not dispatch further tasks without task-specific model approval. No repeated approval reminders from heartbeat when unchanged. No business-content questions are needed for this spec. Do not silently replace models or bypass permissions.
+
+## A1 status on 2026-10-09
+
+See admin-a1-storage-feasibility.md. Worker conversation 22f76154-befb-4bc5-b39d-a670759d73c9. Leader repaired proposal defects and verified an isolated adapter with actual simultaneous worker-thread commands. Full tests 38/38 and TypeScript pass; not a deployed payment repository. Cloud staging and versioned migration gate unresolved, so A2 is not dispatched.
 
 ## A1 worker brief
 
