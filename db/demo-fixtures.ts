@@ -908,6 +908,7 @@ export interface SeedPostInput {
   coverImageUrl: string;
   coverImageAlt: string;
   isPublished: boolean;
+  isPinned?: boolean;
 }
 
 export const DEMO_POSTS: SeedPostInput[] = [
@@ -921,6 +922,7 @@ export const DEMO_POSTS: SeedPostInput[] = [
     coverImageUrl: "/bai-viet/banner_bai_1_yen_tuoi_tho_su.jpg",
     coverImageAlt: "Thố yến tươi chưng nóng 200ml giữ trọn dưỡng chất - Yến Sào Hà Mi Đà Nẵng",
     isPublished: true,
+    isPinned: true,
     content: [
       "Trong hành trình chăm sóc sức khỏe gia đình, đặc biệt khi bồi bổ cho mẹ bầu, ông bà lớn tuổi hay người thân đang hồi phục sau bệnh, những người tiêu dùng tinh tế và sành yến ngày càng khắt khe hơn. Thay vì chọn những hũ yến chưng sẵn đóng nắp kim loại sản xuất hàng loạt lưu kho dài ngày, xu hướng thưởng thức Yến tươi chưng nóng trong thố sứ 200ml đang trở thành chuẩn mực mới của sự an tâm. Dưới góc độ khoa học dinh dưỡng và trải nghiệm ẩm thực dưỡng sinh, đâu là sự khác biệt tạo nên giá trị này?",
       "## 1. Bảo toàn trọn vẹn cấu trúc Protein và 18 loại Axit Amin quý giá",

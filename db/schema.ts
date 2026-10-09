@@ -235,6 +235,7 @@ export interface PostRecord {
   coverImageUrl: string;
   coverImageAlt?: string;
   isPublished: boolean;
+  isPinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }

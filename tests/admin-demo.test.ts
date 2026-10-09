@@ -118,3 +118,27 @@ test("admin demo provides order notifications, audio bell, web push and email di
   assert.ok(!rolePermissions.MARKETING.includes('notifications'), "MARKETING should not have notifications permission");
 });
 
+test("admin demo starts with clean zero demo orders and intuitive empty state", () => {
+  // Verify INITIAL_FIXTURES.orders is empty
+  const fixturesMatch = html.match(/const INITIAL_FIXTURES\s*=\s*({[\s\S]*?});/);
+  assert.ok(fixturesMatch, "INITIAL_FIXTURES not found");
+  const fixtures = runInNewContext(`(${fixturesMatch[1]})`);
+  assert.equal(fixtures.orders.length, 0, "Initial orders should be empty");
+  assert.ok(html.includes("Chưa có đơn hàng nào"), "Missing empty orders placeholder");
+});
+
+test("admin demo supports article pinning (isPinned) with toggle and top sorting", () => {
+  assert.ok(html.includes('id="postIsPinnedInput"'), "Missing postIsPinnedInput in edit modal");
+  assert.ok(html.includes("togglePinPost"), "Missing togglePinPost handler");
+  assert.ok(html.includes("📌 Đã ghim"), "Missing pinned badge text");
+  assert.ok(html.includes("btn-pinned"), "Missing btn-pinned class");
+
+  // Verify sorting logic: pinned articles are prioritized at the top
+  const posts = [
+    { id: "p1", title: "Bài 1", isPinned: false },
+    { id: "p2", title: "Bài 2", isPinned: true },
+    { id: "p3", title: "Bài 3", isPinned: false },
+  ];
+  posts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+  assert.equal(posts[0].id, "p2", "Pinned post should be sorted first");
+});

@@ -95,6 +95,11 @@ export default async function BaiVietPage() {
                     <span className="absolute top-4 left-4 rounded-full bg-[#1B4332]/90 backdrop-blur-xs px-3.5 py-1 text-xs font-semibold text-[#FFFCF4]">
                       {post.category}
                     </span>
+                    {post.isPinned && (
+                      <span className="absolute top-4 right-4 rounded-full bg-[#D4AF37] px-3 py-1 text-xs font-bold text-[#1B1B1B] shadow-sm flex items-center gap-1">
+                        📌 Ghim nổi bật
+                      </span>
+                    )}
                   </Link>
 
                   <div className="space-y-2 px-1">

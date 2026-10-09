@@ -69,6 +69,13 @@
       border-color: #fca5a5;
     }
     .btn-danger:hover { background: var(--status-red-bg); }
+    .btn-pinned {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+      font-weight: 600;
+    }
+    .btn-pinned:hover { background: #fde68a; }
     .btn-sm {
       min-height: 36px;
       padding: 0 10px;
@@ -2838,6 +2845,15 @@
               <option value="draft">Bản nháp (Lưu nội bộ)</option>
             </select>
           </div>
+          <div class="form-group" style="background: #fefce8; border: 1px solid #fef08a; padding: 12px 14px; border-radius: 8px; margin-top: 14px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; margin-bottom: 0;">
+              <input type="checkbox" id="postIsPinnedInput" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" />
+              <span>📌 Ghim bài viết lên đầu trang (Ưu tiên hiển thị nổi bật)</span>
+            </label>
+            <div style="font-size: 12px; color: #854d0e; margin-top: 4px; margin-left: 26px;">
+              Bài viết được ghim sẽ luôn hiển thị ở vị trí ưu tiên đầu danh sách quản trị và trang Cẩm nang Yến Sào.
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn" onclick="closeDialog('editPostModal')">Huỷ</button>
@@ -3005,174 +3021,7 @@
     };
 
     const INITIAL_FIXTURES = {
-      orders: [
-        {
-          id: 'HM-1001',
-          createdAt: '2026-10-03 09:15',
-          completedAt: '2026-10-03 14:00',
-          source: 'Website',
-          buyerName: 'Nguyễn Văn Mẫu A',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-01',
-          recipientName: 'Bà ngoại Nguyễn Thị Mẫu',
-          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
-          discount: 20000,
-          shippingFee: 25000,
-          status: 'completed',
-          notes: 'Đóng gói túi quà tặng trang nhã',
-          ledger: [
-            { id: 'L-1', date: '2026-10-03', type: 'collection', amount: 375000, method: 'Chuyển khoản' }
-          ]
-        },
-        {
-          id: 'HM-1002',
-          createdAt: '2026-10-04 10:30',
-          completedAt: '2026-10-04 16:45',
-          source: 'Zalo',
-          buyerName: 'Trần Thị Thử Nghiệm B',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-02',
-          recipientName: null,
-          items: [{ productId: 'P2', quantity: 3, unitPrice: 145000 }],
-          discount: 0,
-          shippingFee: 20000,
-          status: 'completed',
-          notes: 'Giao giờ hành chính',
-          ledger: [
-            { id: 'L-2', date: '2026-10-04', type: 'collection', amount: 455000, method: 'Tiền mặt' }
-          ]
-        },
-        {
-          id: 'HM-1003',
-          createdAt: '2026-10-05 14:20',
-          completedAt: null,
-          source: 'Messenger',
-          buyerName: 'Lê Demo C',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-03',
-          recipientName: 'Mẹ Lê Thị Mẫu',
-          items: [{ productId: 'P1', quantity: 1, unitPrice: 185000 }],
-          discount: 0,
-          shippingFee: 20000,
-          status: 'delivering',
-          notes: 'Giao hỏa tốc',
-          ledger: [
-            { id: 'L-3', date: '2026-10-05', type: 'collection', amount: 205000, method: 'Chuyển khoản' }
-          ]
-        },
-        {
-          id: 'HM-1004',
-          createdAt: '2026-10-06 08:45',
-          completedAt: '2026-10-06 11:30',
-          source: 'Store',
-          buyerName: 'Phạm Văn Mẫu D',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-04',
-          recipientName: null,
-          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }, { productId: 'P2', quantity: 1, unitPrice: 145000 }],
-          discount: 30000,
-          shippingFee: 0,
-          status: 'completed',
-          notes: 'Khách mua dùng trực tiếp',
-          ledger: [
-            { id: 'L-4', date: '2026-10-06', type: 'collection', amount: 485000, method: 'Tiền mặt' }
-          ]
-        },
-        {
-          id: 'HM-1005',
-          createdAt: '2026-10-06 16:10',
-          completedAt: null,
-          source: 'Phone',
-          buyerName: 'Hoàng Thị Demo E',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-05',
-          recipientName: null,
-          items: [{ productId: 'P2', quantity: 2, unitPrice: 145000 }],
-          discount: 0,
-          shippingFee: 20000,
-          status: 'cancelled',
-          cancelReason: 'Khách báo bận đi công tác đột xuất',
-          notes: 'Đã gọi xác nhận huỷ',
-          ledger: []
-        },
-        {
-          id: 'HM-1006',
-          createdAt: '2026-10-07 11:00',
-          completedAt: '2026-10-07 15:30',
-          source: 'Website',
-          buyerName: 'Vũ Minh Mẫu F',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-06',
-          recipientName: 'Bạn Vũ Thuỳ Demo',
-          items: [{ productId: 'P1', quantity: 4, unitPrice: 185000 }],
-          discount: 40000,
-          shippingFee: 0,
-          status: 'completed',
-          notes: 'Ghi thiệp chúc mừng',
-          ledger: [
-            { id: 'L-5', date: '2026-10-07', type: 'collection', amount: 700000, method: 'Chuyển khoản' },
-            { id: 'L-6', date: '2026-10-08', type: 'refund', amount: 50000, method: 'Chuyển khoản', reason: 'Hoàn ưu đãi thành viên bù' }
-          ]
-        },
-        {
-          id: 'HM-1007',
-          createdAt: '2026-10-08 10:15',
-          completedAt: null,
-          source: 'Zalo',
-          buyerName: 'Đỗ Lan Demo G',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-07',
-          recipientName: null,
-          items: [{ productId: 'P2', quantity: 4, unitPrice: 145000 }],
-          discount: 20000,
-          shippingFee: 20000,
-          status: 'preparing',
-          notes: 'Ít đường, không đá',
-          ledger: [
-            { id: 'L-7', date: '2026-10-08', type: 'collection', amount: 300000, method: 'Chuyển khoản' }
-          ]
-        },
-        {
-          id: 'HM-1008',
-          createdAt: '2026-10-08 17:30',
-          completedAt: null,
-          source: 'Messenger',
-          buyerName: 'Bùi Tuấn Mẫu H',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-08',
-          recipientName: null,
-          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
-          discount: 0,
-          shippingFee: 25000,
-          status: 'confirmed',
-          notes: 'Gọi trước khi giao',
-          ledger: []
-        },
-        {
-          id: 'HM-1009',
-          createdAt: '2026-10-09 08:30',
-          completedAt: null,
-          source: 'Website',
-          buyerName: 'Ngô Quỳnh Demo I',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-09',
-          recipientName: 'Anh Ngô Văn Mẫu',
-          items: [{ productId: 'P1', quantity: 1, unitPrice: 185000 }, { productId: 'P2', quantity: 2, unitPrice: 145000 }],
-          discount: 0,
-          shippingFee: 20000,
-          status: 'pending',
-          notes: 'Yêu cầu đơn mới tạo sáng nay',
-          ledger: []
-        },
-        {
-          id: 'HM-1010',
-          createdAt: '2026-10-09 10:45',
-          completedAt: '2026-10-09 12:15',
-          source: 'Store',
-          buyerName: 'Đặng Hữu Mẫu K',
-          buyerPhone: 'SĐT mẫu 0900-DEMO-10',
-          recipientName: null,
-          items: [{ productId: 'P1', quantity: 2, unitPrice: 185000 }],
-          discount: 10000,
-          shippingFee: 0,
-          status: 'completed',
-          notes: 'Khách thanh toán tại quầy 09/10',
-          ledger: [
-            { id: 'L-8', date: '2026-10-09', type: 'collection', amount: 360000, method: 'Chuyển khoản' }
-          ]
-        }
-      ],
+      orders: [],
       posts: [
         {
           id: 'post-1',
@@ -3182,6 +3031,7 @@
           excerpt: 'Khám phá sự khác biệt về cấu trúc protein, 18 loại axit amin và độ an toàn của thố sứ tráng men 200ml chứa 35g yến tươi thật chưng thủ công ngay khi đặt tại Yến Sào Hà Mi Đà Nẵng.',
           coverImageUrl: '/assets/bai-viet/banner_bai_1_yen_tuoi_tho_su.jpg',
           status: 'published',
+          isPinned: true,
           updatedAt: '2026-10-07',
           content: 'Trong hành trình chăm sóc sức khỏe gia đình, đặc biệt khi bồi bổ cho mẹ bầu, ông bà lớn tuổi hay người thân đang hồi phục sau bệnh, những người tiêu dùng tinh tế và sành yến ngày càng khắt khe hơn. Thay vì chọn những hũ yến chưng sẵn đóng nắp kim loại sản xuất hàng loạt lưu kho dài ngày, xu hướng thưởng thức Yến tươi chưng nóng trong thố sứ 200ml đang trở thành chuẩn mực mới của sự an tâm.'
         },
@@ -3193,6 +3043,7 @@
           excerpt: 'Quy trình 120 phút chưng thủ công tươi nóng ngay khi nhận đơn và giao tận nơi tại 6 quận nội thành Đà Nẵng cùng các bệnh viện lớn như Hoàn Mỹ, Gia Đình, Vinmec, Phụ Sản - Nhi.',
           coverImageUrl: '/assets/bai-viet/banner_bai_2_giao_hoa_toc_2h_da_nang.jpg',
           status: 'published',
+          isPinned: false,
           updatedAt: '2026-10-08',
           content: 'Khi một người thân đang nằm viện cần bồi bổ ngay sau ca phẫu thuật, khi mẹ bầu mệt mỏi nghén ăn vào buổi chiều, hay khi bạn ở xa muốn gửi gấp một thố yến ấm nóng về biếu ông bà tại Đà Nẵng — sự kịp thời và độ tươi mới chính là điều quý giá nhất. Thấu hiểu trọn vẹn tâm ý đó, Yến Sào Hà Mi tiên phong chuẩn hóa dịch vụ: Yến Tươi Chưng Nóng Thố Sứ 200ml — Giao Ngay Trong 2H Nội Thành Đà Nẵng.'
         },
@@ -3204,6 +3055,7 @@
           excerpt: 'Hướng dẫn chi tiết 2 khung giờ vàng trong ngày và liều lượng dùng yến tươi chưng nóng chuẩn khoa học giúp mẹ bầu, người mới ốm dậy và ông bà lớn tuổi hấp thu trọn vẹn dưỡng chất.',
           coverImageUrl: '/assets/bai-viet/banner_bai_3_cam_nang_dinh_duong.jpg',
           status: 'published',
+          isPinned: false,
           updatedAt: '2026-10-08',
           content: 'Yến sào từ lâu đã được trân quý nhờ hàm lượng đạm tự nhiên cao cùng 18 loại axit amin không thể thay thế. Tuy nhiên, để từng sợi yến thực sự chuyển hóa thành sinh lực, việc ăn yến đúng thời điểm và đúng liều lượng đóng vai trò quyết định.'
         },
@@ -3215,6 +3067,7 @@
           excerpt: 'Gợi ý cách chọn quà thăm bệnh, quà biếu ông bà cha mẹ và quà tặng đối tác tinh tế tại Đà Nẵng với Thố Yến Tươi Chưng Nóng Giao Ngay 2H và Bộ Sưu Tập Set Quà Hoa Sen Vàng Hà Mi.',
           coverImageUrl: '/assets/bai-viet/banner_bai_4_qua_bieu_suc_khoe.jpg',
           status: 'published',
+          isPinned: false,
           updatedAt: '2026-10-09',
           content: 'Trong nét đẹp văn hóa của người Việt, một món quà biếu ý nghĩa không nằm ở sự phô trương cầu kỳ, mà ở sự thấu hiểu và tấm lòng chân thành dành cho sức khỏe của người nhận.'
         },
@@ -3226,6 +3079,7 @@
           excerpt: 'Cách nhận biết màu sắc tự nhiên của tổ yến thật và 5 dấu hiệu nhận biết yến không ngâm hóa chất tẩy trắng.',
           coverImageUrl: '/assets/bai-viet/banner_bai_1_yen_tuoi_tho_su.jpg',
           status: 'draft',
+          isPinned: false,
           updatedAt: '2026-10-09',
           content: 'Có một lời khuyên mà những người thợ nhặt yến lành nghề luôn dặn người thân khi đi mua tổ yến khô: “Đừng chọn những tai yến trắng tinh như tuyết và đều màu răm rắp như đúc khuôn”.'
         }
@@ -3367,24 +3221,7 @@
       products: JSON.parse(JSON.stringify(PRODUCTS)),
       notificationSettings: JSON.parse(JSON.stringify(INITIAL_FIXTURES.notificationSettings)),
       notificationLogs: JSON.parse(JSON.stringify(INITIAL_FIXTURES.notificationLogs)),
-      inAppNotifications: [
-        {
-          id: 'notif-1',
-          orderId: 'HM-1009',
-          title: 'Đơn mới từ Website',
-          desc: 'Khách Ngô Quỳnh Demo I đặt 3 thố yến (495.000 ₫)',
-          time: '08:30 Hôm nay',
-          read: false
-        },
-        {
-          id: 'notif-2',
-          orderId: 'HM-1010',
-          title: 'Đơn hoàn tất tại quầy',
-          desc: 'Khách Đặng Hữu Mẫu K thanh toán 360.000 ₫',
-          time: '10:45 Hôm nay',
-          read: true
-        }
-      ]
+      inAppNotifications: []
     };
 
     // Role permissions mapping
@@ -3962,7 +3799,16 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy đơn hàng phù hợp</td></tr>`;
+        if (appState.orders.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 48px 20px;">
+            <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Chưa có đơn hàng nào</div>
+            <div style="font-size: 13px; color: var(--text-muted); max-width: 440px; margin: 0 auto 16px; line-height: 1.5;">Hệ thống quản trị đang sẵn sàng tiếp nhận đơn đặt hàng thực tế từ Website và kênh trực tiếp.</div>
+            <button class="btn btn-primary btn-sm" onclick="openCreateOrderModal()">+ Tạo đơn hàng mới</button>
+          </td></tr>`;
+        } else {
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Không tìm thấy đơn hàng phù hợp với bộ lọc</td></tr>`;
+        }
         return;
       }
 
@@ -4574,12 +4420,20 @@
         return;
       }
 
+      // Sort pinned articles to the top automatically
+      filtered.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
       tbody.innerHTML = filtered.map(p => `
-        <tr>
+        <tr style="${p.isPinned ? 'background: #fffdf5;' : ''}">
           <td><img src="${esc(p.coverImageUrl)}" class="product-thumb" alt="" onerror="this.style.display='none'" /></td>
           <td>
-            <div style="font-weight: 600; max-width: 360px;">${esc(p.title)}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">/${esc(p.slug)}</div>
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+              ${p.isPinned ? '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">📌 Đã ghim</span>' : ''}
+              <div>
+                <div style="font-weight: 600; max-width: 360px;">${esc(p.title)}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">/${esc(p.slug)}</div>
+              </div>
+            </div>
           </td>
           <td><span class="badge-source">${esc(p.category)}</span></td>
           <td>
@@ -4589,7 +4443,10 @@
           </td>
           <td>${esc(p.updatedAt)}</td>
           <td>
-            <div style="display: flex; gap: 6px;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-sm ${p.isPinned ? 'btn-pinned' : ''}" onclick="togglePinPost('${p.id}')" title="${p.isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài lên đầu trang'}">
+                ${p.isPinned ? '📌 Bỏ ghim' : '📌 Ghim'}
+              </button>
               <button class="btn btn-sm" onclick="openEditPost('${p.id}')">Sửa</button>
               <button class="btn btn-sm" onclick="togglePostStatus('${p.id}')">
                 ${p.status === 'published' ? 'Hạ nháp' : 'Xuất bản'}
@@ -4600,6 +4457,17 @@
         </tr>
       `).join('');
       if (window.lucide) lucide.createIcons();
+    }
+
+    function togglePinPost(postId) {
+      const post = appState.posts.find(p => p.id === postId);
+      if (post) {
+        post.isPinned = !post.isPinned;
+        post.updatedAt = SIMULATED_TODAY;
+        showToast(post.isPinned ? '📌 Đã ghim bài viết lên đầu trang!' : 'Đã bỏ ghim bài viết!', 'success');
+        persistAppState();
+        renderPostsTable();
+      }
     }
 
     function resetPostFilters() {
@@ -4630,6 +4498,9 @@
       document.getElementById('postExcerptInput').value = '';
       document.getElementById('postContentInput').value = '';
       document.getElementById('postStatusInput').value = 'published';
+      if (document.getElementById('postIsPinnedInput')) {
+        document.getElementById('postIsPinnedInput').checked = false;
+      }
       document.getElementById('editPostModal').showModal();
     }
 
@@ -4645,6 +4516,9 @@
       document.getElementById('postExcerptInput').value = post.excerpt || '';
       document.getElementById('postContentInput').value = post.content || '';
       document.getElementById('postStatusInput').value = post.status;
+      if (document.getElementById('postIsPinnedInput')) {
+        document.getElementById('postIsPinnedInput').checked = !!post.isPinned;
+      }
       document.getElementById('editPostModal').showModal();
     }
 
@@ -4658,6 +4532,7 @@
       const excerpt = document.getElementById('postExcerptInput').value.trim();
       const content = document.getElementById('postContentInput').value.trim();
       const status = document.getElementById('postStatusInput').value;
+      const isPinned = !!(document.getElementById('postIsPinnedInput')?.checked);
 
       if (id) {
         const post = appState.posts.find(p => p.id === id);
@@ -4669,6 +4544,7 @@
           post.excerpt = excerpt;
           post.content = content;
           post.status = status;
+          post.isPinned = isPinned;
           post.updatedAt = SIMULATED_TODAY;
         }
         showToast('Đã lưu bài viết thành công!', 'success');
@@ -4682,11 +4558,13 @@
           excerpt,
           content,
           status,
+          isPinned,
           updatedAt: SIMULATED_TODAY
         };
         appState.posts.unshift(newPost);
         showToast('Đã tạo bài viết mới thành công!', 'success');
       }
+      persistAppState();
       closeDialog('editPostModal');
       renderPostsTable();
     }
@@ -4697,14 +4575,16 @@
         post.status = post.status === 'published' ? 'draft' : 'published';
         post.updatedAt = SIMULATED_TODAY;
         showToast(`Đã đổi bài viết sang trạng thái: ${post.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}`, 'info');
+        persistAppState();
         renderPostsTable();
       }
     }
 
     function deletePost(postId) {
-      if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này khỏi danh sách demo?')) {
+      if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
         appState.posts = appState.posts.filter(p => p.id !== postId);
-        showToast('Đã xóa bài viết khỏi demo', 'info');
+        showToast('Đã xóa bài viết thành công', 'info');
+        persistAppState();
         renderPostsTable();
       }
     }
@@ -5628,7 +5508,7 @@
     /* --- 14.5. PERSISTENCE --- */
     function persistAppState() {
       try {
-        localStorage.setItem('ha_mi_admin_state_v1', JSON.stringify({
+        localStorage.setItem('ha_mi_admin_state_v2', JSON.stringify({
           orders: appState.orders,
           posts: appState.posts,
           jobs: appState.jobs,
@@ -5646,11 +5526,17 @@
 
     function loadSavedAppState() {
       try {
-        const saved = localStorage.getItem('ha_mi_admin_state_v1');
+        if (localStorage.getItem('ha_mi_admin_state_v1')) {
+          localStorage.removeItem('ha_mi_admin_state_v1');
+        }
+        const saved = localStorage.getItem('ha_mi_admin_state_v2');
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object') {
-            if (Array.isArray(parsed.orders) && parsed.orders.length > 0) appState.orders = parsed.orders;
+            if (Array.isArray(parsed.orders)) {
+              // Purge obsolete demo orders HM-1001 through HM-1010
+              appState.orders = parsed.orders.filter(o => !/^HM-10(0[1-9]|10)$/.test(o.id));
+            }
             if (Array.isArray(parsed.posts) && parsed.posts.length > 0) appState.posts = parsed.posts;
             if (Array.isArray(parsed.jobs) && parsed.jobs.length > 0) appState.jobs = parsed.jobs;
             if (parsed.site) appState.site = parsed.site;
@@ -5658,7 +5544,9 @@
             if (parsed.products) appState.products = parsed.products;
             if (parsed.notificationSettings) appState.notificationSettings = parsed.notificationSettings;
             if (Array.isArray(parsed.notificationLogs)) appState.notificationLogs = parsed.notificationLogs;
-            if (Array.isArray(parsed.inAppNotifications)) appState.inAppNotifications = parsed.inAppNotifications;
+            if (Array.isArray(parsed.inAppNotifications)) {
+              appState.inAppNotifications = parsed.inAppNotifications.filter(n => !/^notif-[12]$/.test(n.id));
+            }
           }
         }
       } catch (e) {
@@ -5671,33 +5559,17 @@
       if (window.confirm('Khôi phục dữ liệu mặc định Hà Mi? Các thay đổi sẽ được đặt lại về mẫu chuẩn.')) {
         try {
           localStorage.removeItem('ha_mi_admin_state_v1');
+          localStorage.removeItem('ha_mi_admin_state_v2');
         } catch (e) {}
-        appState.orders = JSON.parse(JSON.stringify(INITIAL_FIXTURES.orders));
+        appState.orders = [];
         appState.posts = JSON.parse(JSON.stringify(INITIAL_FIXTURES.posts));
         appState.jobs = JSON.parse(JSON.stringify(INITIAL_FIXTURES.jobs));
         appState.site = JSON.parse(JSON.stringify(INITIAL_FIXTURES.site));
         appState.staff = JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff));
         appState.products = JSON.parse(JSON.stringify(PRODUCTS));
         appState.notificationSettings = JSON.parse(JSON.stringify(INITIAL_FIXTURES.notificationSettings));
-        appState.notificationLogs = JSON.parse(JSON.stringify(INITIAL_FIXTURES.notificationLogs));
-        appState.inAppNotifications = [
-          {
-            id: 'notif-1',
-            orderId: 'HM-1009',
-            title: 'Đơn mới từ Website',
-            desc: 'Khách Ngô Quỳnh Demo I đặt 3 thố yến (495.000 ₫)',
-            time: '08:30 Hôm nay',
-            read: false
-          },
-          {
-            id: 'notif-2',
-            orderId: 'HM-1010',
-            title: 'Đơn hoàn tất tại quầy',
-            desc: 'Khách Đặng Hữu Mẫu K thanh toán 360.000 ₫',
-            time: '10:45 Hôm nay',
-            read: true
-          }
-        ];
+        appState.notificationLogs = [];
+        appState.inAppNotifications = [];
         showToast('Đã khôi phục dữ liệu mẫu gốc thành công!', 'info');
         updateDashboard();
         renderOrdersTable();

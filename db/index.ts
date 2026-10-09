@@ -288,6 +288,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       content TEXT NOT NULL,
       cover_image_url TEXT NOT NULL,
       is_published INTEGER NOT NULL DEFAULT 1,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -539,11 +540,14 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   );
 
   // Ensure canonical SEO/GEO blog posts are always present
+  try {
+    db.exec("ALTER TABLE posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;");
+  } catch {}
   const nowIso = new Date().toISOString();
   db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
   const upsertCanonicalPost = db.prepare(`
-    INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       slug = excluded.slug,
       title = excluded.title,
@@ -552,6 +556,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       content = excluded.content,
       cover_image_url = excluded.cover_image_url,
       is_published = excluded.is_published,
+      is_pinned = excluded.is_pinned,
       updated_at = excluded.updated_at
   `);
   for (const post of DEMO_POSTS) {
@@ -564,6 +569,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       post.content,
       post.coverImageUrl,
       post.isPublished ? 1 : 0,
+      post.isPinned ? 1 : 0,
       nowIso,
       nowIso
     );
@@ -2150,8 +2156,8 @@ const POST_ALT_BY_SLUG = new Map<string, string>(
 export function getAllPosts(onlyPublished = false): PostRecord[] {
   const db = getSqliteDb();
   const sql = onlyPublished
-    ? "SELECT * FROM posts WHERE is_published = 1 ORDER BY created_at DESC, id ASC"
-    : "SELECT * FROM posts ORDER BY created_at DESC, id ASC";
+    ? "SELECT * FROM posts WHERE is_published = 1 ORDER BY is_pinned DESC, created_at DESC, id ASC"
+    : "SELECT * FROM posts ORDER BY is_pinned DESC, created_at DESC, id ASC";
   const rows = db.prepare(sql).all() as Record<string, unknown>[];
   return rows.map((r) => {
     const slug = String(r.slug);
@@ -2166,6 +2172,7 @@ export function getAllPosts(onlyPublished = false): PostRecord[] {
       coverImageUrl: String(r.cover_image_url),
       coverImageAlt: POST_ALT_BY_SLUG.get(slug) || title,
       isPublished: Boolean(r.is_published),
+      isPinned: Boolean(r.is_pinned),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     };
@@ -2190,6 +2197,7 @@ export function getPostBySlug(slug: string): PostRecord | null {
     coverImageUrl: String(r.cover_image_url),
     coverImageAlt: POST_ALT_BY_SLUG.get(String(r.slug)) || title,
     isPublished: Boolean(r.is_published),
+    isPinned: Boolean(r.is_pinned),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
   };
@@ -2204,6 +2212,7 @@ export function upsertPostByStaff(params: {
   content: string;
   coverImageUrl: string;
   isPublished: boolean;
+  isPinned?: boolean;
 }) {
   const db = getSqliteDb();
   const nowIso = new Date().toISOString();
@@ -2216,8 +2225,8 @@ export function upsertPostByStaff(params: {
 
   db.prepare(`
     INSERT INTO posts (
-      id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       slug = excluded.slug,
       title = excluded.title,
@@ -2226,6 +2235,7 @@ export function upsertPostByStaff(params: {
       content = excluded.content,
       cover_image_url = excluded.cover_image_url,
       is_published = excluded.is_published,
+      is_pinned = excluded.is_pinned,
       updated_at = excluded.updated_at
   `).run(
     postId,
@@ -2236,6 +2246,7 @@ export function upsertPostByStaff(params: {
     params.content?.trim() || cleanTitle,
     params.coverImageUrl?.trim() || "/brand/hero-editorial-clean.jpg",
     params.isPublished ? 1 : 0,
+    params.isPinned ? 1 : 0,
     nowIso,
     nowIso
   );
@@ -3050,6 +3061,7 @@ CREATE TABLE IF NOT EXISTS posts (
   content TEXT NOT NULL,
   cover_image_url TEXT NOT NULL,
   is_published INTEGER NOT NULL DEFAULT 1,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -3150,8 +3162,8 @@ function applyCloudTablesToLocalSqlite(
     const syncNowIso = new Date().toISOString();
     db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
     const upsertPostStmt = db.prepare(`
-      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         slug = excluded.slug,
         title = excluded.title,
@@ -3160,6 +3172,7 @@ function applyCloudTablesToLocalSqlite(
         content = excluded.content,
         cover_image_url = excluded.cover_image_url,
         is_published = excluded.is_published,
+        is_pinned = excluded.is_pinned,
         updated_at = excluded.updated_at
     `);
     for (const post of DEMO_POSTS) {
@@ -3172,6 +3185,7 @@ function applyCloudTablesToLocalSqlite(
         post.content,
         post.coverImageUrl,
         post.isPublished ? 1 : 0,
+        post.isPinned ? 1 : 0,
         syncNowIso,
         syncNowIso
       );

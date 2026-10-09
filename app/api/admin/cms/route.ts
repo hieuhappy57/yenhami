@@ -123,6 +123,7 @@ export async function POST(request: Request) {
         content: String(post.content || ""),
         coverImageUrl: String(post.coverImageUrl || "/brand/hero-editorial-clean.jpg"),
         isPublished: Boolean(post.isPublished ?? true),
+        isPinned: Boolean(post.isPinned ?? false),
       });
       await syncDbToCloud();
       return NextResponse.json(res);
