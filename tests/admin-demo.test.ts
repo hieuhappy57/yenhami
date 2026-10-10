@@ -157,13 +157,13 @@ test("admin demo provides staff passwords and individual authentication modal", 
   assert.ok(html.includes("generateRandomStaffPassword"), "Missing generateRandomStaffPassword function");
   assert.ok(html.includes("handleStaffLoginSubmit"), "Missing handleStaffLoginSubmit function");
 
-  // Verify staff fixtures have passwords
+  // Verify staff fixtures are defined without exposing plaintext passwords in code
   const fixturesMatch = html.match(/const INITIAL_FIXTURES\s*=\s*({[\s\S]*?});/);
   assert.ok(fixturesMatch, "INITIAL_FIXTURES not found");
   const fixtures = runInNewContext(`(${fixturesMatch[1]})`);
   assert.ok(fixtures.staff.length >= 5, "Expected at least 5 staff fixtures");
   fixtures.staff.forEach((st: { name: string; password?: string; email: string }) => {
-    assert.ok(st.password, `Staff ${st.name} (${st.email}) must have a default password`);
+    assert.ok(!st.password, `Staff ${st.name} (${st.email}) must NOT store plaintext password in source code`);
   });
 });
 

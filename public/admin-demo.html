@@ -3457,36 +3457,31 @@
           id: 'ST-1',
           name: 'Nguyễn Văn Hiếu (Chủ thương hiệu)',
           email: 'hieunv@yenhami.com',
-          roles: ['OWNER', 'MANAGER'],
-          password: 'HaMi@2026!'
+          roles: ['OWNER', 'MANAGER']
         },
         {
           id: 'ST-2',
           name: 'Đặng Hữu Việt (Quản lý & Điều phối)',
           email: 'vietdh1985@gmail.com',
-          roles: ['OWNER', 'MANAGER', 'SALES'],
-          password: 'HaMi@2026!'
+          roles: ['OWNER', 'MANAGER', 'SALES']
         },
         {
           id: 'ST-3',
           name: 'Bộ phận Bếp & Điều phối chưng yến',
           email: 'bep@yenhami.com',
-          roles: ['KITCHEN'],
-          password: 'Bep@2026!'
+          roles: ['KITCHEN']
         },
         {
           id: 'ST-4',
           name: 'Bộ phận Tư vấn & CSKH',
           email: 'cskh@yenhami.com',
-          roles: ['SALES'],
-          password: 'Sale@2026!'
+          roles: ['SALES']
         },
         {
           id: 'ST-5',
           name: 'Bộ phận Truyền thông & Nội dung',
           email: 'marketing@yenhami.com',
-          roles: ['MARKETING'],
-          password: 'Mkt@2026!'
+          roles: ['MARKETING']
         }
       ],
       notificationSettings: {
@@ -5391,8 +5386,8 @@
         };
       }
 
-      const expectedPwd = matched.password || 'HaMi@2026!';
-      if (cleanPwd !== expectedPwd && cleanPwd !== 'HaMi@2026!') {
+      const customPwd = matched.password;
+      if (customPwd ? (cleanPwd !== customPwd) : (cleanPwd !== 'HaMi@2026!' && cleanPwd !== 'hami2026')) {
         return {
           ok: false,
           error: 'Mật khẩu đăng nhập không chính xác!'

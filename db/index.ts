@@ -524,48 +524,51 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   }
 
   // Always ensure default staff accounts exist
+  const defaultMasterPassword = process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!";
+  const defaultMasterHash = hashPassword(defaultMasterPassword);
+
   const defaultStaffList = [
     {
       id: "staff-admin-1",
       username: "hami_staff",
       displayName: "Điều phối Bếp & CSKH Hà Mi",
       role: "OWNER",
-      password: process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!",
+      passwordHash: defaultMasterHash,
     },
     {
       id: "staff-1",
       username: "hieunv@yenhami.com",
       displayName: "Nguyễn Văn Hiếu",
       role: "OWNER",
-      password: "HaMi@2026!",
+      passwordHash: defaultMasterHash,
     },
     {
       id: "staff-2",
       username: "vietdh1985@gmail.com",
       displayName: "Đặng Hữu Việt",
       role: "MANAGER",
-      password: "HaMi@2026!",
+      passwordHash: defaultMasterHash,
     },
     {
       id: "staff-3",
       username: "bep@yenhami.com",
       displayName: "Bộ phận Bếp & Pha chế",
       role: "KITCHEN",
-      password: "Bep@2026!",
+      passwordHash: defaultMasterHash,
     },
     {
       id: "staff-4",
       username: "cskh@yenhami.com",
       displayName: "Bộ phận CSKH & Tư vấn",
       role: "SALES",
-      password: "Sale@2026!",
+      passwordHash: defaultMasterHash,
     },
     {
       id: "staff-5",
       username: "marketing@yenhami.com",
       displayName: "Bộ phận Marketing & Nội dung",
       role: "MARKETING",
-      password: "Mkt@2026!",
+      passwordHash: defaultMasterHash,
     },
   ];
 
@@ -584,7 +587,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       s.username.toLowerCase(),
       s.displayName,
       s.role,
-      hashPassword(s.password),
+      s.passwordHash,
       1,
       new Date().toISOString()
     );
