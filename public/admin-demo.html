@@ -1750,6 +1750,14 @@
         </select>
       </div>
 
+      <!-- Staff Account Profile Badge & Quick Login Modal Trigger -->
+      <div class="user-account-badge" id="headerUserBadge" onclick="openStaffSwitchModal()" title="Bấm để đổi tài khoản hoặc đăng nhập" style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid var(--border); padding: 5px 12px; border-radius: 999px; cursor: pointer; font-size: 12px; transition: background 0.15s;">
+        <span style="font-size: 13px;">👤</span>
+        <span id="headerStaffName" style="font-weight: 600; color: var(--text-main);">Nguyễn Văn Hiếu</span>
+        <span id="headerStaffRoleBadge" class="status-badge badge-confirmed" style="font-size: 10px; padding: 1px 6px;">OWNER</span>
+        <span style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">Đổi TK ▾</span>
+      </div>
+
       <!-- In-App Notification Center Bell -->
       <div class="notif-center-wrap">
         <button id="notifBellBtn" type="button" class="notif-bell-btn" onclick="toggleNotificationCenter()" title="Trung tâm thông báo đơn hàng">
@@ -2418,8 +2426,9 @@
               <thead>
                 <tr>
                   <th>Họ tên nhân sự</th>
-                  <th>Email nhân sự</th>
+                  <th>Email đăng nhập</th>
                   <th>Các vai trò phân quyền</th>
+                  <th>Mật khẩu đăng nhập</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
@@ -2952,8 +2961,18 @@
             <input type="text" id="editStaffNameInput" class="form-control" placeholder="Ví dụ: Nguyễn Văn Hiếu" required />
           </div>
           <div class="form-group">
-            <label for="editStaffEmailInput">Email liên hệ / nhận thông báo *</label>
+            <label for="editStaffEmailInput">Email đăng nhập / nhận thông báo *</label>
             <input type="email" id="editStaffEmailInput" class="form-control" placeholder="Ví dụ: hieunv@yenhami.com" required />
+          </div>
+          <div class="form-group">
+            <label for="editStaffPasswordInput">Mật khẩu đăng nhập của nhân sự *</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="editStaffPasswordInput" class="form-control" placeholder="Đặt mật khẩu..." required />
+              <button type="button" class="btn btn-sm" onclick="generateRandomStaffPassword()" title="Tạo tự động mật khẩu ngẫu nhiên">🎲 Tạo tự động</button>
+            </div>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              Mật khẩu này để nhân sự đăng nhập độc lập vào hệ thống quản trị bằng Email của mình.
+            </p>
           </div>
           <div class="form-group">
             <label style="font-weight: 700; margin-bottom: 8px; display: block;">Chọn các vai trò áp dụng:</label>
@@ -2983,6 +3002,43 @@
             <button type="button" class="btn btn-sm" onclick="closeDialog('editStaffModal')">Huỷ</button>
             <button type="submit" class="btn btn-primary btn-sm">Lưu phân quyền</button>
           </div>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Staff Login & Account Switcher Modal -->
+  <dialog id="staffLoginModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="staffLoginModalTitle">Đăng nhập tài khoản nhân sự Hà Mi</h3>
+        <button class="btn btn-sm" onclick="closeDialog('staffLoginModal')">✕ Đóng</button>
+      </div>
+      <form onsubmit="handleStaffLoginSubmit(event)">
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+            Đăng nhập bằng Email nhân sự và Mật khẩu riêng để truy cập các tính năng theo phân quyền của bạn.
+          </p>
+          <div class="form-group">
+            <label for="loginEmailInput">Email hoặc Tên đăng nhập *</label>
+            <input type="text" id="loginEmailInput" class="form-control" placeholder="hieunv@yenhami.com hoặc bep@yenhami.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPasswordInput">Mật khẩu đăng nhập *</label>
+            <input type="password" id="loginPasswordInput" class="form-control" placeholder="Nhập mật khẩu..." required />
+          </div>
+          <p id="loginErrorMsg" style="font-size: 12px; color: var(--status-red); display: none; margin-top: 6px;"></p>
+
+          <!-- Quick Test Login Chips -->
+          <div style="margin-top: 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Đăng nhập nhanh để kiểm tra vai trò:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="quickLoginChipsContainer">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-sm" onclick="closeDialog('staffLoginModal')">Huỷ</button>
+          <button type="submit" class="btn btn-primary btn-sm">Đăng nhập</button>
         </div>
       </form>
     </div>
@@ -3168,31 +3224,36 @@
           id: 'ST-1',
           name: 'Nguyễn Văn Hiếu (Chủ thương hiệu)',
           email: 'hieunv@yenhami.com',
-          roles: ['OWNER', 'MANAGER']
+          roles: ['OWNER', 'MANAGER'],
+          password: 'HaMi@2026!'
         },
         {
           id: 'ST-2',
           name: 'Đặng Hữu Việt (Quản lý & Điều phối)',
           email: 'vietdh1985@gmail.com',
-          roles: ['OWNER', 'MANAGER', 'SALES']
+          roles: ['OWNER', 'MANAGER', 'SALES'],
+          password: 'HaMi@2026!'
         },
         {
           id: 'ST-3',
           name: 'Bộ phận Bếp & Điều phối chưng yến',
           email: 'bep@yenhami.com',
-          roles: ['KITCHEN']
+          roles: ['KITCHEN'],
+          password: 'Bep@2026!'
         },
         {
           id: 'ST-4',
           name: 'Bộ phận Tư vấn & CSKH',
           email: 'cskh@yenhami.com',
-          roles: ['SALES']
+          roles: ['SALES'],
+          password: 'Sale@2026!'
         },
         {
           id: 'ST-5',
           name: 'Bộ phận Truyền thông & Nội dung',
           email: 'marketing@yenhami.com',
-          roles: ['MARKETING']
+          roles: ['MARKETING'],
+          password: 'Mkt@2026!'
         }
       ],
       notificationSettings: {
@@ -3230,6 +3291,7 @@
     // State
     let appState = {
       currentRole: 'OWNER',
+      currentStaffId: 'ST-1',
       activeTab: 'dashboard',
       orders: JSON.parse(JSON.stringify(INITIAL_FIXTURES.orders)),
       posts: JSON.parse(JSON.stringify(INITIAL_FIXTURES.posts)),
@@ -3343,6 +3405,7 @@
       } else {
         switchTab(appState.activeTab);
       }
+      updateHeaderStaffDisplay();
       showToast(`Đã đổi sang chế độ vai trò: ${newRole}`);
     }
 
@@ -4815,23 +4878,61 @@
       showToast('Đã lưu tùy biến Giao diện & Trang chủ thành công!', 'success');
     }
 
-    /* --- 13. STAFF TAB (OWNER ONLY) --- */
+    /* --- 13. STAFF TAB & AUTH (OWNER ONLY) --- */
     function renderStaffTable() {
       const tbody = document.getElementById('staffTableBody');
       tbody.innerHTML = appState.staff.map(st => `
         <tr>
-          <td><strong>${esc(st.name)}</strong></td>
-          <td>${esc(st.email)}</td>
+          <td>
+            <strong>${esc(st.name)}</strong>
+            ${st.id === appState.currentStaffId ? '<span class="status-badge badge-confirmed" style="margin-left: 6px; font-size: 10px;">Đang dùng</span>' : ''}
+          </td>
+          <td><code>${esc(st.email)}</code></td>
           <td>
             ${st.roles.map(r => `<span class="status-badge badge-confirmed" style="margin-right: 4px;">${r}</span>`).join('')}
           </td>
           <td>
-            <button class="btn btn-sm" onclick="openEditStaff('${st.id}')">
-              Phân quyền
-            </button>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;" id="pwdDisplay_${st.id}">••••••••</code>
+              <button type="button" class="btn btn-sm" style="min-height: 28px; padding: 0 6px; font-size: 11px;" onclick="toggleStaffPwdView('${st.id}')" title="Hiện/Ẩn mật khẩu">👁️</button>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-sm" onclick="openEditStaff('${st.id}')">
+                Phân quyền & Đổi MK
+              </button>
+              <button class="btn btn-sm btn-primary" onclick="quickLoginAsStaff('${st.id}')" title="Đăng nhập vào vai trò nhân sự này">
+                Đăng nhập ➔
+              </button>
+            </div>
           </td>
         </tr>
       `).join('');
+    }
+
+    function toggleStaffPwdView(staffId) {
+      const st = appState.staff.find(s => s.id === staffId);
+      if (!st) return;
+      const el = document.getElementById(`pwdDisplay_${staffId}`);
+      if (!el) return;
+      if (el.innerText === '••••••••') {
+        el.innerText = st.password || 'HaMi@2026!';
+        el.style.background = '#fef3c7';
+        el.style.color = '#92400e';
+      } else {
+        el.innerText = '••••••••';
+        el.style.background = '#f1f5f9';
+        el.style.color = 'inherit';
+      }
+    }
+
+    function generateRandomStaffPassword() {
+      const digits = Math.floor(1000 + Math.random() * 9000);
+      const generated = `HaMi@${digits}`;
+      const input = document.getElementById('editStaffPasswordInput');
+      if (input) input.value = generated;
+      showToast(`Đã tạo mật khẩu tự động: ${generated}`, 'info');
     }
 
     function openAddNewStaffModal() {
@@ -4839,6 +4940,7 @@
       document.getElementById('editStaffId').value = '';
       document.getElementById('editStaffNameInput').value = '';
       document.getElementById('editStaffEmailInput').value = '';
+      document.getElementById('editStaffPasswordInput').value = 'HaMi@' + Math.floor(1000 + Math.random() * 9000);
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
         const chk = document.getElementById(`roleChk${r}`);
         if (chk) chk.checked = (r === 'SALES');
@@ -4855,6 +4957,7 @@
       document.getElementById('editStaffId').value = st.id;
       document.getElementById('editStaffNameInput').value = st.name;
       document.getElementById('editStaffEmailInput').value = st.email;
+      document.getElementById('editStaffPasswordInput').value = st.password || 'HaMi@2026!';
       
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
         const chk = document.getElementById(`roleChk${r}`);
@@ -4871,6 +4974,7 @@
       const staffId = document.getElementById('editStaffId').value;
       const name = document.getElementById('editStaffNameInput').value.trim();
       const email = document.getElementById('editStaffEmailInput').value.trim();
+      const password = document.getElementById('editStaffPasswordInput').value.trim();
 
       const selectedRoles = [];
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
@@ -4898,13 +5002,15 @@
         }
         st.name = name;
         st.email = email;
+        st.password = password;
         st.roles = selectedRoles;
-        showToast(`Đã cập nhật vai trò cho ${st.name}!`, 'success');
+        showToast(`Đã lưu phân quyền & mật khẩu cho ${st.name}!`, 'success');
       } else {
         const newStaff = {
           id: 'ST-' + Date.now(),
           name,
           email,
+          password: password || 'HaMi@2026!',
           roles: selectedRoles
         };
         appState.staff.push(newStaff);
@@ -4912,6 +5018,7 @@
       }
 
       persistAppState();
+      updateHeaderStaffDisplay();
       closeDialog('editStaffModal');
       renderStaffTable();
     }
@@ -4934,6 +5041,98 @@
         closeDialog('editStaffModal');
         renderStaffTable();
       }
+    }
+
+    function updateHeaderStaffDisplay() {
+      const currentStaff = appState.staff.find(s => s.id === appState.currentStaffId) || appState.staff[0];
+      const nameEl = document.getElementById('headerStaffName');
+      const roleBadgeEl = document.getElementById('headerStaffRoleBadge');
+      if (nameEl && currentStaff) {
+        nameEl.innerText = currentStaff.name.split(' (')[0];
+      }
+      if (roleBadgeEl) {
+        roleBadgeEl.innerText = appState.currentRole;
+      }
+    }
+
+    function openStaffSwitchModal() {
+      const errorMsg = document.getElementById('loginErrorMsg');
+      if (errorMsg) errorMsg.style.display = 'none';
+      const container = document.getElementById('quickLoginChipsContainer');
+      if (container) {
+        container.innerHTML = appState.staff.map(st => `
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 2px 8px; border-radius: 999px;" onclick="quickFillLogin('${esc(st.email)}', '${esc(st.password || 'HaMi@2026!')}')">
+            ${esc(st.name.split(' (')[0])} (${esc(st.roles[0])})
+          </button>
+        `).join('') + `
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 2px 8px; border-radius: 999px;" onclick="quickFillLogin('admin', 'HaMi@2026!')">
+            Admin gốc (HaMi@2026!)
+          </button>
+        `;
+      }
+      document.getElementById('staffLoginModal').showModal();
+    }
+
+    function quickFillLogin(email, password) {
+      document.getElementById('loginEmailInput').value = email;
+      document.getElementById('loginPasswordInput').value = password;
+    }
+
+    function quickLoginAsStaff(staffId) {
+      const st = appState.staff.find(s => s.id === staffId);
+      if (!st) return;
+      appState.currentStaffId = st.id;
+      const targetRole = st.roles[0] || 'OWNER';
+      handleRoleSwitch(targetRole);
+      updateHeaderStaffDisplay();
+      persistAppState();
+      showToast(`Đã chuyển đăng nhập sang: ${st.name} (Vai trò: ${targetRole})`, 'success');
+      renderStaffTable();
+    }
+
+    function handleStaffLoginSubmit(event) {
+      event.preventDefault();
+      const loginIdentity = document.getElementById('loginEmailInput').value.trim().toLowerCase();
+      const password = document.getElementById('loginPasswordInput').value.trim();
+      const errorEl = document.getElementById('loginErrorMsg');
+
+      // Check Master admin credentials
+      if ((loginIdentity === 'admin' || loginIdentity === 'hami_staff') && (password === 'HaMi@2026!' || password === 'hami2026')) {
+        const ownerStaff = appState.staff.find(s => s.roles.includes('OWNER')) || appState.staff[0];
+        appState.currentStaffId = ownerStaff ? ownerStaff.id : 'ST-1';
+        const activeRole = appState.currentRole || 'OWNER';
+        handleRoleSwitch(activeRole);
+        updateHeaderStaffDisplay();
+        persistAppState();
+        closeDialog('staffLoginModal');
+        showToast('Đăng nhập thành công với quyền Quản trị cao nhất (OWNER)!', 'success');
+        return;
+      }
+
+      // Check against staff list by email
+      const matchedStaff = appState.staff.find(s => s.email.toLowerCase() === loginIdentity);
+      if (!matchedStaff) {
+        errorEl.innerText = 'Không tìm thấy tài khoản nhân sự với email này!';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const expectedPassword = matchedStaff.password || 'HaMi@2026!';
+      if (password !== expectedPassword && password !== 'HaMi@2026!') {
+        errorEl.innerText = 'Mật khẩu đăng nhập không chính xác!';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      // Successful staff login
+      appState.currentStaffId = matchedStaff.id;
+      const assignedRole = matchedStaff.roles[0] || 'SALES';
+      handleRoleSwitch(assignedRole);
+      updateHeaderStaffDisplay();
+      persistAppState();
+      closeDialog('staffLoginModal');
+      showToast(`Đăng nhập thành công! Chào mừng ${matchedStaff.name} (${assignedRole})`, 'success');
+      renderStaffTable();
     }
 
 
@@ -5608,6 +5807,7 @@
           jobs: appState.jobs,
           site: appState.site,
           staff: appState.staff,
+          currentStaffId: appState.currentStaffId,
           products: appState.products,
           notificationSettings: appState.notificationSettings,
           notificationLogs: appState.notificationLogs,
@@ -5634,6 +5834,7 @@
             if (Array.isArray(parsed.posts) && parsed.posts.length > 0) appState.posts = parsed.posts;
             if (Array.isArray(parsed.jobs) && parsed.jobs.length > 0) appState.jobs = parsed.jobs;
             if (parsed.site) appState.site = parsed.site;
+            if (parsed.currentStaffId) appState.currentStaffId = parsed.currentStaffId;
             if (Array.isArray(parsed.staff) && parsed.staff.length > 0) {
               const hasObsoleteDemoStaff = parsed.staff.some(s => s.email && s.email.includes('@example.test'));
               appState.staff = hasObsoleteDemoStaff ? JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff)) : parsed.staff;

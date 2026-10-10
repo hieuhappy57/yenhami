@@ -142,3 +142,26 @@ test("admin demo supports article pinning (isPinned) with toggle and top sorting
   posts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
   assert.equal(posts[0].id, "p2", "Pinned post should be sorted first");
 });
+
+test("admin demo provides staff passwords and individual authentication modal", () => {
+  // Verify modal elements and password controls
+  assert.ok(html.includes('id="editStaffPasswordInput"'), "Missing editStaffPasswordInput in staff modal");
+  assert.ok(html.includes('id="staffLoginModal"'), "Missing staffLoginModal");
+  assert.ok(html.includes('id="loginEmailInput"'), "Missing loginEmailInput");
+  assert.ok(html.includes('id="loginPasswordInput"'), "Missing loginPasswordInput");
+  assert.ok(html.includes('id="quickLoginChipsContainer"'), "Missing quickLoginChipsContainer");
+  assert.ok(html.includes('id="headerStaffName"'), "Missing headerStaffName badge");
+  assert.ok(html.includes('id="headerStaffRoleBadge"'), "Missing headerStaffRoleBadge");
+  assert.ok(html.includes("generateRandomStaffPassword"), "Missing generateRandomStaffPassword function");
+  assert.ok(html.includes("handleStaffLoginSubmit"), "Missing handleStaffLoginSubmit function");
+
+  // Verify staff fixtures have passwords
+  const fixturesMatch = html.match(/const INITIAL_FIXTURES\s*=\s*({[\s\S]*?});/);
+  assert.ok(fixturesMatch, "INITIAL_FIXTURES not found");
+  const fixtures = runInNewContext(`(${fixturesMatch[1]})`);
+  assert.ok(fixtures.staff.length >= 5, "Expected at least 5 staff fixtures");
+  fixtures.staff.forEach((st: { name: string; password?: string; email: string }) => {
+    assert.ok(st.password, `Staff ${st.name} (${st.email}) must have a default password`);
+  });
+});
+
