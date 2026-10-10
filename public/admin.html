@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>HÀ MI ADMIN | Quản trị Hệ thống Yến Sào Hà Mi</title>
   <style>
     :root {
@@ -1834,7 +1837,7 @@
         <p class="auth-subtitle">Yêu cầu xác thực tài khoản & mật khẩu để truy cập dữ liệu quản trị Yến Sào Hà Mi.</p>
       </div>
 
-      <form id="authGateForm" onsubmit="handleAuthGateLogin(event)">
+      <form id="authGateForm" autocomplete="off" onsubmit="handleAuthGateLogin(event)">
         <div class="form-group" style="margin-bottom: 14px;">
           <label for="authGateUsernameInput" style="font-size: 13px; font-weight: 600; color: #1e293b; display: block; margin-bottom: 4px;">
             Email hoặc Tên đăng nhập *
@@ -1847,7 +1850,11 @@
               class="auth-gate-input"
               placeholder="Nhập email hoặc tên đăng nhập..."
               required
-              autocomplete="username"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+              value=""
             />
           </div>
         </div>
@@ -1866,7 +1873,8 @@
               class="auth-gate-input"
               placeholder="Nhập mật khẩu của bạn..."
               required
-              autocomplete="current-password"
+              autocomplete="new-password"
+              value=""
             />
             <button
               type="button"
@@ -5298,6 +5306,8 @@
       const appContainer = document.getElementById('authenticatedAppContainer');
       if (gateScreen) gateScreen.style.display = 'flex';
       if (appContainer) appContainer.style.display = 'none';
+      const uInput = document.getElementById('authGateUsernameInput');
+      if (uInput) uInput.value = '';
       const pInput = document.getElementById('authGatePasswordInput');
       if (pInput) pInput.value = '';
       const errEl = document.getElementById('authGateErrorMsg');
@@ -6233,7 +6243,19 @@
         renderNotificationBadge();
         updateAudioToggleBtn();
         updateBrowserPushBadge();
+      } else {
+        const uInput = document.getElementById('authGateUsernameInput');
+        if (uInput) uInput.value = '';
+        const pInput = document.getElementById('authGatePasswordInput');
+        if (pInput) pInput.value = '';
       }
+
+      // Handle Safari bfcache tab restoration
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+          window.location.reload();
+        }
+      });
 
       window.addEventListener('beforeunload', persistAppState);
 

@@ -152,6 +152,8 @@ test("admin demo provides staff passwords and individual authentication modal", 
   assert.ok(!html.includes('id="quickLoginChipsContainer"'), "quickLoginChipsContainer must be hidden/removed for security");
   assert.ok(!html.includes('onclick="fillAuthGateCreds'), "fillAuthGateCreds must be removed to prevent exposing credentials");
   assert.ok(!html.includes('onclick="quickLoginAsStaff'), "quickLoginAsStaff bypass must be removed");
+  assert.ok(!html.includes("Chọn nhanh tài khoản mẫu"), "Must not include sample account chips");
+  assert.ok(!html.includes("Chủ Hà Mi"), "Must not include sample account suggestions in login gate");
   assert.ok(html.includes('id="headerStaffName"'), "Missing headerStaffName badge");
   assert.ok(html.includes('id="headerStaffRoleBadge"'), "Missing headerStaffRoleBadge");
   assert.ok(html.includes("generateRandomStaffPassword"), "Missing generateRandomStaffPassword function");
