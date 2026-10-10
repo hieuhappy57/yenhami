@@ -1669,10 +1669,255 @@
         border-bottom: 1px solid var(--border);
       }
     }
+    /* --- AUTH GATE SCREEN (SECURITY SHIELD) --- */
+    .auth-gate-wrapper {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, #091e14 0%, #0f291e 40%, #143527 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .auth-gate-card {
+      background: #ffffff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 30px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
+      animation: authCardFadeIn 0.3s ease-out;
+    }
+    @keyframes authCardFadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .auth-gate-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .auth-logo-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #f0fdf4;
+      border: 2px solid #86efac;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px auto;
+      box-shadow: 0 8px 16px -4px rgba(21, 128, 61, 0.2);
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .auth-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #dcfce7;
+      color: #15803d;
+      padding: 3px 12px;
+      border-radius: 999px;
+      border: 1px solid #86efac;
+      margin-bottom: 8px;
+    }
+    .auth-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    .auth-gate-input-wrap {
+      position: relative;
+      margin-top: 6px;
+    }
+    .auth-gate-input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      pointer-events: none;
+      color: #94a3b8;
+    }
+    .auth-gate-input {
+      width: 100%;
+      height: 46px;
+      padding-left: 40px;
+      padding-right: 42px;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      font-size: 14px;
+      color: #0f172a;
+      background: #ffffff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .auth-gate-input:focus {
+      border-color: #15803d;
+      box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+    }
+    .auth-pwd-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 6px;
+      min-height: auto;
+      color: #64748b;
+    }
+    .auth-submit-btn {
+      width: 100%;
+      height: 48px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      background: #15803d;
+      color: #ffffff;
+      border: 1px solid #166534;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 6px -1px rgba(21, 128, 61, 0.3);
+      transition: background 0.15s, transform 0.05s;
+    }
+    .auth-submit-btn:hover {
+      background: #166534;
+    }
+    .auth-submit-btn:active {
+      transform: scale(0.99);
+    }
+    .btn-logout {
+      color: #b91c1c !important;
+      border-color: #fecaca !important;
+      background: #fff5f5 !important;
+      font-weight: 600 !important;
+      transition: background 0.15s;
+    }
+    .btn-logout:hover {
+      background: #fee2e2 !important;
+    }
+    #authenticatedAppContainer {
+      display: none;
+      width: 100%;
+      min-height: 100vh;
+    }
   </style>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
+  <!-- ============================================== -->
+  <!-- FULL-SCREEN AUTHENTICATION GATE (SECURITY SHIELD) -->
+  <!-- ============================================== -->
+  <div id="authGateScreen" class="auth-gate-wrapper">
+    <div class="auth-gate-card">
+      <div class="auth-gate-header">
+        <div class="auth-logo-circle">
+          <img src="/brand/ha-mi-logo-mark-256.png" width="48" height="48" alt="Hà Mi" />
+        </div>
+        <h1 class="auth-title">HÀ MI ADMIN</h1>
+        <div class="auth-badge">HỆ THỐNG QUẢN TRỊ BẢO MẬT</div>
+        <p class="auth-subtitle">Yêu cầu xác thực tài khoản & mật khẩu để truy cập dữ liệu quản trị Yến Sào Hà Mi.</p>
+      </div>
+
+      <form id="authGateForm" onsubmit="handleAuthGateLogin(event)">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="authGateUsernameInput" style="font-size: 13px; font-weight: 600; color: #1e293b; display: block; margin-bottom: 4px;">
+            Email hoặc Tên đăng nhập *
+          </label>
+          <div class="auth-gate-input-wrap">
+            <span class="auth-gate-input-icon">👤</span>
+            <input
+              type="text"
+              id="authGateUsernameInput"
+              class="auth-gate-input"
+              placeholder="hieunv@yenhami.com hoặc admin"
+              required
+              autocomplete="username"
+            />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label for="authGatePasswordInput" style="font-size: 13px; font-weight: 600; color: #1e293b;">
+              Mật khẩu truy cập *
+            </label>
+          </div>
+          <div class="auth-gate-input-wrap">
+            <span class="auth-gate-input-icon">🔒</span>
+            <input
+              type="password"
+              id="authGatePasswordInput"
+              class="auth-gate-input"
+              placeholder="Nhập mật khẩu của bạn..."
+              required
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="auth-pwd-toggle"
+              onclick="toggleAuthGatePasswordVisibility()"
+              title="Ẩn/hiện mật khẩu"
+            >
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <div id="authGateErrorMsg" style="display: none; background: #fee2e2; border: 1px solid #f87171; color: #b91c1c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; line-height: 1.4;">
+        </div>
+
+        <button
+          type="submit"
+          id="authGateSubmitBtn"
+          class="auth-submit-btn"
+        >
+          🔐 ĐĂNG NHẬP VÀO HỆ THỐNG
+        </button>
+      </form>
+
+      <!-- Quick Test Login Chips -->
+      <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span>Chọn nhanh tài khoản mẫu:</span>
+          <span style="font-size: 10px; font-weight: 400; color: #94a3b8;">Bấm để điền mẫu</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('hieunv@yenhami.com', 'HaMi@2026!')">👑 Chủ Hà Mi</button>
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('vietdh1985@gmail.com', 'HaMi@2026!')">🛡️ Quản lý Việt</button>
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('bep@yenhami.com', 'Bep@2026!')">🍲 Bếp</button>
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('cskh@yenhami.com', 'Sale@2026!')">📞 CSKH</button>
+          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('marketing@yenhami.com', 'Mkt@2026!')">✍️ Marketing</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; text-align: center;">
+        <a href="/" style="font-size: 12px; color: #64748b; text-decoration: none; font-weight: 500;">
+          ← Quay lại trang chủ Yến Sào Hà Mi
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- AUTHENTICATED ADMIN APP CONTAINER (PROTECTED)  -->
+  <!-- ============================================== -->
+  <div id="authenticatedAppContainer">
   <!-- Mobile Slide-Over Drawer & Backdrop -->
   <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" onclick="closeMobileDrawer()"></div>
   <aside class="mobile-drawer" id="mobileDrawer" aria-label="Menu quản trị di động">
@@ -1757,6 +2002,12 @@
         <span id="headerStaffRoleBadge" class="status-badge badge-confirmed" style="font-size: 10px; padding: 1px 6px;">OWNER</span>
         <span style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">Đổi TK ▾</span>
       </div>
+
+      <!-- Explicit Security Logout Button -->
+      <button type="button" class="btn btn-sm btn-logout" onclick="handleAdminLogout()" title="Đăng xuất bảo mật khỏi hệ thống" style="padding: 0 12px; gap: 4px;">
+        <i data-lucide="log-out"></i>
+        <span>Đăng xuất</span>
+      </button>
 
       <!-- In-App Notification Center Bell -->
       <div class="notif-center-wrap">
@@ -3043,6 +3294,8 @@
       </form>
     </div>
   </dialog>
+
+  </div> <!-- End #authenticatedAppContainer -->
 
   <!-- Live Toast Container -->
   <div id="toastContainer" aria-live="polite"></div>
@@ -5090,48 +5343,196 @@
       renderStaffTable();
     }
 
-    function handleStaffLoginSubmit(event) {
+
+    /* --- SECURITY & AUTHENTICATION GATE ENGINE --- */
+    const ADMIN_SESSION_STORAGE_KEY = 'hami_admin_session_v1';
+
+    function toggleAuthGatePasswordVisibility() {
+      const input = document.getElementById('authGatePasswordInput');
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function fillAuthGateCreds(email, password) {
+      const uInput = document.getElementById('authGateUsernameInput');
+      const pInput = document.getElementById('authGatePasswordInput');
+      if (uInput) uInput.value = email;
+      if (pInput) pInput.value = password;
+    }
+
+    function lockAdminApp() {
+      const gateScreen = document.getElementById('authGateScreen');
+      const appContainer = document.getElementById('authenticatedAppContainer');
+      if (gateScreen) gateScreen.style.display = 'flex';
+      if (appContainer) appContainer.style.display = 'none';
+      const pInput = document.getElementById('authGatePasswordInput');
+      if (pInput) pInput.value = '';
+      const errEl = document.getElementById('authGateErrorMsg');
+      if (errEl) errEl.style.display = 'none';
+    }
+
+    function unlockAdminApp(staff, role) {
+      const gateScreen = document.getElementById('authGateScreen');
+      const appContainer = document.getElementById('authenticatedAppContainer');
+      if (gateScreen) gateScreen.style.display = 'none';
+      if (appContainer) appContainer.style.display = 'block';
+
+      appState.currentStaffId = staff ? staff.id : 'ST-1';
+      const targetRole = role || (staff && staff.roles && staff.roles[0]) || 'OWNER';
+      handleRoleSwitch(targetRole);
+      updateHeaderStaffDisplay();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function saveAdminSession(staff, role) {
+      const session = {
+        authenticated: true,
+        staffId: staff.id,
+        role: role || staff.roles[0] || 'OWNER',
+        username: staff.email,
+        displayName: staff.name,
+        timestamp: Date.now()
+      };
+      try {
+        sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
+        localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
+      } catch (e) {
+        console.warn('Storage unavailable', e);
+      }
+    }
+
+    function checkExistingSession() {
+      try {
+        const raw = sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) || localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
+        if (raw) {
+          const session = JSON.parse(raw);
+          // Session is valid for 12 hours
+          if (session && session.authenticated && (Date.now() - session.timestamp < 12 * 60 * 60 * 1000)) {
+            const matched = appState.staff.find(s => s.id === session.staffId) || appState.staff[0];
+            unlockAdminApp(matched, session.role);
+            return true;
+          }
+        }
+      } catch (err) {
+        console.error('Session read error:', err);
+      }
+      lockAdminApp();
+      return false;
+    }
+
+    function handleAdminLogout() {
+      try {
+        sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+        localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+        fetch('/api/admin/auth', { method: 'DELETE' }).catch(() => {});
+      } catch (e) {}
+      lockAdminApp();
+      showToast('Đã đăng xuất an toàn khỏi hệ thống!', 'info');
+    }
+
+    function authenticateUser(loginIdentity, password) {
+      const cleanUser = String(loginIdentity || '').trim().toLowerCase();
+      const cleanPwd = String(password || '').trim();
+
+      // 1. Check Master Admin
+      if ((cleanUser === 'admin' || cleanUser === 'hami_staff') && (cleanPwd === 'HaMi@2026!' || cleanPwd === 'hami2026')) {
+        const ownerStaff = appState.staff.find(s => s.roles.includes('OWNER')) || appState.staff[0];
+        return {
+          ok: true,
+          staff: ownerStaff,
+          role: 'OWNER'
+        };
+      }
+
+      // 2. Check Staff List by email
+      const matched = appState.staff.find(s => s.email.toLowerCase() === cleanUser);
+      if (!matched) {
+        return {
+          ok: false,
+          error: 'Không tìm thấy tài khoản nhân sự với email này!'
+        };
+      }
+
+      const expectedPwd = matched.password || 'HaMi@2026!';
+      if (cleanPwd !== expectedPwd && cleanPwd !== 'HaMi@2026!') {
+        return {
+          ok: false,
+          error: 'Mật khẩu đăng nhập không chính xác!'
+        };
+      }
+
+      return {
+        ok: true,
+        staff: matched,
+        role: matched.roles[0] || 'SALES'
+      };
+    }
+
+    function handleAuthGateLogin(event) {
+      event.preventDefault();
+      const usernameInput = document.getElementById('authGateUsernameInput');
+      const passwordInput = document.getElementById('authGatePasswordInput');
+      const errorEl = document.getElementById('authGateErrorMsg');
+      const submitBtn = document.getElementById('authGateSubmitBtn');
+
+      const username = usernameInput ? usernameInput.value : '';
+      const password = passwordInput ? passwordInput.value : '';
+
+      const authResult = authenticateUser(username, password);
+      if (!authResult.ok) {
+        if (errorEl) {
+          errorEl.innerText = authResult.error || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+          errorEl.style.display = 'block';
+        }
+        return;
+      }
+
+      // Success
+      if (errorEl) errorEl.style.display = 'none';
+      saveAdminSession(authResult.staff, authResult.role);
+
+      // Async sync with server cookie session
+      fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      }).catch(() => {});
+
+      unlockAdminApp(authResult.staff, authResult.role);
+      showToast(`Đăng nhập thành công! Chào mừng ${authResult.staff.name} (${authResult.role})`, 'success');
+      renderStaffTable();
+    }
+
+        function handleStaffLoginSubmit(event) {
       event.preventDefault();
       const loginIdentity = document.getElementById('loginEmailInput').value.trim().toLowerCase();
       const password = document.getElementById('loginPasswordInput').value.trim();
       const errorEl = document.getElementById('loginErrorMsg');
 
-      // Check Master admin credentials
-      if ((loginIdentity === 'admin' || loginIdentity === 'hami_staff') && (password === 'HaMi@2026!' || password === 'hami2026')) {
-        const ownerStaff = appState.staff.find(s => s.roles.includes('OWNER')) || appState.staff[0];
-        appState.currentStaffId = ownerStaff ? ownerStaff.id : 'ST-1';
-        const activeRole = appState.currentRole || 'OWNER';
-        handleRoleSwitch(activeRole);
-        updateHeaderStaffDisplay();
-        persistAppState();
-        closeDialog('staffLoginModal');
-        showToast('Đăng nhập thành công với quyền Quản trị cao nhất (OWNER)!', 'success');
+      const authResult = authenticateUser(loginIdentity, password);
+      if (!authResult.ok) {
+        if (errorEl) {
+          errorEl.innerText = authResult.error || 'Mật khẩu đăng nhập không chính xác!';
+          errorEl.style.display = 'block';
+        }
         return;
       }
 
-      // Check against staff list by email
-      const matchedStaff = appState.staff.find(s => s.email.toLowerCase() === loginIdentity);
-      if (!matchedStaff) {
-        errorEl.innerText = 'Không tìm thấy tài khoản nhân sự với email này!';
-        errorEl.style.display = 'block';
-        return;
-      }
+      if (errorEl) errorEl.style.display = 'none';
+      saveAdminSession(authResult.staff, authResult.role);
 
-      const expectedPassword = matchedStaff.password || 'HaMi@2026!';
-      if (password !== expectedPassword && password !== 'HaMi@2026!') {
-        errorEl.innerText = 'Mật khẩu đăng nhập không chính xác!';
-        errorEl.style.display = 'block';
-        return;
-      }
+      fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginIdentity, password })
+      }).catch(() => {});
 
-      // Successful staff login
-      appState.currentStaffId = matchedStaff.id;
-      const assignedRole = matchedStaff.roles[0] || 'SALES';
-      handleRoleSwitch(assignedRole);
+      appState.currentStaffId = authResult.staff.id;
+      handleRoleSwitch(authResult.role);
       updateHeaderStaffDisplay();
       persistAppState();
       closeDialog('staffLoginModal');
-      showToast(`Đăng nhập thành công! Chào mừng ${matchedStaff.name} (${assignedRole})`, 'success');
+      showToast(`Đã chuyển đăng nhập sang: ${authResult.staff.name} (${authResult.role})`, 'success');
       renderStaffTable();
     }
 
@@ -5892,10 +6293,15 @@
       if (todayEl) {
         todayEl.textContent = new Date().toLocaleDateString('vi-VN');
       }
-      handleRoleSwitch('OWNER');
-      renderNotificationBadge();
-      updateAudioToggleBtn();
-      updateBrowserPushBadge();
+
+      // Check authentication session gate
+      const isAuthenticated = checkExistingSession();
+      if (isAuthenticated) {
+        renderNotificationBadge();
+        updateAudioToggleBtn();
+        updateBrowserPushBadge();
+      }
+
       window.addEventListener('beforeunload', persistAppState);
 
       // Close notification center when clicking outside

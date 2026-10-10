@@ -165,3 +165,22 @@ test("admin demo provides staff passwords and individual authentication modal", 
   });
 });
 
+test("admin demo enforces full-screen auth gate and locks app without authentication", () => {
+  // 1. Auth Gate markup and elements
+  assert.ok(html.includes('id="authGateScreen"'), "Missing authGateScreen full-screen shield");
+  assert.ok(html.includes('id="authenticatedAppContainer"'), "Missing authenticatedAppContainer wrapper");
+  assert.ok(html.includes('id="authGateUsernameInput"'), "Missing authGateUsernameInput");
+  assert.ok(html.includes('id="authGatePasswordInput"'), "Missing authGatePasswordInput");
+  assert.ok(html.includes('id="authGateSubmitBtn"'), "Missing authGateSubmitBtn");
+  assert.ok(html.includes('id="authGateErrorMsg"'), "Missing authGateErrorMsg");
+  assert.ok(html.includes("handleAuthGateLogin"), "Missing handleAuthGateLogin function");
+  assert.ok(html.includes("checkExistingSession"), "Missing checkExistingSession function");
+  assert.ok(html.includes("handleAdminLogout"), "Missing handleAdminLogout function");
+  assert.ok(html.includes("lockAdminApp"), "Missing lockAdminApp function");
+  assert.ok(html.includes("unlockAdminApp"), "Missing unlockAdminApp function");
+
+  // 2. Default initial state hides authenticatedAppContainer
+  assert.ok(html.includes("#authenticatedAppContainer {\n      display: none;"), "authenticatedAppContainer must be hidden by default in CSS");
+});
+
+

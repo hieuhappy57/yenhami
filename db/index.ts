@@ -523,21 +523,72 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     }
   }
 
-  // Always ensure default staff admin account exists
-  db.prepare(`
+  // Always ensure default staff accounts exist
+  const defaultStaffList = [
+    {
+      id: "staff-admin-1",
+      username: "hami_staff",
+      displayName: "Điều phối Bếp & CSKH Hà Mi",
+      role: "OWNER",
+      password: process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!",
+    },
+    {
+      id: "staff-1",
+      username: "hieunv@yenhami.com",
+      displayName: "Nguyễn Văn Hiếu",
+      role: "OWNER",
+      password: "HaMi@2026!",
+    },
+    {
+      id: "staff-2",
+      username: "vietdh1985@gmail.com",
+      displayName: "Đặng Hữu Việt",
+      role: "MANAGER",
+      password: "HaMi@2026!",
+    },
+    {
+      id: "staff-3",
+      username: "bep@yenhami.com",
+      displayName: "Bộ phận Bếp & Pha chế",
+      role: "KITCHEN",
+      password: "Bep@2026!",
+    },
+    {
+      id: "staff-4",
+      username: "cskh@yenhami.com",
+      displayName: "Bộ phận CSKH & Tư vấn",
+      role: "SALES",
+      password: "Sale@2026!",
+    },
+    {
+      id: "staff-5",
+      username: "marketing@yenhami.com",
+      displayName: "Bộ phận Marketing & Nội dung",
+      role: "MARKETING",
+      password: "Mkt@2026!",
+    },
+  ];
+
+  const upsertStaff = db.prepare(`
     INSERT INTO staff_users (id, username, display_name, role, password_hash, is_active, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(username) DO UPDATE SET
+      display_name = excluded.display_name,
+      role = excluded.role,
+      password_hash = excluded.password_hash,
       is_active = 1
-  `).run(
-    "staff-admin-1",
-    "hami_staff",
-    "Điều phối Bếp & CSKH Hà Mi",
-    "OPS_ADMIN",
-    hashPassword(process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!"),
-    1,
-    new Date().toISOString()
-  );
+  `);
+  for (const s of defaultStaffList) {
+    upsertStaff.run(
+      s.id,
+      s.username.toLowerCase(),
+      s.displayName,
+      s.role,
+      hashPassword(s.password),
+      1,
+      new Date().toISOString()
+    );
+  }
 
   // Ensure canonical SEO/GEO blog posts are always present
   try {
