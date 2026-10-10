@@ -6,7 +6,7 @@ export async function GET(
   context: { params: Promise<{ key: string[] }> }
 ) {
   if (!isCloudflareR2Enabled()) {
-    return new NextResponse("Cloudflare R2 not configured", { status: 404 });
+    return new NextResponse("Not found", { status: 404 });
   }
 
   const { key } = await context.params;

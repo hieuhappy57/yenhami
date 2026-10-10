@@ -2899,46 +2899,9 @@ export function getCloudDatabaseStatus(): {
   databaseIdMasked: string | null;
   r2BucketName: string | null;
 } {
-  const r2Enabled = isCloudflareR2Enabled();
-  const d1Enabled = isCloudflareD1Enabled();
-  const bucketName = r2Enabled ? getCloudflareR2BucketName() : null;
-
-  if (d1Enabled && r2Enabled) {
-    const rawId = getCloudflareD1DatabaseId();
-    const masked =
-      rawId.length > 12 ? `${rawId.slice(0, 8)}...${rawId.slice(-4)}` : rawId;
-    return {
-      provider: "CLOUDFLARE_D1",
-      label: `Cloudflare R2 (${bucketName}) + D1 SQL (Chuẩn Enterprise • Bảo mật 100%)`,
-      isCloudflareD1Configured: true,
-      isCloudflareR2Configured: true,
-      databaseIdMasked: masked,
-      r2BucketName: bucketName,
-    };
-  }
-  if (r2Enabled) {
-    return {
-      provider: "CLOUDFLARE_R2",
-      label: `Cloudflare R2 Object Storage (Bucket: ${bucketName} • Miễn phí 10GB • Bảo mật 100%)`,
-      isCloudflareD1Configured: false,
-      isCloudflareR2Configured: true,
-      databaseIdMasked: bucketName,
-      r2BucketName: bucketName,
-    };
-  }
-  if (isGistSyncEnabled()) {
-    return {
-      provider: "GITHUB_GIST",
-      label: "GitHub Secret Gist (Chờ chuyển sang Cloudflare R2 / D1)",
-      isCloudflareD1Configured: false,
-      isCloudflareR2Configured: false,
-      databaseIdMasked: null,
-      r2BucketName: null,
-    };
-  }
   return {
     provider: "LOCAL_SQLITE",
-    label: "SQLite Nội bộ (Chưa cấu hình Cloudflare R2 / D1)",
+    label: "Hệ thống Cơ sở dữ liệu Bảo mật Nội bộ",
     isCloudflareD1Configured: false,
     isCloudflareR2Configured: false,
     databaseIdMasked: null,

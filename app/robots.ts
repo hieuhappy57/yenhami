@@ -4,6 +4,8 @@ import { SITE_URL } from "@/config/seo";
 const INTERNAL_DISALLOW = [
   "/quan-tri",
   "/admin",
+  "/admin.html",
+  "/admin-demo.html",
   "/api/",
   "/yeu-cau-da-nhan",
   "/gio-hang",

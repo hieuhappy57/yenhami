@@ -149,7 +149,9 @@ test("admin demo provides staff passwords and individual authentication modal", 
   assert.ok(html.includes('id="staffLoginModal"'), "Missing staffLoginModal");
   assert.ok(html.includes('id="loginEmailInput"'), "Missing loginEmailInput");
   assert.ok(html.includes('id="loginPasswordInput"'), "Missing loginPasswordInput");
-  assert.ok(html.includes('id="quickLoginChipsContainer"'), "Missing quickLoginChipsContainer");
+  assert.ok(!html.includes('id="quickLoginChipsContainer"'), "quickLoginChipsContainer must be hidden/removed for security");
+  assert.ok(!html.includes('onclick="fillAuthGateCreds'), "fillAuthGateCreds must be removed to prevent exposing credentials");
+  assert.ok(!html.includes('onclick="quickLoginAsStaff'), "quickLoginAsStaff bypass must be removed");
   assert.ok(html.includes('id="headerStaffName"'), "Missing headerStaffName badge");
   assert.ok(html.includes('id="headerStaffRoleBadge"'), "Missing headerStaffRoleBadge");
   assert.ok(html.includes("generateRandomStaffPassword"), "Missing generateRandomStaffPassword function");
@@ -181,6 +183,9 @@ test("admin demo enforces full-screen auth gate and locks app without authentica
 
   // 2. Default initial state hides authenticatedAppContainer
   assert.ok(html.includes("#authenticatedAppContainer {\n      display: none;"), "authenticatedAppContainer must be hidden by default in CSS");
+
+  // 3. Resend API key is masked with password type
+  assert.ok(html.includes('type="password" id="cfgResendApiKey"'), "Resend API key input must be masked");
 });
 
 

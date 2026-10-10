@@ -1845,7 +1845,7 @@
               type="text"
               id="authGateUsernameInput"
               class="auth-gate-input"
-              placeholder="hieunv@yenhami.com hoặc admin"
+              placeholder="Nhập email hoặc tên đăng nhập..."
               required
               autocomplete="username"
             />
@@ -1891,20 +1891,7 @@
         </button>
       </form>
 
-      <!-- Quick Test Login Chips -->
-      <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
-        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span>Chọn nhanh tài khoản mẫu:</span>
-          <span style="font-size: 10px; font-weight: 400; color: #94a3b8;">Bấm để điền mẫu</span>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('hieunv@yenhami.com', 'HaMi@2026!')">👑 Chủ Hà Mi</button>
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('vietdh1985@gmail.com', 'HaMi@2026!')">🛡️ Quản lý Việt</button>
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('bep@yenhami.com', 'Bep@2026!')">🍲 Bếp</button>
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('cskh@yenhami.com', 'Sale@2026!')">📞 CSKH</button>
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; height: auto; min-height: 28px;" onclick="fillAuthGateCreds('marketing@yenhami.com', 'Mkt@2026!')">✍️ Marketing</button>
-        </div>
-      </div>
+
 
       <div style="margin-top: 18px; text-align: center;">
         <a href="/" style="font-size: 12px; color: #64748b; text-decoration: none; font-weight: 500;">
@@ -2795,7 +2782,7 @@
 
                 <div class="form-group">
                   <label for="cfgResendApiKey">Resend API Key (Tùy chọn dành cho Domain riêng)</label>
-                  <input type="text" id="cfgResendApiKey" class="form-control" placeholder="re_xxxxxxxxxxxxxx" />
+                  <input type="password" id="cfgResendApiKey" class="form-control" placeholder="re_xxxxxxxxxxxxxx" autocomplete="off" />
                   <small style="color: var(--text-muted); font-size: 11px;">Nếu không điền Webhook hoặc Resend, hệ thống sẽ chạy ở chế độ giả lập an toàn, ghi nhật ký và cho phép xem trước mẫu thư.</small>
                 </div>
 
@@ -3272,20 +3259,13 @@
           </p>
           <div class="form-group">
             <label for="loginEmailInput">Email hoặc Tên đăng nhập *</label>
-            <input type="text" id="loginEmailInput" class="form-control" placeholder="hieunv@yenhami.com hoặc bep@yenhami.com" required />
+            <input type="text" id="loginEmailInput" class="form-control" placeholder="Nhập email nhân sự hoặc tên đăng nhập..." required autocomplete="username" />
           </div>
           <div class="form-group">
             <label for="loginPasswordInput">Mật khẩu đăng nhập *</label>
-            <input type="password" id="loginPasswordInput" class="form-control" placeholder="Nhập mật khẩu..." required />
+            <input type="password" id="loginPasswordInput" class="form-control" placeholder="Nhập mật khẩu..." required autocomplete="current-password" />
           </div>
           <p id="loginErrorMsg" style="font-size: 12px; color: var(--status-red); display: none; margin-top: 6px;"></p>
-
-          <!-- Quick Test Login Chips -->
-          <div style="margin-top: 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;">
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Đăng nhập nhanh để kiểm tra vai trò:</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="quickLoginChipsContainer">
-            </div>
-          </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-sm" onclick="closeDialog('staffLoginModal')">Huỷ</button>
@@ -5138,46 +5118,22 @@
         <tr>
           <td>
             <strong>${esc(st.name)}</strong>
-            ${st.id === appState.currentStaffId ? '<span class="status-badge badge-confirmed" style="margin-left: 6px; font-size: 10px;">Đang dùng</span>' : ''}
+            ${st.id === appState.currentStaffId ? '<span class="status-badge badge-confirmed" style="margin-left: 6px; font-size: 10px;">Đang đăng nhập</span>' : ''}
           </td>
           <td><code>${esc(st.email)}</code></td>
           <td>
             ${st.roles.map(r => `<span class="status-badge badge-confirmed" style="margin-right: 4px;">${r}</span>`).join('')}
           </td>
           <td>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;" id="pwdDisplay_${st.id}">••••••••</code>
-              <button type="button" class="btn btn-sm" style="min-height: 28px; padding: 0 6px; font-size: 11px;" onclick="toggleStaffPwdView('${st.id}')" title="Hiện/Ẩn mật khẩu">👁️</button>
-            </div>
+            <code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 12px; color: var(--text-muted);" title="Mật khẩu được lưu trữ an toàn">••••••••</code>
           </td>
           <td>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button class="btn btn-sm" onclick="openEditStaff('${st.id}')">
-                Phân quyền & Đổi MK
-              </button>
-              <button class="btn btn-sm btn-primary" onclick="quickLoginAsStaff('${st.id}')" title="Đăng nhập vào vai trò nhân sự này">
-                Đăng nhập ➔
-              </button>
-            </div>
+            <button class="btn btn-sm" onclick="openEditStaff('${st.id}')">
+              ✏️ Phân quyền & Đổi MK
+            </button>
           </td>
         </tr>
       `).join('');
-    }
-
-    function toggleStaffPwdView(staffId) {
-      const st = appState.staff.find(s => s.id === staffId);
-      if (!st) return;
-      const el = document.getElementById(`pwdDisplay_${staffId}`);
-      if (!el) return;
-      if (el.innerText === '••••••••') {
-        el.innerText = st.password || 'HaMi@2026!';
-        el.style.background = '#fef3c7';
-        el.style.color = '#92400e';
-      } else {
-        el.innerText = '••••••••';
-        el.style.background = '#f1f5f9';
-        el.style.color = 'inherit';
-      }
     }
 
     function generateRandomStaffPassword() {
@@ -5185,7 +5141,7 @@
       const generated = `HaMi@${digits}`;
       const input = document.getElementById('editStaffPasswordInput');
       if (input) input.value = generated;
-      showToast(`Đã tạo mật khẩu tự động: ${generated}`, 'info');
+      showToast(`Đã tạo mật khẩu ngẫu nhiên: ${generated}`, 'info');
     }
 
     function openAddNewStaffModal() {
@@ -5193,7 +5149,10 @@
       document.getElementById('editStaffId').value = '';
       document.getElementById('editStaffNameInput').value = '';
       document.getElementById('editStaffEmailInput').value = '';
-      document.getElementById('editStaffPasswordInput').value = 'HaMi@' + Math.floor(1000 + Math.random() * 9000);
+      const pwdInput = document.getElementById('editStaffPasswordInput');
+      pwdInput.value = '';
+      pwdInput.placeholder = 'Đặt mật khẩu cho nhân sự mới...';
+      pwdInput.required = true;
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
         const chk = document.getElementById(`roleChk${r}`);
         if (chk) chk.checked = (r === 'SALES');
@@ -5206,11 +5165,14 @@
     function openEditStaff(staffId) {
       const st = appState.staff.find(s => s.id === staffId);
       if (!st) return;
-      document.getElementById('editStaffTitle').innerText = 'Chỉnh sửa nhân sự & Phân quyền';
+      document.getElementById('editStaffTitle').innerText = `Phân quyền: ${st.name}`;
       document.getElementById('editStaffId').value = st.id;
       document.getElementById('editStaffNameInput').value = st.name;
       document.getElementById('editStaffEmailInput').value = st.email;
-      document.getElementById('editStaffPasswordInput').value = st.password || 'HaMi@2026!';
+      const pwdInput = document.getElementById('editStaffPasswordInput');
+      pwdInput.value = '';
+      pwdInput.placeholder = 'Để trống nếu giữ nguyên mật khẩu...';
+      pwdInput.required = false;
       
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
         const chk = document.getElementById(`roleChk${r}`);
@@ -5255,15 +5217,21 @@
         }
         st.name = name;
         st.email = email;
-        st.password = password;
+        if (password) {
+          st.password = password;
+        }
         st.roles = selectedRoles;
-        showToast(`Đã lưu phân quyền & mật khẩu cho ${st.name}!`, 'success');
+        showToast(`Đã lưu phân quyền cho ${st.name}!`, 'success');
       } else {
+        if (!password) {
+          showToast('Vui lòng nhập mật khẩu cho nhân sự mới!', 'error');
+          return;
+        }
         const newStaff = {
           id: 'ST-' + Date.now(),
           name,
           email,
-          password: password || 'HaMi@2026!',
+          password,
           roles: selectedRoles
         };
         appState.staff.push(newStaff);
@@ -5311,36 +5279,11 @@
     function openStaffSwitchModal() {
       const errorMsg = document.getElementById('loginErrorMsg');
       if (errorMsg) errorMsg.style.display = 'none';
-      const container = document.getElementById('quickLoginChipsContainer');
-      if (container) {
-        container.innerHTML = appState.staff.map(st => `
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 2px 8px; border-radius: 999px;" onclick="quickFillLogin('${esc(st.email)}', '${esc(st.password || 'HaMi@2026!')}')">
-            ${esc(st.name.split(' (')[0])} (${esc(st.roles[0])})
-          </button>
-        `).join('') + `
-          <button type="button" class="btn btn-sm" style="font-size: 11px; padding: 2px 8px; border-radius: 999px;" onclick="quickFillLogin('admin', 'HaMi@2026!')">
-            Admin gốc (HaMi@2026!)
-          </button>
-        `;
-      }
+      const emailInput = document.getElementById('loginEmailInput');
+      const pwdInput = document.getElementById('loginPasswordInput');
+      if (emailInput) emailInput.value = '';
+      if (pwdInput) pwdInput.value = '';
       document.getElementById('staffLoginModal').showModal();
-    }
-
-    function quickFillLogin(email, password) {
-      document.getElementById('loginEmailInput').value = email;
-      document.getElementById('loginPasswordInput').value = password;
-    }
-
-    function quickLoginAsStaff(staffId) {
-      const st = appState.staff.find(s => s.id === staffId);
-      if (!st) return;
-      appState.currentStaffId = st.id;
-      const targetRole = st.roles[0] || 'OWNER';
-      handleRoleSwitch(targetRole);
-      updateHeaderStaffDisplay();
-      persistAppState();
-      showToast(`Đã chuyển đăng nhập sang: ${st.name} (Vai trò: ${targetRole})`, 'success');
-      renderStaffTable();
     }
 
 
@@ -5353,12 +5296,7 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    function fillAuthGateCreds(email, password) {
-      const uInput = document.getElementById('authGateUsernameInput');
-      const pInput = document.getElementById('authGatePasswordInput');
-      if (uInput) uInput.value = email;
-      if (pInput) pInput.value = password;
-    }
+
 
     function lockAdminApp() {
       const gateScreen = document.getElementById('authGateScreen');
@@ -5988,7 +5926,7 @@
       updateAudioToggleBtn();
       persistAppState();
 
-      // Sync to backend SQLite / D1 if available
+      // Sync to backend storage if available
       try {
         fetch('/api/admin/cms', {
           method: 'POST',
