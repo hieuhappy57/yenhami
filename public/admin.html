@@ -2402,15 +2402,23 @@
       <!-- TAB: STAFF (OWNER ONLY) -->
       <section id="tab-staff" class="tab-content" style="display: none;">
         <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">Phân quyền nhân sự nội bộ (Dành riêng cho OWNER)</h2>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 class="card-title">Phân quyền nhân sự nội bộ (Dành riêng cho OWNER)</h2>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                Quản lý danh sách nhân sự thực tế, phân bổ quyền hạn và gán trách nhiệm vận hành theo từng vai trò.
+              </p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openAddNewStaffModal()">
+              <i data-lucide="plus"></i> <span>+ Thêm nhân sự mới</span>
+            </button>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Họ tên nhân sự</th>
-                  <th>Email mẫu</th>
+                  <th>Email nhân sự</th>
                   <th>Các vai trò phân quyền</th>
                   <th>Thao tác</th>
                 </tr>
@@ -2939,32 +2947,42 @@
       <form onsubmit="handleSaveStaffRoles(event)">
         <input type="hidden" id="editStaffId" />
         <div class="modal-body">
-          <p id="editStaffName" style="font-weight: 600; margin-bottom: 8px;"></p>
           <div class="form-group">
-            <label>Chọn các vai trò áp dụng:</label>
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
-              <input type="checkbox" id="roleChkOWNER" value="OWNER" /> Chủ thương hiệu (OWNER)
+            <label for="editStaffNameInput">Họ tên nhân sự *</label>
+            <input type="text" id="editStaffNameInput" class="form-control" placeholder="Ví dụ: Nguyễn Văn Hiếu" required />
+          </div>
+          <div class="form-group">
+            <label for="editStaffEmailInput">Email liên hệ / nhận thông báo *</label>
+            <input type="email" id="editStaffEmailInput" class="form-control" placeholder="Ví dụ: hieunv@yenhami.com" required />
+          </div>
+          <div class="form-group">
+            <label style="font-weight: 700; margin-bottom: 8px; display: block;">Chọn các vai trò áp dụng:</label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="roleChkOWNER" value="OWNER" /> <span><strong>Chủ thương hiệu (OWNER)</strong> — Toàn quyền 10/10 module</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
-              <input type="checkbox" id="roleChkMANAGER" value="MANAGER" /> Quản lý chung (MANAGER)
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="roleChkMANAGER" value="MANAGER" /> <span><strong>Quản lý chung (MANAGER)</strong> — Quản trị 9/10 module</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
-              <input type="checkbox" id="roleChkSALES" value="SALES" /> Bán hàng & Thu ngân (SALES)
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="roleChkSALES" value="SALES" /> <span><strong>Bán hàng & CSKH (SALES)</strong> — Chỉ thấy Đơn hàng & Khách hàng</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
-              <input type="checkbox" id="roleChkKITCHEN" value="KITCHEN" /> Bếp & Điều phối (KITCHEN)
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="roleChkKITCHEN" value="KITCHEN" /> <span><strong>Bếp & Điều phối (KITCHEN)</strong> — Chỉ thấy Hàng đợi bếp chưng yến</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal;">
-              <input type="checkbox" id="roleChkMARKETING" value="MARKETING" /> Tiếp thị & Nội dung (MARKETING)
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="roleChkMARKETING" value="MARKETING" /> <span><strong>Tiếp thị & Nội dung (MARKETING)</strong> — Bài viết, Tuyển dụng, SP, Trang chủ</span>
             </label>
           </div>
           <p id="staffWarningMsg" style="font-size: 12px; color: var(--status-red); display: none;">
             Không thể bỏ vai trò OWNER cuối cùng của hệ thống.
           </p>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeDialog('editStaffModal')">Huỷ</button>
-          <button type="submit" class="btn btn-primary">Lưu vào demo</button>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-danger btn-sm" id="btnDeleteStaff" onclick="handleDeleteStaff()">Xoá nhân sự</button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-sm" onclick="closeDialog('editStaffModal')">Huỷ</button>
+            <button type="submit" class="btn btn-primary btn-sm">Lưu phân quyền</button>
+          </div>
         </div>
       </form>
     </div>
@@ -3148,32 +3166,32 @@
       staff: [
         {
           id: 'ST-1',
-          name: 'Chủ Hà Mi (mẫu)',
-          email: 'founder@example.test',
+          name: 'Nguyễn Văn Hiếu (Chủ thương hiệu)',
+          email: 'hieunv@yenhami.com',
           roles: ['OWNER', 'MANAGER']
         },
         {
           id: 'ST-2',
-          name: 'Trần Quản Lý',
-          email: 'manager@example.test',
-          roles: ['MANAGER', 'SALES']
+          name: 'Đặng Hữu Việt (Quản lý & Điều phối)',
+          email: 'vietdh1985@gmail.com',
+          roles: ['OWNER', 'MANAGER', 'SALES']
         },
         {
           id: 'ST-3',
-          name: 'Lê Tư Vấn Bán Hàng',
-          email: 'sales@example.test',
-          roles: ['SALES']
-        },
-        {
-          id: 'ST-4',
-          name: 'Bác Bếp Trưởng Mẫu',
-          email: 'kitchen@example.test',
+          name: 'Bộ phận Bếp & Điều phối chưng yến',
+          email: 'bep@yenhami.com',
           roles: ['KITCHEN']
         },
         {
+          id: 'ST-4',
+          name: 'Bộ phận Tư vấn & CSKH',
+          email: 'cskh@yenhami.com',
+          roles: ['SALES']
+        },
+        {
           id: 'ST-5',
-          name: 'Phạm Truyền Thông',
-          email: 'marketing@example.test',
+          name: 'Bộ phận Truyền thông & Nội dung',
+          email: 'marketing@yenhami.com',
           roles: ['MARKETING']
         }
       ],
@@ -4816,16 +4834,34 @@
       `).join('');
     }
 
+    function openAddNewStaffModal() {
+      document.getElementById('editStaffTitle').innerText = 'Thêm nhân sự mới & Phân quyền';
+      document.getElementById('editStaffId').value = '';
+      document.getElementById('editStaffNameInput').value = '';
+      document.getElementById('editStaffEmailInput').value = '';
+      ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
+        const chk = document.getElementById(`roleChk${r}`);
+        if (chk) chk.checked = (r === 'SALES');
+      });
+      document.getElementById('btnDeleteStaff').style.display = 'none';
+      document.getElementById('staffWarningMsg').style.display = 'none';
+      document.getElementById('editStaffModal').showModal();
+    }
+
     function openEditStaff(staffId) {
       const st = appState.staff.find(s => s.id === staffId);
       if (!st) return;
+      document.getElementById('editStaffTitle').innerText = 'Chỉnh sửa nhân sự & Phân quyền';
       document.getElementById('editStaffId').value = st.id;
-      document.getElementById('editStaffName').innerText = `${st.name} (${st.email})`;
+      document.getElementById('editStaffNameInput').value = st.name;
+      document.getElementById('editStaffEmailInput').value = st.email;
       
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
         const chk = document.getElementById(`roleChk${r}`);
         if (chk) chk.checked = st.roles.includes(r);
       });
+      const isSoleOwner = st.roles.includes('OWNER') && appState.staff.filter(s => s.roles.includes('OWNER')).length <= 1;
+      document.getElementById('btnDeleteStaff').style.display = isSoleOwner ? 'none' : 'inline-block';
       document.getElementById('staffWarningMsg').style.display = 'none';
       document.getElementById('editStaffModal').showModal();
     }
@@ -4833,8 +4869,8 @@
     function handleSaveStaffRoles(event) {
       event.preventDefault();
       const staffId = document.getElementById('editStaffId').value;
-      const st = appState.staff.find(s => s.id === staffId);
-      if (!st) return;
+      const name = document.getElementById('editStaffNameInput').value.trim();
+      const email = document.getElementById('editStaffEmailInput').value.trim();
 
       const selectedRoles = [];
       ['OWNER', 'MANAGER', 'SALES', 'KITCHEN', 'MARKETING'].forEach(r => {
@@ -4842,21 +4878,62 @@
         if (chk && chk.checked) selectedRoles.push(r);
       });
 
-      // Last owner guard
-      const isRemovingOwner = st.roles.includes('OWNER') && !selectedRoles.includes('OWNER');
-      if (isRemovingOwner) {
+      if (selectedRoles.length === 0) {
+        showToast('Vui lòng chọn ít nhất 1 vai trò cho nhân sự!', 'error');
+        return;
+      }
+
+      if (staffId) {
+        const st = appState.staff.find(s => s.id === staffId);
+        if (!st) return;
+        // Last owner guard
+        const isRemovingOwner = st.roles.includes('OWNER') && !selectedRoles.includes('OWNER');
+        if (isRemovingOwner) {
+          const totalOwners = appState.staff.filter(s => s.roles.includes('OWNER')).length;
+          if (totalOwners <= 1) {
+            document.getElementById('staffWarningMsg').style.display = 'block';
+            showToast('Hệ thống bắt buộc phải duy trì ít nhất 1 tài khoản OWNER!', 'error');
+            return;
+          }
+        }
+        st.name = name;
+        st.email = email;
+        st.roles = selectedRoles;
+        showToast(`Đã cập nhật vai trò cho ${st.name}!`, 'success');
+      } else {
+        const newStaff = {
+          id: 'ST-' + Date.now(),
+          name,
+          email,
+          roles: selectedRoles
+        };
+        appState.staff.push(newStaff);
+        showToast(`Đã thêm nhân sự ${name} thành công!`, 'success');
+      }
+
+      persistAppState();
+      closeDialog('editStaffModal');
+      renderStaffTable();
+    }
+
+    function handleDeleteStaff() {
+      const staffId = document.getElementById('editStaffId').value;
+      const st = appState.staff.find(s => s.id === staffId);
+      if (!st) return;
+      if (st.roles.includes('OWNER')) {
         const totalOwners = appState.staff.filter(s => s.roles.includes('OWNER')).length;
         if (totalOwners <= 1) {
-          document.getElementById('staffWarningMsg').style.display = 'block';
-          showToast('Hệ thống bắt buộc phải duy trì ít nhất 1 tài khoản OWNER!', 'error');
+          showToast('Không thể xoá tài khoản OWNER duy nhất của hệ thống!', 'error');
           return;
         }
       }
-
-      st.roles = selectedRoles;
-      showToast(`Đã cập nhật vai trò cho ${st.name} vào demo`, 'success');
-      closeDialog('editStaffModal');
-      renderStaffTable();
+      if (window.confirm(`Bạn có chắc chắn muốn xoá nhân sự ${st.name} khỏi danh sách?`)) {
+        appState.staff = appState.staff.filter(s => s.id !== staffId);
+        persistAppState();
+        showToast(`Đã xoá nhân sự ${st.name}!`, 'info');
+        closeDialog('editStaffModal');
+        renderStaffTable();
+      }
     }
 
 
@@ -5308,9 +5385,26 @@
       if (elWebhook) appState.notificationSettings.webhookUrl = elWebhook.value.trim();
 
       const elResend = document.getElementById('cfgResendApiKey');
-      if (elResend) appState.notificationSettings.resendApiKey = elResend.value.trim();
-
       updateAudioToggleBtn();
+      persistAppState();
+
+      // Sync to backend SQLite / D1 if available
+      try {
+        fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_notification_settings',
+            settings: {
+              enableEmail: appState.notificationSettings.enableEmail,
+              notificationEmailTo: [appState.notificationSettings.emailTo1, appState.notificationSettings.emailTo2].filter(Boolean).join(', '),
+              resendApiKey: appState.notificationSettings.resendApiKey,
+              emailWebhookUrl: appState.notificationSettings.webhookUrl
+            }
+          })
+        }).catch(() => {});
+      } catch (e) {}
+
       showToast('Đã lưu cấu hình thông báo & email thành công!', 'success');
     }
 
@@ -5540,7 +5634,10 @@
             if (Array.isArray(parsed.posts) && parsed.posts.length > 0) appState.posts = parsed.posts;
             if (Array.isArray(parsed.jobs) && parsed.jobs.length > 0) appState.jobs = parsed.jobs;
             if (parsed.site) appState.site = parsed.site;
-            if (Array.isArray(parsed.staff) && parsed.staff.length > 0) appState.staff = parsed.staff;
+            if (Array.isArray(parsed.staff) && parsed.staff.length > 0) {
+              const hasObsoleteDemoStaff = parsed.staff.some(s => s.email && s.email.includes('@example.test'));
+              appState.staff = hasObsoleteDemoStaff ? JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff)) : parsed.staff;
+            }
             if (parsed.products) appState.products = parsed.products;
             if (parsed.notificationSettings) appState.notificationSettings = parsed.notificationSettings;
             if (Array.isArray(parsed.notificationLogs)) appState.notificationLogs = parsed.notificationLogs;
