@@ -20,7 +20,7 @@ async function readBody(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const staff = await getAuthenticatedStaff();
+  const staff = await getAuthenticatedStaff(request);
   if (!staff) {
     return NextResponse.json(
       { ok: false, errorMessage: "Yêu cầu đăng nhập nhân viên." },

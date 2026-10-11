@@ -271,7 +271,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           role="status"
           aria-live="polite"
           data-testid="cart-toast-notification"
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-1.5rem)] bg-[#155132]/95 backdrop-blur-md text-[#FFFCF4] border border-[#BD9342] px-3.5 py-2.5 rounded-xl shadow-xl text-xs sm:text-sm flex items-center justify-between gap-2.5 transition-all"
+          className="fixed top-28 sm:top-24 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[calc(100%-1.5rem)] bg-[#155132]/95 backdrop-blur-md text-[#FFFCF4] border border-[#BD9342] px-3.5 py-2.5 rounded-xl shadow-xl text-xs sm:text-sm flex items-center justify-between gap-2.5 transition-all"
         >
           <div className="flex items-center gap-2 min-w-0">
             <CheckCircle2

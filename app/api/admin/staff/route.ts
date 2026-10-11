@@ -6,8 +6,8 @@ import { getAuthenticatedStaff, guardMutationOrigin, privateJsonHeaders, staffCa
 const MAX_BODY_BYTES = 32 * 1024;
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: privateJsonHeaders() });
 
-async function owner() {
-  const staff = await getAuthenticatedStaff();
+async function owner(request?: Request) {
+  const staff = await getAuthenticatedStaff(request);
   if (!staff) return { response: json({ ok: false, errorMessage: "Yêu cầu đăng nhập nhân viên." }, 401) };
   if (!staffCan(staff, "staff.manage")) return { response: json({ ok: false, errorMessage: "Chỉ chủ sở hữu được quản lý nhân viên." }, 403) };
   return { staff };
@@ -20,14 +20,14 @@ async function body(request: Request) {
   return JSON.parse(text) as Record<string, unknown>;
 }
 
-export async function GET() {
-  const auth = await owner();
+export async function GET(request: Request) {
+  const auth = await owner(request);
   if (auth.response) return auth.response;
   return json({ ok: true, staff: listStaff() });
 }
 
 export async function POST(request: Request) {
-  const auth = await owner();
+  const auth = await owner(request);
   if (auth.response) return auth.response;
   if (!guardMutationOrigin(request)) return json({ ok: false, errorMessage: "Nguồn yêu cầu không hợp lệ." }, 403);
   try {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await owner();
+  const auth = await owner(request);
   if (auth.response) return auth.response;
   if (!guardMutationOrigin(request)) return json({ ok: false, errorMessage: "Nguồn yêu cầu không hợp lệ." }, 403);
   try {

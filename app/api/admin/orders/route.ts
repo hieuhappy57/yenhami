@@ -72,7 +72,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const staff = await getAuthenticatedStaff();
+  const staff = await getAuthenticatedStaff(request);
   if (!staff) return fail("Yêu cầu đăng nhập nhân viên.", 401);
   if (!staffCan(staff, "orders.write")) return fail("Bạn không có quyền tạo đơn.", 403);
   if (!guardMutationOrigin(request)) return fail("Nguồn yêu cầu không hợp lệ.", 403, "INVALID_ORIGIN");

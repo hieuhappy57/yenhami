@@ -189,8 +189,9 @@ export default async function YeuCauDaNhanPage({
                       {item.productNameSnapshot} × {item.quantity}
                     </p>
                     <p className="text-xs text-[#2B433A]/85">
-                      Thố {item.volumeMlSnapshot}ml • {item.variantNameSnapshot}{" "}
-                      • {item.selectedOptionSnapshot}
+                      {item.volumeMlSnapshot <= 100 ? "Hũ" : "Thố"}{" "}
+                      {item.volumeMlSnapshot}ml • {item.variantNameSnapshot} •{" "}
+                      {item.selectedOptionSnapshot}
                     </p>
                   </div>
                   <span className="font-bold text-[#155132]">

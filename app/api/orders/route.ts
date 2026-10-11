@@ -6,6 +6,7 @@ import {
   syncDbFromCloud,
   syncDbToCloud,
 } from "@/db";
+import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox } from "@/db/order-outbox";
 import { getAuthenticatedStaff } from "@/lib/staff-auth";
 
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
 
   await syncDbFromCloud(true);
 
-  const staff = await getAuthenticatedStaff();
+  const staff = await getAuthenticatedStaff(request);
   const order = getOrderRequestByReference({
     referenceCode: ref,
     lookupToken: token,
@@ -75,12 +76,27 @@ export async function POST(request: Request) {
       console.warn("Pre-order cloud sync warning:", syncErr);
     }
 
-    const body = await request.json();
-    const res = submitOrderRequest(body);
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { ok: false, errorCode: "INVALID_BODY", errorMessage: "Dữ liệu yêu cầu không hợp lệ." },
+        { status: 400 }
+      );
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { ok: false, errorCode: "INVALID_BODY", errorMessage: "Dữ liệu yêu cầu không hợp lệ." },
+        { status: 400 }
+      );
+    }
+    const res = submitOrderRequest(body as any);
 
     if (res.ok && res.order?.referenceCode) {
       try {
         await flushPendingOrderNotifications(res.order.referenceCode);
+        await flushOrderNotificationOutbox({ limit: 5 });
       } catch (notifErr) {
         console.error("Order notification error:", notifErr);
       }

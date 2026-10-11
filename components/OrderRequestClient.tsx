@@ -594,6 +594,7 @@ export function OrderRequestClient({
                   name="requestedDate"
                   data-testid="requested-date-input"
                   type="date"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={requestedDate}
                   onChange={(e) => setRequestedDate(e.target.value)}
                   required
@@ -855,7 +856,7 @@ export function OrderRequestClient({
                     {Object.entries(fieldErrors).map(([fieldKey, errText]) => (
                       <li key={fieldKey}>
                         <a
-                          href={`#${fieldKey}`}
+                          href={`#${fieldKey === 'slotId' ? 'slotSelect' : fieldKey}`}
                           className="underline font-medium hover:text-red-950"
                         >
                           {errText}
@@ -870,10 +871,16 @@ export function OrderRequestClient({
             <button
               type="submit"
               data-testid="submit-order-btn"
-              disabled={submitting || items.length === 0}
+              disabled={submitting || items.length === 0 || !hasAvailableSlot || loadingSlots}
               className="mt-4 flex w-full min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F3D78A] to-[#D4AF37] px-6 py-3 text-sm font-bold text-[#1B1B1B] shadow-xs transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu đặt món →"}
+              {submitting
+                ? "Đang gửi yêu cầu..."
+                : loadingSlots
+                  ? "Đang tải khung giờ..."
+                  : !hasAvailableSlot
+                    ? "Vui lòng chọn ngày giao còn khung giờ"
+                    : "Gửi yêu cầu đặt món →"}
             </button>
 
             <p className="mt-2.5 text-center text-xs text-[#4A4A4A]">

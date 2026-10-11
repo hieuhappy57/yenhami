@@ -340,6 +340,34 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       detail TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS order_notification_outbox (
+      id TEXT PRIMARY KEY,
+      order_request_id TEXT NOT NULL UNIQUE,
+      reference_code TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL CHECK(status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED')),
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT NOT NULL,
+      claimed_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      sent_at TEXT,
+      FOREIGN KEY(order_request_id) REFERENCES order_requests(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_notification_outbox_due
+      ON order_notification_outbox(status, next_attempt_at, created_at);
+    CREATE TRIGGER IF NOT EXISTS queue_order_notification_after_insert
+    AFTER INSERT ON order_requests
+    BEGIN
+      INSERT OR IGNORE INTO order_notification_outbox (
+        id, order_request_id, reference_code, status, retry_count,
+        next_attempt_at, created_at, updated_at
+      ) VALUES (
+        'outbox-' || NEW.id, NEW.id, NEW.reference_code, 'PENDING', 0,
+        NEW.created_at, NEW.created_at, NEW.created_at
+      );
+    END;
   `);
 
   // Ensure start_minutes_of_day column exists if DB was created before this migration
@@ -1227,28 +1255,37 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
     .get(idempotencyKey) as Record<string, unknown> | undefined;
 
   if (existingOrder) {
+    const fullOrder = getOrderRequestByReference({
+      referenceCode: String(existingOrder.reference_code),
+      isStaff: true,
+    });
     return {
       ok: true,
       deduplicated: true,
-      order: {
-        id: String(existingOrder.id),
-        referenceCode: String(existingOrder.reference_code),
-        lookupToken: String(existingOrder.lookup_token),
-        orderStatus: String(existingOrder.order_status) as OrderStatus,
-        paymentStatus: String(existingOrder.payment_status) as PaymentStatus,
-        subtotalVnd: Number(existingOrder.subtotal_vnd),
-        shippingFeeVnd:
-          existingOrder.shipping_fee_vnd === null
-            ? null
-            : Number(existingOrder.shipping_fee_vnd),
-        shippingFeeNote: String(existingOrder.shipping_fee_note),
-        totalVnd: Number(existingOrder.total_vnd),
-        isTotalFinal: Boolean(existingOrder.is_total_final),
-        requestedDate: String(existingOrder.requested_date),
-        slotLabelSnapshot: String(existingOrder.slot_label_snapshot),
-        zoneNameSnapshot: String(existingOrder.zone_name_snapshot),
-        createdAt: String(existingOrder.created_at),
-      },
+      order: fullOrder
+        ? {
+            ...fullOrder,
+            lookupToken: String(existingOrder.lookup_token),
+          }
+        : {
+            id: String(existingOrder.id),
+            referenceCode: String(existingOrder.reference_code),
+            lookupToken: String(existingOrder.lookup_token),
+            orderStatus: String(existingOrder.order_status) as OrderStatus,
+            paymentStatus: String(existingOrder.payment_status) as PaymentStatus,
+            subtotalVnd: Number(existingOrder.subtotal_vnd),
+            shippingFeeVnd:
+              existingOrder.shipping_fee_vnd === null
+                ? null
+                : Number(existingOrder.shipping_fee_vnd),
+            shippingFeeNote: String(existingOrder.shipping_fee_note),
+            totalVnd: Number(existingOrder.total_vnd),
+            isTotalFinal: Boolean(existingOrder.is_total_final),
+            requestedDate: String(existingOrder.requested_date),
+            slotLabelSnapshot: String(existingOrder.slot_label_snapshot),
+            zoneNameSnapshot: String(existingOrder.zone_name_snapshot),
+            createdAt: String(existingOrder.created_at),
+          },
     };
   }
 
@@ -1326,28 +1363,37 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
 
     if (existingInsideTx) {
       db.exec("COMMIT;");
+      const fullOrder = getOrderRequestByReference({
+        referenceCode: String(existingInsideTx.reference_code),
+        isStaff: true,
+      });
       return {
         ok: true,
         deduplicated: true,
-        order: {
-          id: String(existingInsideTx.id),
-          referenceCode: String(existingInsideTx.reference_code),
-          lookupToken: String(existingInsideTx.lookup_token),
-          orderStatus: String(existingInsideTx.order_status) as OrderStatus,
-          paymentStatus: String(existingInsideTx.payment_status) as PaymentStatus,
-          subtotalVnd: Number(existingInsideTx.subtotal_vnd),
-          shippingFeeVnd:
-            existingInsideTx.shipping_fee_vnd === null
-              ? null
-              : Number(existingInsideTx.shipping_fee_vnd),
-          shippingFeeNote: String(existingInsideTx.shipping_fee_note),
-          totalVnd: Number(existingInsideTx.total_vnd),
-          isTotalFinal: Boolean(existingInsideTx.is_total_final),
-          requestedDate: String(existingInsideTx.requested_date),
-          slotLabelSnapshot: String(existingInsideTx.slot_label_snapshot),
-          zoneNameSnapshot: String(existingInsideTx.zone_name_snapshot),
-          createdAt: String(existingInsideTx.created_at),
-        },
+        order: fullOrder
+          ? {
+              ...fullOrder,
+              lookupToken: String(existingInsideTx.lookup_token),
+            }
+          : {
+              id: String(existingInsideTx.id),
+              referenceCode: String(existingInsideTx.reference_code),
+              lookupToken: String(existingInsideTx.lookup_token),
+              orderStatus: String(existingInsideTx.order_status) as OrderStatus,
+              paymentStatus: String(existingInsideTx.payment_status) as PaymentStatus,
+              subtotalVnd: Number(existingInsideTx.subtotal_vnd),
+              shippingFeeVnd:
+                existingInsideTx.shipping_fee_vnd === null
+                  ? null
+                  : Number(existingInsideTx.shipping_fee_vnd),
+              shippingFeeNote: String(existingInsideTx.shipping_fee_note),
+              totalVnd: Number(existingInsideTx.total_vnd),
+              isTotalFinal: Boolean(existingInsideTx.is_total_final),
+              requestedDate: String(existingInsideTx.requested_date),
+              slotLabelSnapshot: String(existingInsideTx.slot_label_snapshot),
+              zoneNameSnapshot: String(existingInsideTx.zone_name_snapshot),
+              createdAt: String(existingInsideTx.created_at),
+            },
       };
     }
 
@@ -1877,7 +1923,7 @@ export function updateOrderStatusByStaff(params: {
       ).run(orderBowls, requestedDate, slotId);
     }
 
-    db.prepare(`
+    const updateResult = db.prepare(`
       UPDATE order_requests
       SET order_status = ?, payment_status = ?, shipping_fee_vnd = ?,
           shipping_fee_note = ?, total_vnd = ?, is_total_final = ?, updated_at = ?,
@@ -1897,6 +1943,11 @@ export function updateOrderStatusByStaff(params: {
       orderId,
       currentVersion
     );
+
+    if (Number(updateResult?.changes || 0) !== 1) {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "VERSION_CONFLICT", errorMessage: "Đơn hàng đã được thay đổi. Vui lòng tải lại." };
+    }
 
     db.prepare(`
       INSERT INTO order_status_history (
@@ -2970,6 +3021,7 @@ async function executeCloudflareD1Query<T = Record<string, unknown>>(
     },
     body: JSON.stringify(bodyObj),
     cache: "no-store",
+    signal: AbortSignal.timeout(5000),
   });
 
   const data = (await res.json()) as {
@@ -3422,6 +3474,7 @@ export async function putCloudflareR2Object(
     },
     body: body as BodyInit,
     cache: "no-store",
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
@@ -3459,6 +3512,7 @@ export async function getCloudflareR2Object(objectKey: string): Promise<{
       Authorization: `Bearer ${apiToken}`,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
@@ -3638,6 +3692,7 @@ export async function syncDbToCloud(): Promise<void> {
           },
         },
       }),
+      signal: AbortSignal.timeout(5000),
     });
     lastCloudSyncAtMs = Date.now();
   } catch {
@@ -3658,6 +3713,7 @@ async function pullFromGistIntoLocalSqlite(): Promise<boolean> {
         "User-Agent": "ha-mi-website-cloud-sync",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return false;
     const data = (await res.json()) as {
