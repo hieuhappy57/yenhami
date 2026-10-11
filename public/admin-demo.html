@@ -2456,9 +2456,14 @@
                 Soạn thảo, biên tập bài viết kiến thức dinh dưỡng, cẩm nang sức khỏe và quà biếu yến sào Hà Mi.
               </p>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openNewPostModal()">
-              <i data-lucide="plus"></i> <span>+ Viết bài mới</span>
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" onclick="fetchServerCmsPosts(false)" title="Tải lại danh sách bài viết từ máy chủ">
+                <span>🔄 Tải lại</span>
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="openNewPostModal()">
+                <i data-lucide="plus"></i> <span>+ Viết bài mới</span>
+              </button>
+            </div>
           </div>
 
           <div class="filter-bar">
@@ -3777,7 +3782,10 @@
       }
       if (tabId === 'customers') renderCustomersTable();
       if (tabId === 'products') renderProductsTable();
-      if (tabId === 'posts') renderPostsTable();
+      if (tabId === 'posts') {
+        renderPostsTable();
+        if (typeof fetchServerCmsPosts === 'function') fetchServerCmsPosts(true);
+      }
       if (tabId === 'jobs') renderJobsTable();
       if (tabId === 'site') loadSiteSettingsForm();
       if (tabId === 'staff') renderStaffTable();
@@ -5491,14 +5499,76 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function togglePinPost(postId) {
+    async function fetchServerCmsPosts(silent = false) {
+      try {
+        const res = await fetch('/api/admin/cms', { headers: getAdminAuthHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok && Array.isArray(data.posts) && data.posts.length > 0) {
+          appState.posts = data.posts.map(p => ({
+            id: p.id,
+            title: p.title,
+            slug: p.slug,
+            category: p.category || 'Tin tức Hà Mi',
+            coverImageUrl: p.coverImageUrl || '/brand/hero-editorial-clean.jpg',
+            excerpt: p.excerpt || '',
+            content: p.content || '',
+            status: p.isPublished ? 'published' : 'draft',
+            isPinned: Boolean(p.isPinned),
+            updatedAt: p.updatedAt ? p.updatedAt.slice(0, 10) : SIMULATED_TODAY
+          }));
+          persistAppState();
+          if (appState.activeTab === 'posts') {
+            renderPostsTable();
+          }
+          if (!silent) showToast('✅ Đã đồng bộ bài viết từ máy chủ!', 'success');
+        }
+      } catch (e) {
+        if (!silent) showToast('Lỗi kết nối khi tải bài viết từ máy chủ', 'error');
+      }
+    }
+
+    async function togglePinPost(postId) {
       const post = appState.posts.find(p => p.id === postId);
-      if (post) {
-        post.isPinned = !post.isPinned;
-        post.updatedAt = SIMULATED_TODAY;
-        showToast(post.isPinned ? '📌 Đã ghim bài viết lên đầu trang!' : 'Đã bỏ ghim bài viết!', 'success');
+      if (!post) return;
+      const oldPinned = !!post.isPinned;
+      post.isPinned = !oldPinned;
+      post.updatedAt = SIMULATED_TODAY;
+      persistAppState();
+      renderPostsTable();
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({
+            action: 'upsert_post',
+            post: {
+              id: post.id,
+              slug: post.slug,
+              title: post.title,
+              category: post.category,
+              coverImageUrl: post.coverImageUrl,
+              excerpt: post.excerpt,
+              content: post.content,
+              isPublished: post.status === 'published',
+              isPinned: post.isPinned
+            }
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok) {
+          showToast(post.isPinned ? '📌 Đã ghim bài viết lên đầu trang!' : 'Đã bỏ ghim bài viết!', 'success');
+        } else {
+          post.isPinned = oldPinned;
+          persistAppState();
+          renderPostsTable();
+          showToast(`❌ Không thể lưu ghim bài viết: ${data.errorMessage || 'Lỗi máy chủ'}`, 'error');
+        }
+      } catch (e) {
+        post.isPinned = oldPinned;
         persistAppState();
         renderPostsTable();
+        showToast('❌ Lỗi kết nối máy chủ khi ghim bài viết', 'error');
       }
     }
 
@@ -5554,7 +5624,7 @@
       document.getElementById('editPostModal').showModal();
     }
 
-    function handleSavePost(event) {
+    async function handleSavePost(event) {
       event.preventDefault();
       const id = document.getElementById('editPostId').value;
       const title = document.getElementById('postTitleInput').value.trim();
@@ -5566,58 +5636,146 @@
       const status = document.getElementById('postStatusInput').value;
       const isPinned = !!(document.getElementById('postIsPinnedInput')?.checked);
 
-      if (id) {
-        const post = appState.posts.find(p => p.id === id);
-        if (post) {
-          post.title = title;
-          post.slug = slug;
-          post.category = category;
-          post.coverImageUrl = coverImageUrl;
-          post.excerpt = excerpt;
-          post.content = content;
-          post.status = status;
-          post.isPinned = isPinned;
-          post.updatedAt = SIMULATED_TODAY;
+      if (!title) {
+        showToast('Vui lòng nhập tiêu đề bài viết', 'error');
+        return;
+      }
+
+      const postPayload = {
+        id: id || undefined,
+        slug: slug || undefined,
+        title,
+        category,
+        coverImageUrl: coverImageUrl || '/brand/hero-editorial-clean.jpg',
+        excerpt: excerpt || title,
+        content: content || title,
+        isPublished: status === 'published',
+        isPinned
+      };
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({ action: 'upsert_post', post: postPayload })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok) {
+          const finalId = data.id || id || ('post-' + Date.now());
+          const finalSlug = data.slug || slug;
+          if (id) {
+            const post = appState.posts.find(p => p.id === id);
+            if (post) {
+              post.title = title;
+              post.slug = finalSlug;
+              post.category = category;
+              post.coverImageUrl = coverImageUrl;
+              post.excerpt = excerpt;
+              post.content = content;
+              post.status = status;
+              post.isPinned = isPinned;
+              post.updatedAt = SIMULATED_TODAY;
+            }
+          } else {
+            const newPost = {
+              id: finalId,
+              title,
+              slug: finalSlug,
+              category,
+              coverImageUrl,
+              excerpt,
+              content,
+              status,
+              isPinned,
+              updatedAt: SIMULATED_TODAY
+            };
+            appState.posts.unshift(newPost);
+          }
+          persistAppState();
+          closeDialog('editPostModal');
+          renderPostsTable();
+          showToast(id ? 'Đã lưu bài viết thành công!' : 'Đã tạo bài viết mới thành công!', 'success');
+        } else {
+          showToast(`❌ Lỗi lưu bài viết: ${data.errorMessage || 'Máy chủ từ chối'}`, 'error');
         }
-        showToast('Đã lưu bài viết thành công!', 'success');
-      } else {
-        const newPost = {
-          id: 'post-' + Date.now(),
-          title,
-          slug,
-          category,
-          coverImageUrl,
-          excerpt,
-          content,
-          status,
-          isPinned,
-          updatedAt: SIMULATED_TODAY
-        };
-        appState.posts.unshift(newPost);
-        showToast('Đã tạo bài viết mới thành công!', 'success');
+      } catch (err) {
+        showToast('❌ Lỗi kết nối khi lưu bài viết', 'error');
       }
-      persistAppState();
-      closeDialog('editPostModal');
-      renderPostsTable();
     }
 
-    function togglePostStatus(postId) {
+    async function togglePostStatus(postId) {
       const post = appState.posts.find(p => p.id === postId);
-      if (post) {
-        post.status = post.status === 'published' ? 'draft' : 'published';
-        post.updatedAt = SIMULATED_TODAY;
-        showToast(`Đã đổi bài viết sang trạng thái: ${post.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}`, 'info');
+      if (!post) return;
+      const oldStatus = post.status;
+      const newStatus = oldStatus === 'published' ? 'draft' : 'published';
+      post.status = newStatus;
+      post.updatedAt = SIMULATED_TODAY;
+      persistAppState();
+      renderPostsTable();
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({
+            action: 'upsert_post',
+            post: {
+              id: post.id,
+              slug: post.slug,
+              title: post.title,
+              category: post.category,
+              coverImageUrl: post.coverImageUrl,
+              excerpt: post.excerpt,
+              content: post.content,
+              isPublished: newStatus === 'published',
+              isPinned: !!post.isPinned
+            }
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok) {
+          showToast(`Đã đổi bài viết sang: ${newStatus === 'published' ? 'Đã xuất bản' : 'Bản nháp'}`, 'info');
+        } else {
+          post.status = oldStatus;
+          persistAppState();
+          renderPostsTable();
+          showToast(`❌ Lỗi đổi trạng thái: ${data.errorMessage || 'Máy chủ từ chối'}`, 'error');
+        }
+      } catch (e) {
+        post.status = oldStatus;
         persistAppState();
         renderPostsTable();
+        showToast('❌ Lỗi kết nối khi đổi trạng thái bài viết', 'error');
       }
     }
 
-    function deletePost(postId) {
-      if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-        appState.posts = appState.posts.filter(p => p.id !== postId);
-        showToast('Đã xóa bài viết thành công', 'info');
+    async function deletePost(postId) {
+      if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return;
+      const oldPosts = [...appState.posts];
+      appState.posts = appState.posts.filter(p => p.id !== postId);
+      persistAppState();
+      renderPostsTable();
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({ action: 'delete_post', postId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok) {
+          showToast('Đã xóa bài viết thành công', 'info');
+        } else {
+          appState.posts = oldPosts;
+          persistAppState();
+          renderPostsTable();
+          showToast(`❌ Lỗi xóa bài viết: ${data.errorMessage || 'Máy chủ từ chối'}`, 'error');
+        }
+      } catch (e) {
+        appState.posts = oldPosts;
         persistAppState();
         renderPostsTable();
+        showToast('❌ Lỗi kết nối khi xóa bài viết', 'error');
       }
     }
 
@@ -6040,6 +6198,7 @@
       handleRoleSwitch(targetRole);
       updateHeaderStaffDisplay();
       if (window.lucide) lucide.createIcons();
+      if (typeof fetchServerCmsPosts === 'function') fetchServerCmsPosts(true);
     }
 
     function getStaffToken() {
