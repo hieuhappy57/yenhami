@@ -183,9 +183,7 @@ export default async function LienHePage() {
                     </p>
                   </div>
                   <span className="rounded-full bg-[#E2FCF3] px-3 py-1 font-semibold text-[#1B4332]">
-                    {slot.remainingBowls > 0
-                      ? `Còn ${slot.remainingBowls}/${slot.maxCapacityBowls} thố`
-                      : "Đã đầy"}
+                    {slot.isActive ? "Nhận giao hẹn giờ" : "Tạm ngưng"}
                   </span>
                 </div>
               ))}

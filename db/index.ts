@@ -230,6 +230,11 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       is_total_final INTEGER NOT NULL DEFAULT 1,
       order_status TEXT NOT NULL,
       payment_status TEXT NOT NULL,
+      row_version INTEGER NOT NULL DEFAULT 1,
+      confirmed_at TEXT,
+      preparing_started_at TEXT,
+      prepared_done_at TEXT,
+      completed_at TEXT,
       is_demo_order INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -387,6 +392,9 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   ensureOrderColumn("source", "ALTER TABLE order_requests ADD COLUMN source TEXT NOT NULL DEFAULT 'UNKNOWN'");
   ensureOrderColumn("source_detail", "ALTER TABLE order_requests ADD COLUMN source_detail TEXT");
   ensureOrderColumn("row_version", "ALTER TABLE order_requests ADD COLUMN row_version INTEGER NOT NULL DEFAULT 1");
+  ensureOrderColumn("confirmed_at", "ALTER TABLE order_requests ADD COLUMN confirmed_at TEXT");
+  ensureOrderColumn("preparing_started_at", "ALTER TABLE order_requests ADD COLUMN preparing_started_at TEXT");
+  ensureOrderColumn("prepared_done_at", "ALTER TABLE order_requests ADD COLUMN prepared_done_at TEXT");
   ensureOrderColumn("completed_at", "ALTER TABLE order_requests ADD COLUMN completed_at TEXT");
 
   const countRow = db.prepare("SELECT COUNT(*) as cnt FROM products").get() as { cnt: number };
@@ -743,10 +751,8 @@ export function getDeliverySlots(params?: {
       }
     }
 
+    // Capacity is tracked for reporting without locking/blocking delivery slots
     const remainingBowls = Math.max(0, maxCap - dateReserved);
-    if (!unavailableReason && remainingBowls === 0) {
-      unavailableReason = "Khung giờ đã đầy cho ngày này";
-    }
 
     return {
       id: slotId,
@@ -1127,26 +1133,6 @@ export function calculateServerQuote(params: {
         };
       }
     }
-
-    if (selectedSlot.remainingBowls < totalBowls) {
-      return {
-        ok: false,
-        errorCode: "SLOT_FULL",
-        errorMessage:
-          selectedSlot.remainingBowls === 0
-            ? `Khung giờ "${selectedSlot.label}" ngày ${params.requestedDate || ""} đã đầy năng lực phục vụ của bếp. Vui lòng chọn khung giờ hoặc ngày khác.`
-            : `Khung giờ "${selectedSlot.label}" chỉ còn nhận thêm tối đa ${selectedSlot.remainingBowls} thố (bạn đang chọn ${totalBowls} thố). Vui lòng chọn khung giờ khác hoặc điều chỉnh số lượng.`,
-        items: computedItems,
-        totalBowls,
-        subtotalVnd,
-        shippingFeeVnd,
-        shippingFeeNote,
-        totalVnd: subtotalVnd + (shippingFeeVnd ?? 0),
-        isTotalFinal,
-        zone: selectedZone,
-        slot: selectedSlot,
-      };
-    }
   }
 
   return {
@@ -1438,29 +1424,13 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
        VALUES (?, ?, ?)`
     ).run(requestedDate, quote.slot.id, initialReservedForDate);
 
-    // Atomically reserve bowls for (requestedDate, slot.id) if within maxCapacityBowls
-    const updateDateSlotRes = db
-      .prepare(
-        `UPDATE slot_date_reservations
-         SET reserved_bowls = reserved_bowls + ?
-         WHERE requested_date = ? AND slot_id = ? AND (reserved_bowls + ?) <= ?`
-      )
-      .run(
-        quote.totalBowls,
-        requestedDate,
-        quote.slot.id,
-        quote.totalBowls,
-        quote.slot.maxCapacityBowls
-      );
-
-    if (updateDateSlotRes.changes === 0) {
-      db.exec("ROLLBACK;");
-      return {
-        ok: false,
-        errorCode: "SLOT_FULL",
-        errorMessage: `Khung giờ "${quote.slot.label}" ngày ${requestedDate} vừa hết chỗ cho ${quote.totalBowls} thố. Vui lòng chọn khung giờ hoặc ngày khác.`,
-      };
-    }
+    // No capacity limit: delivery slots serve as delivery schedule notes.
+    // Increment reserved_bowls count purely for tracking/reporting without blocking.
+    db.prepare(
+      `UPDATE slot_date_reservations
+       SET reserved_bowls = reserved_bowls + ?
+       WHERE requested_date = ? AND slot_id = ?`
+    ).run(quote.totalBowls, requestedDate, quote.slot.id);
 
     const orderId = `ord-${crypto.randomUUID()}`;
     const shortRand = crypto.randomBytes(4).toString("hex").toUpperCase();
@@ -1711,7 +1681,26 @@ export function getOrderRequestByReference(params: {
     source: String(row.source || "UNKNOWN") as OrderSource,
     sourceDetail: row.source_detail ? String(row.source_detail) : null,
     rowVersion: Number(row.row_version || 1),
-    completedAt: row.completed_at ? String(row.completed_at) : null,
+    confirmedAt: row.confirmed_at
+      ? String(row.confirmed_at)
+      : history.find((h) => String(h.to_status) === "CONFIRMED")?.created_at
+        ? String(history.find((h) => String(h.to_status) === "CONFIRMED")!.created_at)
+        : null,
+    preparingStartedAt: row.preparing_started_at
+      ? String(row.preparing_started_at)
+      : history.find((h) => String(h.to_status) === "PREPARING")?.created_at
+        ? String(history.find((h) => String(h.to_status) === "PREPARING")!.created_at)
+        : null,
+    preparedDoneAt: row.prepared_done_at
+      ? String(row.prepared_done_at)
+      : history.find((h) => String(h.to_status) === "DELIVERING")?.created_at
+        ? String(history.find((h) => String(h.to_status) === "DELIVERING")!.created_at)
+        : null,
+    completedAt: row.completed_at
+      ? String(row.completed_at)
+      : history.find((h) => String(h.to_status) === "COMPLETED")?.created_at
+        ? String(history.find((h) => String(h.to_status) === "COMPLETED")!.created_at)
+        : null,
     isDemoOrder: Boolean(row.is_demo_order),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -1800,8 +1789,9 @@ export function confirmOrderWithPaymentByStaff(params: {
       .run(`pay-${crypto.randomUUID()}`,String(row.id),params.amountVnd,params.method,now,now,params.staffUsername,params.idempotencyKey);
     const updated = db.prepare(`UPDATE order_requests SET order_status = 'CONFIRMED', payment_status = 'PAID',
       shipping_fee_vnd = ?, shipping_fee_note = 'Phí giao đã xác nhận', total_vnd = ?, is_total_final = 1,
+      confirmed_at = COALESCE(confirmed_at, ?),
       row_version = row_version + 1, updated_at = ? WHERE id = ? AND row_version = ?`)
-      .run(params.shippingFeeVnd,total,now,String(row.id),params.expectedVersion);
+      .run(params.shippingFeeVnd,total,now,now,String(row.id),params.expectedVersion);
     if (Number(updated.changes) !== 1) return reject("VERSION_CONFLICT","Đơn đã thay đổi. Vui lòng tải lại.");
     db.prepare(`INSERT INTO order_status_history
       (id,order_request_id,from_status,to_status,from_payment_status,to_payment_status,changed_by_staff_username,changed_by_staff_name,note,created_at)
@@ -2003,6 +1993,9 @@ export function updateOrderStatusByStaff(params: {
       UPDATE order_requests
       SET order_status = ?, payment_status = ?, shipping_fee_vnd = ?,
           shipping_fee_note = ?, total_vnd = ?, is_total_final = ?, updated_at = ?,
+          confirmed_at = CASE WHEN ? = 'CONFIRMED' THEN COALESCE(confirmed_at, ?) ELSE confirmed_at END,
+          preparing_started_at = CASE WHEN ? = 'PREPARING' THEN COALESCE(preparing_started_at, ?) ELSE preparing_started_at END,
+          prepared_done_at = CASE WHEN ? = 'DELIVERING' THEN COALESCE(prepared_done_at, ?) ELSE prepared_done_at END,
           completed_at = CASE WHEN ? = 'COMPLETED' THEN COALESCE(completed_at, ?) ELSE completed_at END,
           row_version = row_version + 1
       WHERE id = ? AND row_version = ?
@@ -2013,6 +2006,12 @@ export function updateOrderStatusByStaff(params: {
       shippingFeeNote,
       totalVnd,
       isTotalFinal ? 1 : 0,
+      nowIso,
+      params.newOrderStatus,
+      nowIso,
+      params.newOrderStatus,
+      nowIso,
+      params.newOrderStatus,
       nowIso,
       params.newOrderStatus,
       nowIso,
@@ -3190,6 +3189,9 @@ CREATE TABLE IF NOT EXISTS order_requests (
   source TEXT NOT NULL DEFAULT 'UNKNOWN',
   source_detail TEXT,
   row_version INTEGER NOT NULL DEFAULT 1,
+  confirmed_at TEXT,
+  preparing_started_at TEXT,
+  prepared_done_at TEXT,
   completed_at TEXT,
   is_demo_order INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,

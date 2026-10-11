@@ -275,8 +275,8 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
     const slotB = slotsB.find((s) => s.id === "slot-morning")!;
     assert.equal(slotB.remainingBowls, 12);
 
-    // Attempting to book 8 bowls on dateA slot-morning (only 7 left) fails with SLOT_FULL
-    const overbookA = submitOrderRequest({
+    // Booking 8 bowls on dateA slot-morning succeeds without capacity restriction (no SLOT_FULL)
+    const bookingA = submitOrderRequest({
       idempotencyKey: "idem-test-dateA-overbook",
       orderPurpose: "SELF",
       buyerName: "Trần Văn B",
@@ -288,8 +288,8 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
       items: [{ productId: "prod-thanh-nguyen", quantity: 8 }],
       now: fixedNow,
     });
-    assert.equal(overbookA.ok, false);
-    assert.equal(overbookA.errorCode, "SLOT_FULL");
+    assert.equal(bookingA.ok, true);
+    assert.ok(bookingA.order?.referenceCode);
   });
 
   it("6. Enforces strict order lookup authorization (requires valid lookupToken or staff)", () => {

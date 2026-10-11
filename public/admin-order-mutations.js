@@ -10,6 +10,9 @@ mapServerOrderToUiOrder = function (serverOrder) {
     id: entry.id, date: entry.occurredAt, type: entry.type === 'REFUND' ? 'refund' : 'collection',
     amount: Number(entry.amountVnd), method: entry.method, reason: entry.reason || ''
   }));
+  order.confirmedAt = serverOrder.confirmedAt || null;
+  order.preparingStartedAt = serverOrder.preparingStartedAt || null;
+  order.preparedDoneAt = serverOrder.preparedDoneAt || null;
   order.completedAt = serverOrder.completedAt || null;
   order.isTotalFinal = serverOrder.isTotalFinal;
   if (serverOrder.orderPurpose === 'SELF') {order.recipientName='';order.recipientPhone='';}
@@ -33,8 +36,16 @@ openOrderDetail = function (orderId) {
     progress.appendChild(step);
   });
   document.getElementById('orderDetailContent').prepend(progress);
+
+  // RBAC UI masking on order detail:
+  const content = document.getElementById('orderDetailContent');
+  if (!['OWNER', 'MANAGER'].includes(appState.currentRole)) {
+    // Hide refund form and cancel buttons for SALES/others
+    content.querySelectorAll('form[onsubmit*="handleRecordRefund"]').forEach(el => el.remove());
+    content.querySelectorAll('button[onclick*="promptCancelOrder"]').forEach(el => el.remove());
+  }
+
   if (order?.status === 'pending') {
-    const content = document.getElementById('orderDetailContent');
     content.querySelector('form[onsubmit*="handleRecordCollection"]')?.remove();
     content.querySelectorAll('button[onclick*="progressOrderStatus"]').forEach(button => button.remove());
     const form = document.createElement('form');
@@ -72,7 +83,7 @@ async function sendOrderMutation(orderId, payload) {
   const order = appState.orders.find(o => o.id === orderId);
   if (!order) return false;
   orderMutationPending.add(orderId);
-  const buttons = [...document.querySelectorAll('#orderDetailModal button, #orderDetailModal input, #orderDetailModal select')];
+  const buttons = [...document.querySelectorAll('#orderDetailModal button, #orderDetailModal input, #orderDetailModal select, .kitchen-action-btn')];
   buttons.forEach(button => { button.disabled = true; });
   try {
     const response = await fetch('/api/admin/orders', {
@@ -91,7 +102,9 @@ async function sendOrderMutation(orderId, payload) {
       throw new Error(data.errorMessage || 'Máy chủ chưa xác nhận thao tác.');
     }
     const index = appState.orders.findIndex(o => o.id === orderId);
-    appState.orders[index] = mapServerOrderToUiOrder(data.order);
+    if (index !== -1 && data.order) {
+      appState.orders[index] = mapServerOrderToUiOrder(data.order);
+    }
     refreshOrderViews(orderId);
     showToast('Đã lưu thao tác trên máy chủ.', 'success');
     return true;
@@ -105,7 +118,11 @@ async function sendOrderMutation(orderId, payload) {
 }
 
 async function progressOrderStatus(orderId, nextStatus) {
-  if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole)) return;
+  if (appState.currentRole === 'KITCHEN') {
+    if (!['preparing', 'delivering'].includes(nextStatus)) return;
+  } else if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole)) {
+    return;
+  }
   const statuses = {confirmed:'CONFIRMED',preparing:'PREPARING',delivering:'DELIVERING',completed:'COMPLETED'};
   const next = {pending:'confirmed',confirmed:'preparing',preparing:'delivering',delivering:'completed'};
   const order = appState.orders.find(o => o.id === orderId);
@@ -114,15 +131,33 @@ async function progressOrderStatus(orderId, nextStatus) {
   return sendOrderMutation(orderId, {action:'status',newOrderStatus:statuses[nextStatus]});
 }
 
+async function kitchenStartPreparing(orderId) {
+  const order = appState.orders.find(o => o.id === orderId);
+  if (!order) return;
+  return sendOrderMutation(orderId, { action: 'status', newOrderStatus: 'PREPARING' });
+}
+
+async function kitchenFinishPreparing(orderId) {
+  const order = appState.orders.find(o => o.id === orderId);
+  if (!order) return;
+  return sendOrderMutation(orderId, { action: 'status', newOrderStatus: 'DELIVERING' });
+}
+
 async function promptCancelOrder(orderId) {
-  if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole)) return;
+  if (!['OWNER','MANAGER'].includes(appState.currentRole)) {
+    showToast('Chỉ Quản lý (Manager) hoặc Chủ cơ sở (Owner) mới có quyền huỷ đơn hàng!', 'error');
+    return;
+  }
   const reason = window.prompt('Nhập lý do huỷ đơn hàng (bắt buộc):');
   if (reason?.trim()) return sendOrderMutation(orderId,{action:'status',newOrderStatus:'CANCELLED',note:reason.trim()});
 }
 
 async function recordOrderCash(event, orderId, type) {
   event?.preventDefault();
-  if (!(type === 'collection' ? ['OWNER','MANAGER','SALES'] : ['OWNER','MANAGER']).includes(appState.currentRole)) return;
+  if (!(type === 'collection' ? ['OWNER','MANAGER','SALES'] : ['OWNER','MANAGER']).includes(appState.currentRole)) {
+    showToast('Bạn không có quyền thực hiện giao dịch này.', 'error');
+    return;
+  }
   const prefix = type === 'collection' ? 'col' : 'ref';
   const amount = Number(document.getElementById(`${prefix}Amount_${orderId}`)?.value);
   const methodLabel = document.getElementById(`${prefix}Method_${orderId}`)?.value;

@@ -208,7 +208,7 @@ export default async function MenuPage() {
           </p>
           <ul className="space-y-2.5 text-xs sm:text-sm">
             {slots.map((s) => {
-              const isFull = s.remainingBowls <= 0 || !s.isActive;
+              const isAvailable = s.isActive;
               return (
                 <li
                   key={s.id}
@@ -222,14 +222,14 @@ export default async function MenuPage() {
                   </div>
                   <span
                     className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                      isFull
+                      !isAvailable
                         ? "bg-red-50 text-red-800"
                         : "bg-[#E2FCF3] text-[#1B4332]"
                     }`}
                   >
-                    {isFull
-                      ? "Tạm đầy khung giờ"
-                      : `Còn nhận ${s.remainingBowls}/${s.maxCapacityBowls} thố`}
+                    {!isAvailable
+                      ? "Tạm ngưng"
+                      : "Nhận đặt giao nóng"}
                   </span>
                 </li>
               );

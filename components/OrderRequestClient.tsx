@@ -64,7 +64,7 @@ export function OrderRequestClient({
   const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
   const [slotId, setSlotId] = useState<string>(() => {
     const firstAvailable = initialSlots.find(
-      (s) => s.isActive && s.remainingBowls > 0 && !s.isPastOrInsufficientLead
+      (s) => s.isActive && !s.isPastOrInsufficientLead
     );
     return firstAvailable?.id ?? initialSlots[0]?.id ?? "";
   });
@@ -121,14 +121,12 @@ export function OrderRequestClient({
               (s) =>
                 s.id === prevSlotId &&
                 s.isActive &&
-                s.remainingBowls > 0 &&
                 !s.isPastOrInsufficientLead
             );
             if (currentStillValid) return prevSlotId;
             const firstAvail = nextSlots.find(
               (s) =>
                 s.isActive &&
-                s.remainingBowls > 0 &&
                 !s.isPastOrInsufficientLead
             );
             return firstAvail?.id ?? prevSlotId;
@@ -190,7 +188,7 @@ export function OrderRequestClient({
   const hasAvailableSlot = useMemo(
     () =>
       slots.some(
-        (s) => s.isActive && s.remainingBowls > 0 && !s.isPastOrInsufficientLead
+        (s) => s.isActive && !s.isPastOrInsufficientLead
       ),
     [slots]
   );
@@ -627,26 +625,24 @@ export function OrderRequestClient({
                 >
                   {slots.map((slot) => {
                     const isAvailable =
-                      slot.isActive &&
-                      slot.remainingBowls > 0 &&
-                      !slot.isPastOrInsufficientLead;
+                      slot.isActive && !slot.isPastOrInsufficientLead;
                     return (
                       <option
                         key={slot.id}
                         value={slot.id}
                         disabled={!isAvailable}
                       >
-                        {slot.timeWindow} —{" "}
-                        {isAvailable
-                          ? `Còn nhận (${slot.remainingBowls} thố)`
-                          : slot.unavailableReason || "Đã đầy"}
+                        {slot.timeWindow} ({slot.label})
+                        {!isAvailable
+                          ? ` — ${slot.unavailableReason || "Đã qua khung giờ"}`
+                          : ""}
                       </option>
                     );
                   })}
                 </select>
                 {!hasAvailableSlot && !loadingSlots && (
                   <p className="mt-1 text-[11px] text-amber-800">
-                    Các khung giờ ngày {requestedDate} đã qua hoặc đủ thố, vui lòng đổi ngày giao.
+                    Các khung giờ ngày {requestedDate} đã qua thời gian hẹn tối thiểu, vui lòng chọn ngày giao khác.
                   </p>
                 )}
               </div>

@@ -75,3 +75,43 @@ test("serverless ephemeral production writes allow verified storage", () => {
   delete process.env.HAMI_BLOCK_MUTATIONS;
   assert.doesNotThrow(() => assertAuthoritativeStorage());
 });
+
+test("RBAC matrix enforces strict role permissions across all 5 roles", () => {
+  const kitchen = createStaff({ username: "kitchen-test@example.test", displayName: "Bếp", password: "valid-pwd-1234", roles: ["KITCHEN"] });
+  const sales = createStaff({ username: "sales-test@example.test", displayName: "Sales", password: "valid-pwd-1234", roles: ["SALES"] });
+  const manager = createStaff({ username: "manager-test@example.test", displayName: "Quản lý", password: "valid-pwd-1234", roles: ["MANAGER"] });
+  const owner = createStaff({ username: "owner-test@example.test", displayName: "Chủ", password: "valid-pwd-1234", roles: ["OWNER"] });
+  const marketing = createStaff({ username: "mkt-test@example.test", displayName: "Marketing", password: "valid-pwd-1234", roles: ["MARKETING"] });
+
+  // Kitchen: can read orders & prepare, cannot write or collect or refund
+  assert.equal(staffCan(kitchen, "orders.read"), true);
+  assert.equal(staffCan(kitchen, "orders.prepare"), true);
+  assert.equal(staffCan(kitchen, "orders.write"), false);
+  assert.equal(staffCan(kitchen, "payments.collect"), false);
+  assert.equal(staffCan(kitchen, "payments.refund"), false);
+
+  // Sales: can read/write orders, collect payment, read customers. Cannot prepare dishes, refund, or manage commercial catalog
+  assert.equal(staffCan(sales, "orders.read"), true);
+  assert.equal(staffCan(sales, "orders.write"), true);
+  assert.equal(staffCan(sales, "payments.collect"), true);
+  assert.equal(staffCan(sales, "customers.read"), true);
+  assert.equal(staffCan(sales, "orders.prepare"), false);
+  assert.equal(staffCan(sales, "payments.refund"), false);
+  assert.equal(staffCan(sales, "catalog.commercial.write"), false);
+
+  // Marketing: content write only
+  assert.equal(staffCan(marketing, "content.write"), true);
+  assert.equal(staffCan(marketing, "orders.read"), false);
+  assert.equal(staffCan(marketing, "customers.read"), false);
+
+  // Manager: full operational powers including refund and commercial pricing, but not staff.manage
+  assert.equal(staffCan(manager, "payments.refund"), true);
+  assert.equal(staffCan(manager, "catalog.commercial.write"), true);
+  assert.equal(staffCan(manager, "orders.prepare"), true);
+  assert.equal(staffCan(manager, "staff.manage"), false);
+
+  // Owner: supreme powers including staff.manage
+  assert.equal(staffCan(owner, "staff.manage"), true);
+  assert.equal(staffCan(owner, "settings.sensitive"), true);
+});
+

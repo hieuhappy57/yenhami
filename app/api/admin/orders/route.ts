@@ -22,6 +22,11 @@ export async function GET(request: Request) {
   return respond({ ok: true, staff, orders: kitchenOnly ? orders.map((o) => ({
     id: o.id, referenceCode: o.referenceCode, requestedDate: o.requestedDate,
     slotId: o.slotId, slotLabelSnapshot: o.slotLabelSnapshot, orderStatus: o.orderStatus,
+    buyerNote: o.buyerNote,
+    confirmedAt: o.confirmedAt,
+    preparingStartedAt: o.preparingStartedAt,
+    preparedDoneAt: o.preparedDoneAt,
+    completedAt: o.completedAt,
     rowVersion: o.rowVersion, createdAt: o.createdAt, updatedAt: o.updatedAt,
     items: o.items.map((item) => ({
       id: item.id, productId: item.productId, variantId: item.variantId,
@@ -64,7 +69,8 @@ export async function PATCH(request: Request) {
         const newOrderStatus = String(body.newOrderStatus || "") as OrderStatus;
         if (newOrderStatus === "CONFIRMED") return {ok:false,errorCode:"CONFIRMATION_REQUIRED",errorMessage:"Chốt phí giao và thu tiền trong bước xác nhận đơn."};
         if (!ORDER_STATUSES.includes(newOrderStatus)) return { ok: false, errorCode: "INVALID_STATUS", errorMessage: "Trạng thái đơn không hợp lệ." };
-        const kitchenStep = staffCan(staff, "orders.prepare") && newOrderStatus === "PREPARING";
+        const kitchenStep = staffCan(staff, "orders.prepare") && (newOrderStatus === "PREPARING" || newOrderStatus === "DELIVERING");
+        if (newOrderStatus === "CANCELLED" && !staffCan(staff, "payments.refund")) return { ok: false, forbidden: true, errorMessage: "Chỉ Quản lý hoặc Chủ cơ sở mới có quyền huỷ đơn." };
         if (!staffCan(staff, "orders.write") && !kitchenStep) return { ok: false, forbidden: true, errorMessage: "Bạn không có quyền cập nhật trạng thái này." };
         if (newOrderStatus === "PREPARING") {
           const order = getOrderRequestByReference({referenceCode,isStaff:true});

@@ -2356,10 +2356,17 @@
       <!-- TAB: KITCHEN QUEUE -->
       <section id="tab-kitchen" class="tab-content" style="display: none;">
         <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">Hàng đợi bếp chế biến (Chế độ Bếp: Không hiển thị giá/thông tin người mua)</h2>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 class="card-title" style="margin: 0;">👨‍🍳 Hàng đợi Bếp & Pha chế (Order-Centric FIFO)</h2>
+              <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Đơn chốt trước làm trước (FIFO). Tuyệt đối bảo mật: Ẩn giá tiền, doanh thu &amp; số điện thoại khách hàng.
+              </div>
+            </div>
+            <div id="kitchenQueueStats" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"></div>
           </div>
-          <div class="table-wrap">
+          <div id="kitchenCardsContainer" style="padding: 16px; display: grid; gap: 16px;"></div>
+          <div class="table-wrap" style="display: none;">
             <table>
               <thead>
                 <tr>
@@ -3674,14 +3681,16 @@
       closeAllDialogs();
       const allowedTabs = ROLE_PERMISSIONS[newRole] || [];
       
-      // Update nav UI
+      // Update nav UI (hide tabs that role has no permission to view)
       document.querySelectorAll('.nav-btn').forEach(btn => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
         if (!allowedTabs.includes(tab)) {
           btn.setAttribute('disabled', 'true');
+          btn.style.display = 'none';
         } else {
           btn.removeAttribute('disabled');
+          btn.style.display = '';
         }
       });
 
@@ -4227,6 +4236,35 @@
 
       const aov = completedOrders.length > 0 ? Math.round(completedSales / completedOrders.length) : 0;
 
+      // SLA Lead Time Metrics
+      let waitSum = 0, waitCount = 0;
+      let kitchenSum = 0, kitchenCount = 0;
+      let leadSum = 0, leadCount = 0;
+
+      filtered.forEach(o => {
+        const conf = o.confirmedAt ? new Date(o.confirmedAt).getTime() : null;
+        const prepStart = o.preparingStartedAt ? new Date(o.preparingStartedAt).getTime() : null;
+        const prepDone = o.preparedDoneAt ? new Date(o.preparedDoneAt).getTime() : null;
+        const comp = o.completedAt ? new Date(o.completedAt).getTime() : null;
+
+        if (conf && prepStart && prepStart >= conf) {
+          waitSum += (prepStart - conf);
+          waitCount++;
+        }
+        if (prepStart && prepDone && prepDone >= prepStart) {
+          kitchenSum += (prepDone - prepStart);
+          kitchenCount++;
+        }
+        if (conf && comp && comp >= conf) {
+          leadSum += (comp - conf);
+          leadCount++;
+        }
+      });
+
+      const avgWait = waitCount > 0 ? Math.round(waitSum / (waitCount * 60000)) + 'p' : '--';
+      const avgKitchen = kitchenCount > 0 ? Math.round(kitchenSum / (kitchenCount * 60000)) + 'p' : '--';
+      const avgLead = leadCount > 0 ? Math.round(leadSum / (leadCount * 60000)) + 'p' : '--';
+
       container.innerHTML = `
         <div class="ops-metric-item">
           <div class="ops-metric-val" style="color: #059669;">${totalBowls}</div>
@@ -4238,7 +4276,19 @@
         </div>
         <div class="ops-metric-item">
           <div class="ops-metric-val" style="color: #d97706;">${aov > 0 ? Math.round(aov / 1000) + 'k' : '0 ₫'}</div>
-          <div class="ops-metric-label">Giá trị trung bình/đơn</div>
+          <div class="ops-metric-label">Giá trị TB/đơn</div>
+        </div>
+        <div class="ops-metric-item" title="Thời gian chờ từ lúc chốt đơn đến khi Bếp bắt đầu chưng">
+          <div class="ops-metric-val" style="color: #2563eb;">${avgWait}</div>
+          <div class="ops-metric-label">Chờ vào bếp (SLA)</div>
+        </div>
+        <div class="ops-metric-item" title="Thời gian chế biến trung bình của Bếp">
+          <div class="ops-metric-val" style="color: #7c3aed;">${avgKitchen}</div>
+          <div class="ops-metric-label">Bếp chưng xong</div>
+        </div>
+        <div class="ops-metric-item" title="Tổng thời gian từ khi chốt đơn đến giao thành công">
+          <div class="ops-metric-val" style="color: #0d9488;">${avgLead}</div>
+          <div class="ops-metric-label">Tổng Lead Time</div>
         </div>
       `;
     }
@@ -4364,9 +4414,11 @@
         rowVersion: Number(srv.rowVersion) || 1,
         createdAt: dateFormatted,
         createdAtIso: srv.createdAt,
-        createdAtDateOnly: srvDateOnly,
-        completedAt: srv.orderStatus === 'COMPLETED' ? (srv.updatedAt || dateFormatted) : null,
-        source: 'Website',
+        confirmedAt: srv.confirmedAt || null,
+        preparingStartedAt: srv.preparingStartedAt || null,
+        preparedDoneAt: srv.preparedDoneAt || null,
+        completedAt: srv.completedAt || (srv.orderStatus === 'COMPLETED' ? (srv.updatedAt || dateFormatted) : null),
+        source: ({WEBSITE:'Website',ZALO:'Zalo',MESSENGER:'Messenger',PHONE:'Phone',STORE:'Store',OTHER:'Other'})[srv.source] || srv.source || 'Website',
         buyerName: srv.buyerName || 'Khách đặt',
         buyerPhone: srv.buyerPhone || '',
         buyerNote: srv.buyerNote || '',
@@ -5004,31 +5056,171 @@
 
     /* --- 7. KITCHEN QUEUE --- */
     function renderKitchenTable() {
+      const container = document.getElementById('kitchenCardsContainer');
       const tbody = document.getElementById('kitchenTableBody');
-      const activeKitchenOrders = appState.orders.filter(o => ['confirmed', 'preparing'].includes(o.status));
+      const statsEl = document.getElementById('kitchenQueueStats');
+      
+      const activeKitchenOrders = (appState.orders || []).filter(o => ['confirmed', 'preparing'].includes(o.status));
+
+      // Sắp xếp FIFO: Đơn nào được xác nhận trước (CONFIRMED) thì tự động ưu tiên xếp lên trên đầu danh sách
+      activeKitchenOrders.sort((a, b) => {
+        const timeA = new Date(a.confirmedAt || a.createdAtIso || a.createdAt || 0).getTime();
+        const timeB = new Date(b.confirmedAt || b.createdAtIso || b.createdAt || 0).getTime();
+        return timeA - timeB;
+      });
+
+      const confirmedCount = activeKitchenOrders.filter(o => o.status === 'confirmed').length;
+      const preparingCount = activeKitchenOrders.filter(o => o.status === 'preparing').length;
+
+      if (statsEl) {
+        statsEl.innerHTML = `
+          <span style="background: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #bfdbfe;">
+            ⏳ Chờ chưng: ${confirmedCount} đơn
+          </span>
+          <span style="background: #fef3c7; color: #b45309; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #fde68a;">
+            🔥 Đang chưng: ${preparingCount} đơn
+          </span>
+        `;
+      }
 
       if (activeKitchenOrders.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Không có đơn hàng nào trong hàng đợi bếp</td></tr>`;
+        const emptyMsg = `
+          <div style="text-align: center; padding: 48px 16px; background: #f8fafc; border-radius: 12px; border: 1px dashed var(--border);">
+            <div style="font-size: 36px; margin-bottom: 8px;">✨</div>
+            <strong style="color: var(--primary); font-size: 16px;">Hàng đợi Bếp trống!</strong>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Hiện không có đơn nào đang chờ chưng hoặc chế biến.</div>
+          </div>
+        `;
+        if (container) container.innerHTML = emptyMsg;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Không có đơn hàng nào trong hàng đợi bếp</td></tr>`;
         return;
       }
 
-      let rows = [];
-      activeKitchenOrders.forEach(ord => {
-        ord.items.forEach(it => {
-          const p = appState.products[it.productId] || { name: 'Món yến' };
-          rows.push(`
-            <tr>
-              <td><strong>${esc(ord.id)}</strong></td>
-              <td><strong>${esc(p.name)}</strong></td>
-              <td><span style="font-size: 16px; font-weight: 700; color: var(--primary);">x${it.quantity}</span></td>
-              <td>${esc(it.options || it.option || 'Tiêu chuẩn')}</td>
-              <td>${esc(ord.createdAt)}</td>
-              <td><span class="status-badge badge-${ord.status}">${ord.status === 'confirmed' ? 'Đã xác nhận' : 'Đang chế biến'}</span></td>
-            </tr>
-          `);
-        });
-      });
-      tbody.innerHTML = rows.join('');
+      const nowMs = Date.now();
+      const cardsHtml = activeKitchenOrders.map((ord, idx) => {
+        const confirmedMs = new Date(ord.confirmedAt || ord.createdAtIso || ord.createdAt || nowMs).getTime();
+        const elapsedMinutes = Math.max(0, Math.floor((nowMs - confirmedMs) / 60000));
+
+        // Màu cảnh báo: Xanh <15p, Vàng 15-30p, Đỏ >30p
+        let timerBadgeStyle = '';
+        let timerLabel = '';
+        if (elapsedMinutes < 15) {
+          timerBadgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
+          timerLabel = `⏱️ Chờ ${elapsedMinutes}p (Mới chốt)`;
+        } else if (elapsedMinutes <= 30) {
+          timerBadgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+          timerLabel = `⏱️ Chờ ${elapsedMinutes}p (Cần làm ngay)`;
+        } else {
+          timerBadgeStyle = 'background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800;';
+          timerLabel = `🔥 Chờ ${elapsedMinutes}p (Quá hạn SLA!)`;
+        }
+
+        const isPreparing = ord.status === 'preparing';
+        const actionBtn = isPreparing
+          ? `<button class="btn btn-primary kitchen-action-btn" onclick="kitchenFinishPreparing('${esc(ord.id)}')" style="font-size: 14px; font-weight: 700; padding: 10px 20px; background: #0284c7; border-color: #0284c7; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <span>✅ [Xác nhận làm xong]</span>
+             </button>`
+          : `<button class="btn btn-primary kitchen-action-btn" onclick="kitchenStartPreparing('${esc(ord.id)}')" style="font-size: 14px; font-weight: 700; padding: 10px 20px; background: #059669; border-color: #059669; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <span>🔥 [Bắt đầu chưng]</span>
+             </button>`;
+
+        const itemsHtml = (ord.items || []).map(it => {
+          const p = appState.products[it.productId] || { name: it.productName || it.productNameSnapshot || 'Món yến', volumeMl: 180 };
+          const prodName = it.productName || it.productNameSnapshot || p.name || 'Món yến';
+          const volume = it.volumeMl || it.volumeMlSnapshot || p.volumeMl || 180;
+          const sweetness = it.options || it.option || it.selectedOption || it.selectedOptionSnapshot || 'Đường phèn chuẩn vị';
+          const ingredients = it.ingredients || it.ingredientsSnapshot || (p.ingredients ? (Array.isArray(p.ingredients) ? p.ingredients.join(', ') : p.ingredients) : '');
+
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px;">
+              <div style="min-width: 0; flex: 1;">
+                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">
+                  ${esc(prodName)}
+                  <span style="font-size: 13px; font-weight: 600; color: #475569;">(${volume}ml)</span>
+                </div>
+                <div style="font-size: 13px; color: #0369a1; font-weight: 600; margin-top: 2px;">
+                  🍯 Vị ngọt / Quy cách: ${esc(sweetness)}
+                </div>
+                ${ingredients ? `<div style="font-size: 12px; color: #64748b; margin-top: 2px;">🌿 Topping / Thành phần: ${esc(ingredients)}</div>` : ''}
+              </div>
+              <div style="font-size: 18px; font-weight: 800; color: #155132; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 4px 12px; margin-left: 12px; white-space: nowrap;">
+                x${it.quantity}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const notes = ord.buyerNote || ord.notes || '';
+
+        return `
+          <div class="kitchen-order-card" style="background: #ffffff; border: 2px solid ${isPreparing ? '#38bdf8' : '#e2e8f0'}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden;">
+            <!-- Header -->
+            <div style="padding: 12px 16px; background: ${isPreparing ? '#f0f9ff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 800; background: #1e293b; color: #ffffff; padding: 3px 8px; border-radius: 6px;">#${idx + 1} FIFO</span>
+                <span style="font-size: 16px; font-weight: 800; color: #0f172a;">Mã đơn: ${esc(ord.referenceCode || ord.id)}</span>
+                <span class="status-badge badge-${ord.status}" style="font-size: 12px;">
+                  ${isPreparing ? '🔥 Đang chưng tươi' : '⏳ Chờ chưng'}
+                </span>
+                <span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; ${timerBadgeStyle}">
+                  ${timerLabel}
+                </span>
+              </div>
+              <div style="font-size: 13px; color: #b45309; font-weight: 700;">
+                ⏰ Giờ hẹn giao: ${esc(ord.requestedDate || '')} (${esc(ord.slotLabel || '')})
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 14px 16px;">
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                📅 Đặt lúc: ${esc(ord.createdAt || '')} ${ord.confirmedAt ? `| Chốt đơn: ${new Date(ord.confirmedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}
+              </div>
+
+              <!-- Dish List -->
+              <div style="margin-bottom: 12px;">
+                ${itemsHtml}
+              </div>
+
+              <!-- Special Notes -->
+              ${notes ? `
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #92400e; font-size: 13px;">
+                  <strong>⚠️ GHI CHÚ BẾP:</strong> ${esc(notes)}
+                </div>
+              ` : ''}
+
+              <!-- Actions -->
+              <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+                <span style="font-size: 12px; color: #64748b;">
+                  ${isPreparing ? 'Sau khi làm xong, nhấn nút để bàn giao Shipper' : 'Nhấn bắt đầu chưng để ghi nhận giờ bắt đầu'}
+                </span>
+                ${actionBtn}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (container) container.innerHTML = cardsHtml;
+
+      // Keep table body populated for fallback compatibility
+      if (tbody) {
+        tbody.innerHTML = activeKitchenOrders.map(ord => {
+          return (ord.items || []).map(it => {
+            const p = appState.products[it.productId] || { name: 'Món yến' };
+            return `
+              <tr>
+                <td><strong>${esc(ord.id)}</strong></td>
+                <td><strong>${esc(p.name)}</strong></td>
+                <td><span style="font-size: 16px; font-weight: 700; color: var(--primary);">x${it.quantity}</span></td>
+                <td>${esc(it.options || it.option || 'Tiêu chuẩn')}</td>
+                <td>${esc(ord.createdAt)}</td>
+                <td><span class="status-badge badge-${ord.status}">${ord.status === 'confirmed' ? 'Đã xác nhận' : 'Đang chế biến'}</span></td>
+              </tr>
+            `;
+          }).join('');
+        }).join('');
+      }
     }
 
     /* --- 8. CUSTOMERS TAB --- */

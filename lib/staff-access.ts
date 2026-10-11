@@ -6,7 +6,7 @@ export type StaffCapability = "reports.read" | "orders.read" | "orders.write" | 
 const ROLE_CAPABILITIES: Record<StaffRole, readonly StaffCapability[]> = {
   OWNER: ["reports.read", "orders.read", "orders.write", "orders.prepare", "payments.collect", "payments.refund", "customers.read", "content.write", "catalog.commercial.write", "staff.manage", "settings.sensitive"],
   MANAGER: ["reports.read", "orders.read", "orders.write", "orders.prepare", "payments.collect", "payments.refund", "customers.read", "content.write", "catalog.commercial.write"],
-  SALES: ["orders.read", "orders.write", "orders.prepare", "payments.collect", "customers.read"],
+  SALES: ["orders.read", "orders.write", "payments.collect", "customers.read"],
   KITCHEN: ["orders.read", "orders.prepare"],
   MARKETING: ["content.write"],
 };
