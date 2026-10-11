@@ -6,6 +6,7 @@ import os from "node:os";
 import { createStaff } from "../db/staff-repository";
 import {
   calculateServerQuote,
+  confirmOrderWithPaymentByStaff,
   finalizeDeliveryFeeByStaff,
   recordPaymentEntryByStaff,
   getDeliverySlots,
@@ -37,6 +38,30 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
 
   // Fixed reference time: 2026-10-06 08:15 Asia/Ho_Chi_Minh (01:15 UTC)
   const fixedNow = new Date("2026-10-06T01:15:00.000Z");
+
+  it("confirms fee, payment and order atomically with replay protection", () => {
+    const created = submitOrderRequest({idempotencyKey:"qa-atomic-confirm-order",orderPurpose:"SELF",
+      buyerName:"QA Confirm",buyerPhone:"0900000004",addressDetail:"QA Cam Le",zoneId:"zone-cam-le-lien-chieu",
+      requestedDate:"2026-10-21",slotId:"slot-morning",now:fixedNow,items:[{productId:"prod-thanh-nguyen",quantity:1}]});
+    assert.equal(created.ok,true);
+    const referenceCode=created.order!.referenceCode;
+    const params={referenceCode,expectedVersion:1,shippingFeeVnd:20000,amountVnd:315000,method:"CASH" as const,
+      idempotencyKey:"qa-atomic-confirm-retry",staffUsername:"qa",staffDisplayName:"QA"};
+    assert.equal(confirmOrderWithPaymentByStaff({...params,amountVnd:314000}).ok,false);
+    const before=getOrderRequestByReference({referenceCode,isStaff:true})!;
+    assert.equal(before.orderStatus,"PENDING_CONFIRMATION");
+    assert.equal(before.isTotalFinal,false);
+    assert.equal(before.ledger.length,0);
+    const confirmed=confirmOrderWithPaymentByStaff(params);
+    assert.equal(confirmed.ok,true);
+    assert.equal(confirmed.order!.orderStatus,"CONFIRMED");
+    assert.equal(confirmed.order!.paymentStatus,"PAID");
+    assert.equal(confirmed.order!.totalVnd,315000);
+    assert.equal(confirmed.order!.ledger.length,1);
+    assert.equal(confirmOrderWithPaymentByStaff(params).deduplicated,true);
+    assert.equal(confirmOrderWithPaymentByStaff({...params,shippingFeeVnd:10000}).errorCode,"IDEMPOTENCY_CONFLICT");
+    assert.equal(getOrderRequestByReference({referenceCode,isStaff:true})!.ledger.length,1);
+  });
 
   it("finalizes a pending delivery fee before collecting and rejects stale or repeated changes", () => {
     const created = submitOrderRequest({

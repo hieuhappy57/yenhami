@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 
 const source = readFileSync('public/admin-order-mutations.js', 'utf8');
 function setup(fetch: (...args: any[]) => Promise<any>) {
-  const order = {id:'QA',referenceCode:'QA',rowVersion:1,status:'pending',ledger:[],items:[]};
+  const order = {id:'QA',referenceCode:'QA',rowVersion:1,status:'confirmed',ledger:[],items:[]};
   const state = {currentRole:'OWNER',orders:[order]};
   const inputs: Record<string,any> = {colAmount_QA:{value:'100'},colMethod_QA:{value:'Tiền mặt'},orderDetailModal:{open:false}};
   const messages: string[] = [];
@@ -22,11 +22,11 @@ function setup(fetch: (...args: any[]) => Promise<any>) {
 test('status changes only after server acknowledgement and uses canonical version',async()=>{
   let release: any;
   const {context,state} = setup(()=>new Promise(resolve=>{release=resolve;}));
-  const pending = context.progressOrderStatus('QA','confirmed');
-  assert.equal(state.orders[0].status,'pending');
-  release({ok:true,status:200,json:async()=>({ok:true,order:{id:'QA',rowVersion:2,status:'confirmed',ledger:[]}})});
-  await pending;
+  const pending = context.progressOrderStatus('QA','preparing');
   assert.equal(state.orders[0].status,'confirmed');
+  release({ok:true,status:200,json:async()=>({ok:true,order:{id:'QA',rowVersion:2,status:'preparing',ledger:[]}})});
+  await pending;
+  assert.equal(state.orders[0].status,'preparing');
   assert.equal(state.orders[0].rowVersion,2);
 });
 

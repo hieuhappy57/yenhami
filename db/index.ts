@@ -294,6 +294,10 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       FOREIGN KEY(order_request_id) REFERENCES order_requests(id)
     );
     CREATE INDEX IF NOT EXISTS idx_payment_entries_order ON payment_entries(order_request_id, recorded_at);
+    CREATE TABLE IF NOT EXISTS order_confirmations (
+      idempotency_key TEXT PRIMARY KEY, reference_code TEXT NOT NULL,
+      payload TEXT NOT NULL, created_at TEXT NOT NULL
+    );
 
     CREATE TABLE IF NOT EXISTS site_settings (
       key TEXT PRIMARY KEY,
@@ -1757,6 +1761,58 @@ export function listAllOrderRequestsForStaff() {
     .filter((o): o is NonNullable<typeof o> => o !== null);
 }
 
+export function confirmOrderWithPaymentByStaff(params: {
+  referenceCode: string; expectedVersion: number; shippingFeeVnd: number; amountVnd: number;
+  method: PaymentMethod; idempotencyKey: string; staffUsername: string; staffDisplayName: string;
+}) {
+  if (!Number.isSafeInteger(params.shippingFeeVnd) || params.shippingFeeVnd < 0 ||
+      !Number.isSafeInteger(params.amountVnd) || params.amountVnd < 0 ||
+      !["CASH","BANK_TRANSFER","OTHER"].includes(params.method) || params.idempotencyKey.length < 8) {
+    return {ok:false,errorCode:"VALIDATION_ERROR",errorMessage:"Phí giao hoặc thông tin thu tiền không hợp lệ."};
+  }
+  const db = getSqliteDb();
+  const reference = params.referenceCode.trim().toUpperCase();
+  const payload = JSON.stringify([reference,params.shippingFeeVnd,params.amountVnd,params.method]);
+  db.exec("BEGIN IMMEDIATE TRANSACTION");
+  try {
+    const prior = db.prepare("SELECT payload FROM order_confirmations WHERE idempotency_key = ?")
+      .get(params.idempotencyKey) as {payload:string} | undefined;
+    if (prior) {
+      db.exec("ROLLBACK");
+      if (prior.payload !== payload) return {ok:false,errorCode:"IDEMPOTENCY_CONFLICT",errorMessage:"Mã xác nhận đã dùng cho nội dung khác."};
+      return {ok:true,deduplicated:true,order:getOrderRequestByReference({referenceCode:reference,isStaff:true})};
+    }
+    const row = db.prepare("SELECT * FROM order_requests WHERE reference_code = ?").get(reference) as Record<string,unknown> | undefined;
+    const reject = (errorCode:string,errorMessage:string) => {db.exec("ROLLBACK");return {ok:false,errorCode,errorMessage};};
+    if (!row) return reject("ORDER_NOT_FOUND","Không tìm thấy đơn.");
+    if (Number(row.row_version) !== params.expectedVersion) return reject("VERSION_CONFLICT","Đơn đã thay đổi. Vui lòng tải lại.");
+    if (row.order_status !== "PENDING_CONFIRMATION") return reject("INVALID_STATE","Đơn không còn ở bước chờ xác nhận.");
+    const cash = db.prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(CASE WHEN type = 'COLLECTION' THEN amount_vnd ELSE -amount_vnd END),0) AS net
+      FROM payment_entries WHERE order_request_id = ?`).get(String(row.id)) as {count:number;net:number};
+    if (!cash.count && row.payment_status !== "UNPAID") return reject("RECONCILIATION_REQUIRED","Thanh toán cũ cần đối soát sổ quỹ.");
+    if (cash.count && Number(row.shipping_fee_vnd) !== params.shippingFeeVnd) return reject("INVALID_STATE","Không thay phí giao sau khi đã có giao dịch thu/hoàn.");
+    const total = Number(row.subtotal_vnd) + params.shippingFeeVnd;
+    if (params.amountVnd !== total - Number(cash.net)) return reject("INVALID_AMOUNT","Số tiền thu phải bằng số còn thiếu sau khi chốt phí giao.");
+    const now = new Date().toISOString();
+    if (params.amountVnd > 0) db.prepare(`INSERT INTO payment_entries
+      (id,order_request_id,type,amount_vnd,method,occurred_at,recorded_at,staff_username,reason,idempotency_key)
+      VALUES (?,?,'COLLECTION',?,?,?,?,?,'Thu tiền khi xác nhận đơn',?)`)
+      .run(`pay-${crypto.randomUUID()}`,String(row.id),params.amountVnd,params.method,now,now,params.staffUsername,params.idempotencyKey);
+    const updated = db.prepare(`UPDATE order_requests SET order_status = 'CONFIRMED', payment_status = 'PAID',
+      shipping_fee_vnd = ?, shipping_fee_note = 'Phí giao đã xác nhận', total_vnd = ?, is_total_final = 1,
+      row_version = row_version + 1, updated_at = ? WHERE id = ? AND row_version = ?`)
+      .run(params.shippingFeeVnd,total,now,String(row.id),params.expectedVersion);
+    if (Number(updated.changes) !== 1) return reject("VERSION_CONFLICT","Đơn đã thay đổi. Vui lòng tải lại.");
+    db.prepare(`INSERT INTO order_status_history
+      (id,order_request_id,from_status,to_status,from_payment_status,to_payment_status,changed_by_staff_username,changed_by_staff_name,note,created_at)
+      VALUES (?,?,'PENDING_CONFIRMATION','CONFIRMED',?,'PAID',?,?,'Xác nhận đơn, chốt phí giao và thu tiền',?)`)
+      .run(`hist-${crypto.randomUUID()}`,String(row.id),String(row.payment_status),params.staffUsername,params.staffDisplayName,now);
+    db.prepare("INSERT INTO order_confirmations VALUES (?,?,?,?)").run(params.idempotencyKey,reference,payload,now);
+    db.exec("COMMIT");
+    return {ok:true,deduplicated:false,order:getOrderRequestByReference({referenceCode:reference,isStaff:true})};
+  } catch (error) {try {db.exec("ROLLBACK");} catch {} throw error;}
+}
+
 export function finalizeDeliveryFeeByStaff(params: {referenceCode: string; expectedVersion: number; shippingFeeVnd: number}) {
   if (!Number.isSafeInteger(params.shippingFeeVnd) || params.shippingFeeVnd < 0) {
     return {ok:false,errorCode:"INVALID_AMOUNT",errorMessage:"Phí giao phải là số nguyên VND không âm."};
@@ -2887,6 +2943,7 @@ const CLOUD_TABLES = [
   "order_items",
   "order_status_history",
   "payment_entries",
+  "order_confirmations",
   "site_settings",
   "posts",
   "job_postings",
@@ -3175,6 +3232,12 @@ CREATE TABLE IF NOT EXISTS payment_entries (
   staff_username TEXT NOT NULL,
   reason TEXT,
   idempotency_key TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS order_confirmations (
+  idempotency_key TEXT PRIMARY KEY,
+  reference_code TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS site_settings (
   key TEXT PRIMARY KEY,

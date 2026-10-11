@@ -2313,10 +2313,10 @@
               <option value="ALL">Tất cả trạng thái</option>
               <option value="pending">Chờ tiếp nhận</option>
               <option value="confirmed">Đã xác nhận</option>
-              <option value="preparing">Đang nấu / Chuẩn bị</option>
+              <option value="preparing">Đã chuyển bếp</option>
               <option value="delivering">Đang giao</option>
               <option value="in_progress">Đang xử lý</option>
-              <option value="completed">Đã hoàn tất</option>
+              <option value="completed">Thành công</option>
               <option value="cancelled">Đã huỷ</option>
             </select>
             <select id="orderSourceFilter" class="filter-select" onchange="renderOrdersTable()">
@@ -4522,9 +4522,9 @@
         const statusLabels = {
           pending: '<span class="status-badge badge-pending">Chờ tiếp nhận</span>',
           confirmed: '<span class="status-badge badge-confirmed">Đã xác nhận</span>',
-          preparing: '<span class="status-badge badge-preparing">Đang nấu/chuẩn bị</span>',
+          preparing: '<span class="status-badge badge-preparing">Đã chuyển bếp</span>',
           delivering: '<span class="status-badge badge-delivering">Đang giao</span>',
-          completed: '<span class="status-badge badge-completed">Hoàn tất</span>',
+          completed: '<span class="status-badge badge-completed">Thành công</span>',
           cancelled: '<span class="status-badge badge-cancelled">Đã huỷ</span>'
         };
 
@@ -4617,7 +4617,7 @@
           </button>
         `;
       } else if (ord.status === 'completed') {
-        actionButtonsHtml += `<span style="color: var(--primary); font-weight: 600;">✓ Đơn hàng đã hoàn tất - Không mở lại đơn</span>`;
+        actionButtonsHtml += `<span style="color: var(--primary); font-weight: 600;">✓ Giao hàng thành công</span>`;
       }
 
       if (['pending', 'confirmed'].includes(ord.status)) {

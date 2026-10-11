@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { finalizeDeliveryFeeByStaff, listAllOrderRequestsForStaff, recordPaymentEntryByStaff, submitOrderRequest, syncDbFromCloud, syncDbToCloud, updateOrderStatusByStaff } from "@/db";
+import { confirmOrderWithPaymentByStaff, finalizeDeliveryFeeByStaff, getOrderRequestByReference, listAllOrderRequestsForStaff, recordPaymentEntryByStaff, submitOrderRequest, syncDbFromCloud, syncDbToCloud, updateOrderStatusByStaff } from "@/db";
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, staffCan } from "@/lib/staff-auth";
@@ -44,6 +44,16 @@ export async function PATCH(request: Request) {
     if (!referenceCode || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return fail("Mã đơn hoặc phiên bản không hợp lệ.", 400, "VALIDATION_ERROR");
     const result = await withAuthoritativeMutation(async () => {
       await syncDbFromCloud(true);
+      if (action === "confirm") {
+        if (!staffCan(staff,"orders.write") || !staffCan(staff,"payments.collect")) return {ok:false,forbidden:true,errorMessage:"Bạn không có quyền xác nhận và thu tiền."};
+        const updated = confirmOrderWithPaymentByStaff({referenceCode,expectedVersion,
+          shippingFeeVnd: typeof body.shippingFeeVnd === "number" ? body.shippingFeeVnd : NaN,
+          amountVnd: typeof body.amountVnd === "number" ? body.amountVnd : NaN,
+          method:String(body.method || "") as PaymentMethod,idempotencyKey:String(body.idempotencyKey || ""),
+          staffUsername:staff.username,staffDisplayName:staff.displayName});
+        if (updated.ok && !updated.deduplicated) await syncDbToCloud();
+        return updated;
+      }
       if (action === "delivery_fee") {
         if (!staffCan(staff, "orders.write")) return {ok:false,forbidden:true,errorMessage:"Bạn không có quyền chốt phí giao."};
         const updated = finalizeDeliveryFeeByStaff({referenceCode,expectedVersion,shippingFeeVnd:Number(body.shippingFeeVnd)});
@@ -52,9 +62,15 @@ export async function PATCH(request: Request) {
       }
       if (action === "status") {
         const newOrderStatus = String(body.newOrderStatus || "") as OrderStatus;
+        if (newOrderStatus === "CONFIRMED") return {ok:false,errorCode:"CONFIRMATION_REQUIRED",errorMessage:"Chốt phí giao và thu tiền trong bước xác nhận đơn."};
         if (!ORDER_STATUSES.includes(newOrderStatus)) return { ok: false, errorCode: "INVALID_STATUS", errorMessage: "Trạng thái đơn không hợp lệ." };
         const kitchenStep = staffCan(staff, "orders.prepare") && newOrderStatus === "PREPARING";
         if (!staffCan(staff, "orders.write") && !kitchenStep) return { ok: false, forbidden: true, errorMessage: "Bạn không có quyền cập nhật trạng thái này." };
+        if (newOrderStatus === "PREPARING") {
+          const order = getOrderRequestByReference({referenceCode,isStaff:true});
+          const collected = order?.ledger.reduce((sum,entry)=>sum+(entry.type === "COLLECTION" ? entry.amountVnd : -entry.amountVnd),0) || 0;
+          if (!order?.isTotalFinal || collected < order.totalVnd) return {ok:false,errorCode:"CONFIRMATION_REQUIRED",errorMessage:"Cần chốt phí giao và thu đủ tiền trước khi chuyển bếp."};
+        }
         const updated = updateOrderStatusByStaff({ referenceCode, newOrderStatus, expectedVersion, staffUsername: staff.username, staffDisplayName: staff.displayName, note: String(body.note || "").trim() });
         if (updated.ok) await syncDbToCloud();
         return updated;
