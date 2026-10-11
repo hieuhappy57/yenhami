@@ -6,7 +6,7 @@ import path from "node:path";
 import { getSqliteDb } from "@/db";
 import { authenticateStaff, bootstrapOwnerFromEnvironment, createStaff, createStaffSession, getStaffBySessionToken, listStaff } from "@/db/staff-repository";
 import { assertAuthoritativeStorage, PersistenceUnavailableError } from "@/lib/authoritative-write";
-import { guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-access";
+import { guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan, staffCanChangeOrderStatus } from "@/lib/staff-access";
 
 const testDir = fs.mkdtempSync(path.join(os.tmpdir(), "hami-admin-api-"));
 const previous = { dbPath: process.env.HAMI_DB_PATH, adminPassword: process.env.HAMI_ADMIN_PASSWORD, adminUsername: process.env.HAMI_ADMIN_USERNAME, vercel: process.env.VERCEL };
@@ -98,6 +98,14 @@ test("RBAC matrix enforces strict role permissions across all 5 roles", () => {
   assert.equal(staffCan(sales, "orders.prepare"), false);
   assert.equal(staffCan(sales, "payments.refund"), false);
   assert.equal(staffCan(sales, "catalog.commercial.write"), false);
+  assert.equal(staffCanChangeOrderStatus(sales, "PREPARING"), false);
+  assert.equal(staffCanChangeOrderStatus(sales, "DELIVERING"), false);
+  assert.equal(staffCanChangeOrderStatus(sales, "COMPLETED"), true);
+  assert.equal(staffCanChangeOrderStatus(kitchen, "PREPARING"), true);
+  assert.equal(staffCanChangeOrderStatus(kitchen, "DELIVERING"), true);
+  assert.equal(staffCanChangeOrderStatus(kitchen, "COMPLETED"), false);
+  assert.equal(staffCanChangeOrderStatus(sales, "CANCELLED"), false);
+  assert.equal(staffCanChangeOrderStatus(manager, "CANCELLED"), true);
 
   // Marketing: content write only
   assert.equal(staffCan(marketing, "content.write"), true);

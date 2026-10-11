@@ -5,7 +5,9 @@ import { runInNewContext } from "node:vm";
 
 const html = readFileSync("demo/admin/index.html", "utf8");
 function sourceFunction(name: string, next: string) {
-  const start = html.indexOf(`    function ${name}(`);
+  const start = html.indexOf(`    function ${name}(`) >= 0
+    ? html.indexOf(`    function ${name}(`)
+    : html.indexOf(`    async function ${name}(`);
   const end = html.indexOf(`    function ${next}(`, start);
   assert.ok(start >= 0 && end > start);
   return html.slice(start, end);
@@ -60,7 +62,39 @@ test("admin order details retain only the agreed confirmation flow", () => {
   assert.ok(!html.includes('id="orderDetailResendEmailBtn"'));
   const mutations = readFileSync('public/admin-order-mutations.js','utf8');
   assert.match(mutations, /name="shippingFee"[^>]*step="1"/);
+  assert.match(mutations, /fee\.value\.trim\(\) === ''/);
+  assert.match(mutations, /Nhập phí giao, hoặc 0 nếu miễn phí/);
   assert.ok(mutations.includes('Xác nhận đơn &amp; ghi nhận thu'));
+});
+
+test("kitchen shows the mapped dish name and delivery SLA uses measured completions", () => {
+  assert.match(html, /const prodName = it\.name \|\| it\.productName/);
+  assert.match(html, /it\.name \|\| it\.productName \|\| it\.productNameSnapshot \|\| \(p && p\.name\)/);
+  assert.match(html, /product: appState\.products\[it\.productId\] \|\| \{ name: it\.name \|\| it\.productName/);
+  const metricFunction = sourceFunction("renderDashboardOpsMetrics", "drilldownStatus");
+  const container = { innerHTML: "" };
+  runInNewContext(`${metricFunction}\nrenderDashboardOpsMetrics([], orders, 590000)`, {
+    document: { getElementById: () => container },
+    orders: [
+      { confirmedAt: "2026-10-11T08:00:00.000Z", completedAt: "2026-10-11T09:30:00.000Z" },
+      { confirmedAt: "2026-10-11T08:00:00.000Z", completedAt: "2026-10-11T10:30:00.000Z" },
+    ],
+  });
+  assert.match(container.innerHTML, />50%<\/div>/);
+  runInNewContext(`${metricFunction}\nrenderDashboardOpsMetrics([], [], 0)`, {
+    document: { getElementById: () => container },
+  });
+  assert.match(container.innerHTML, />--<\/div>/);
+});
+
+test("manual orders are submitted to the server with source and delivery schedule", () => {
+  const create = sourceFunction("handleCreateManualOrder", "renderKitchenTable");
+  assert.match(create, /fetch\('\/api\/admin\/orders', \{ method: 'POST'/);
+  assert.match(create, /source: manualField\('mSource'\)\.value/);
+  assert.match(create, /requestedDate: manualField\('mDate'\)\.value/);
+  assert.match(create, /slotId: manualField\('mSlot'\)\.value/);
+  assert.ok(!create.includes('appState.orders.unshift'));
+  assert.ok(!html.includes('Tạo đơn mẫu mới'));
 });
 
 test("admin demo preserves CMS tabs: products, posts, jobs, site with appropriate role access", () => {

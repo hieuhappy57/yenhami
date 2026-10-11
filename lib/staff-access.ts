@@ -1,4 +1,5 @@
 import type { PublicStaff, StaffRole } from "@/db/staff-repository";
+import type { OrderStatus } from "@/db/schema";
 
 export type AuthenticatedStaff = Pick<PublicStaff, "id" | "username" | "displayName" | "role" | "roles">;
 export type StaffCapability = "reports.read" | "orders.read" | "orders.write" | "orders.prepare" | "payments.collect" | "payments.refund" | "customers.read" | "content.write" | "catalog.commercial.write" | "staff.manage" | "settings.sensitive";
@@ -13,6 +14,12 @@ const ROLE_CAPABILITIES: Record<StaffRole, readonly StaffCapability[]> = {
 
 export function staffCan(staff: AuthenticatedStaff, capability: StaffCapability): boolean {
   return staff.roles.some((role) => ROLE_CAPABILITIES[role]?.includes(capability));
+}
+
+export function staffCanChangeOrderStatus(staff: AuthenticatedStaff, status: OrderStatus): boolean {
+  if (status === "PREPARING" || status === "DELIVERING") return staffCan(staff, "orders.prepare");
+  if (status === "CANCELLED") return staffCan(staff, "orders.write") && staffCan(staff, "payments.refund");
+  return staffCan(staff, "orders.write");
 }
 
 export function guardMutationOrigin(request: Request): boolean {

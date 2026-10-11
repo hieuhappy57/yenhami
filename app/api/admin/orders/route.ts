@@ -3,6 +3,7 @@ import { confirmOrderWithPaymentByStaff, finalizeDeliveryFeeByStaff, getOrderReq
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, staffCan } from "@/lib/staff-auth";
+import { staffCanChangeOrderStatus } from "@/lib/staff-access";
 import { privateJsonHeaders, readBoundedJson } from "@/lib/staff-access";
 import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox } from "@/db/order-outbox";
 
@@ -69,9 +70,8 @@ export async function PATCH(request: Request) {
         const newOrderStatus = String(body.newOrderStatus || "") as OrderStatus;
         if (newOrderStatus === "CONFIRMED") return {ok:false,errorCode:"CONFIRMATION_REQUIRED",errorMessage:"Chốt phí giao và thu tiền trong bước xác nhận đơn."};
         if (!ORDER_STATUSES.includes(newOrderStatus)) return { ok: false, errorCode: "INVALID_STATUS", errorMessage: "Trạng thái đơn không hợp lệ." };
-        const kitchenStep = staffCan(staff, "orders.prepare") && (newOrderStatus === "PREPARING" || newOrderStatus === "DELIVERING");
         if (newOrderStatus === "CANCELLED" && !staffCan(staff, "payments.refund")) return { ok: false, forbidden: true, errorMessage: "Chỉ Quản lý hoặc Chủ cơ sở mới có quyền huỷ đơn." };
-        if (!staffCan(staff, "orders.write") && !kitchenStep) return { ok: false, forbidden: true, errorMessage: "Bạn không có quyền cập nhật trạng thái này." };
+        if (!staffCanChangeOrderStatus(staff, newOrderStatus)) return { ok: false, forbidden: true, errorMessage: "Bạn không có quyền cập nhật trạng thái này." };
         if (newOrderStatus === "PREPARING") {
           const order = getOrderRequestByReference({referenceCode,isStaff:true});
           const collected = order?.ledger.reduce((sum,entry)=>sum+(entry.type === "COLLECTION" ? entry.amountVnd : -entry.amountVnd),0) || 0;

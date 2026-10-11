@@ -12,15 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { OrderStatus, PaymentStatus } from "@/db/schema";
-
-const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING_CONFIRMATION: "Chờ Hà Mi xác nhận",
-  CONFIRMED: "Đã xác nhận lịch chưng",
-  PREPARING: "Bếp đang chưng nóng",
-  DELIVERING: "Đang giao nóng",
-  COMPLETED: "Đã giao hoàn tất",
-  CANCELLED: "Đã hủy yêu cầu",
-};
+import { ORDER_PROGRESS_COPY } from "@/lib/order-progress-copy";
 
 const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   UNPAID: "Chưa thu tiền (Xác nhận trước khi thanh toán)",
@@ -174,11 +166,10 @@ export function OrderConfirmationClientFallback({
                 data-testid="order-status-badge"
                 className="inline-block rounded-full bg-[#FFFCF4] border border-[#BD9342]/50 px-2.5 py-0.5 text-[11px] font-bold text-[#8A6632]"
               >
-                {ORDER_STATUS_LABELS[cachedOrder.orderStatus] ??
-                  cachedOrder.orderStatus}
+                {ORDER_PROGRESS_COPY[cachedOrder.orderStatus].label}
               </span>
               <h1 className="mt-1 font-serif-display text-xl font-semibold text-[#155132] sm:text-2xl">
-                Đã nhận yêu cầu, Hà Mi sẽ xác nhận đơn
+                {ORDER_PROGRESS_COPY[cachedOrder.orderStatus].title}
               </h1>
             </div>
           </div>
@@ -197,17 +188,10 @@ export function OrderConfirmationClientFallback({
 
         <div className="mt-5 rounded-2xl border border-[#BD9342]/45 bg-[#FFFCF4] p-4 text-xs leading-relaxed text-[#2B433A]">
           <p className="font-bold text-[#155132]">
-            Quy trình xác nhận đơn tại Yến Sào Hà Mi:
+            {ORDER_PROGRESS_COPY[cachedOrder.orderStatus].heading}
           </p>
           <p className="mt-1">
-            Yêu cầu của bạn đang ở trạng thái{" "}
-            <strong className="text-[#155132]">Chờ Hà Mi xác nhận</strong>. Bếp
-            Hà Mi chỉ bắt đầu chưng yến và hẹn giờ giao chính thức sau khi nhân
-            viên liên hệ qua số điện thoại{" "}
-            <strong className="text-[#155132]">
-              {cachedOrder.buyerPhone || "của bạn"}
-            </strong>
-            .
+            {ORDER_PROGRESS_COPY[cachedOrder.orderStatus].message}
           </p>
         </div>
 

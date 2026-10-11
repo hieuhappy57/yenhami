@@ -19,15 +19,22 @@ function setup(fetch: (...args: any[]) => Promise<any>) {
   return {context,state,messages};
 }
 
-test('status changes only after server acknowledgement and uses canonical version',async()=>{
+test('kitchen status changes only after server acknowledgement and uses canonical version',async()=>{
   let release: any;
   const {context,state} = setup(()=>new Promise(resolve=>{release=resolve;}));
-  const pending = context.progressOrderStatus('QA','preparing');
+  const pending = context.kitchenStartPreparing('QA');
   assert.equal(state.orders[0].status,'confirmed');
   release({ok:true,status:200,json:async()=>({ok:true,order:{id:'QA',rowVersion:2,status:'preparing',ledger:[]}})});
   await pending;
   assert.equal(state.orders[0].status,'preparing');
   assert.equal(state.orders[0].rowVersion,2);
+});
+
+test('sales order detail cannot start or finish kitchen work',async()=>{
+  const {context,state} = setup(async()=>assert.fail('Kitchen mutation must use the kitchen queue'));
+  await context.progressOrderStatus('QA','preparing');
+  assert.equal(state.orders[0].status,'confirmed');
+  assert.match(source,/order\?\.status === 'confirmed' \|\| order\?\.status === 'preparing'/);
 });
 
 test('failed collection leaves ledger unchanged and retry uses the same key',async()=>{

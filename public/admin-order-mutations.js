@@ -50,21 +50,30 @@ openOrderDetail = function (orderId) {
     content.querySelectorAll('button[onclick*="progressOrderStatus"]').forEach(button => button.remove());
     const form = document.createElement('form');
     form.id = 'confirmOrderForm';
-    form.innerHTML = '<h4>Xác nhận đơn hàng</h4><label>Phí giao (VND)<input name="shippingFee" type="number" min="0" step="1" required class="form-control"></label><label>Số tiền thu (VND)<input name="amount" type="number" readonly class="form-control"></label><label>Hình thức thu<select name="method" class="form-control"><option value="BANK_TRANSFER">Chuyển khoản</option><option value="CASH">Tiền mặt</option><option value="OTHER">Khác</option></select></label><button class="btn btn-primary" type="submit">Xác nhận đơn &amp; ghi nhận thu</button>';
+    form.innerHTML = '<h4>Xác nhận đơn hàng</h4><label>Phí giao (VND)<input name="shippingFee" type="number" min="0" step="1" class="form-control"></label><p id="shippingFeeError" role="alert" style="display:none;color:var(--status-red);font-size:12px;margin:4px 0;">Nhập phí giao, hoặc 0 nếu miễn phí.</p><label>Số tiền thu (VND)<input name="amount" type="number" readonly class="form-control"></label><label>Hình thức thu<select name="method" class="form-control"><option value="BANK_TRANSFER">Chuyển khoản</option><option value="CASH">Tiền mặt</option><option value="OTHER">Khác</option></select></label><button class="btn btn-primary" type="submit">Xác nhận đơn &amp; ghi nhận thu</button>';
     const fee = form.querySelector('[name="shippingFee"]');
     const amount = form.querySelector('[name="amount"]');
+    const feeError = form.querySelector('#shippingFeeError');
     fee.value = order.isTotalFinal ? String(order.shippingFee || 0) : '';
     fee.readOnly = order.ledger.length > 0;
     const updateAmount = () => { amount.value = String(Math.max(0,computeOrderFinancials(order).netGoods + Number(fee.value) - computeOrderFinancials(order).netCollected)); };
-    fee.addEventListener('input',updateAmount);updateAmount();
+    fee.addEventListener('input',() => { feeError.style.display = 'none'; updateAmount(); });updateAmount();
     form.addEventListener('submit',async event => {
       event.preventDefault();
+      if (fee.value.trim() === '' || !Number.isSafeInteger(Number(fee.value)) || Number(fee.value) < 0) {
+        feeError.style.display = 'block';
+        fee.focus();
+        return;
+      }
       const payload = {action:'confirm',shippingFeeVnd:Number(fee.value),amountVnd:Number(amount.value),method:form.querySelector('[name="method"]').value};
       const signature = JSON.stringify([orderId,payload]);
       if (!orderPaymentRetries.has(signature)) orderPaymentRetries.set(signature,crypto.randomUUID());
       if (await sendOrderMutation(orderId,{...payload,idempotencyKey:orderPaymentRetries.get(signature)})) orderPaymentRetries.delete(signature);
     });
     content.appendChild(form);
+  }
+  if (order?.status === 'confirmed' || order?.status === 'preparing') {
+    content.querySelectorAll('button[onclick*="progressOrderStatus"]').forEach(button => button.remove());
   }
   document.querySelectorAll('#orderDetailContent button').forEach(button => {
     const labels = {'Chuyển sang Bếp pha chế':'Chuyển bếp','Xuất giao vận chuyển':'Giao hàng','Xác nhận hoàn tất đơn':'Xác nhận thành công'};
@@ -128,6 +137,7 @@ async function progressOrderStatus(orderId, nextStatus) {
   const order = appState.orders.find(o => o.id === orderId);
   if (!order || next[order.status] !== nextStatus) return;
   if (nextStatus === 'confirmed') {openOrderDetail(orderId);return;}
+  if (nextStatus === 'preparing' || nextStatus === 'delivering') return;
   return sendOrderMutation(orderId, {action:'status',newOrderStatus:statuses[nextStatus]});
 }
 

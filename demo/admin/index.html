@@ -2302,7 +2302,7 @@
                 <i data-lucide="refresh-cw"></i> <span>Làm mới đơn</span>
               </button>
               <button class="btn btn-primary btn-sm" onclick="openManualOrderModal()">
-                <i data-lucide="plus"></i> <span>Tạo đơn mẫu mới</span>
+                <i data-lucide="plus"></i> <span>Tạo đơn hàng</span>
               </button>
             </div>
           </div>
@@ -2967,7 +2967,7 @@
   <dialog id="manualOrderModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>Tạo đơn hàng mẫu mới</h3>
+        <h3>Tạo đơn hàng</h3>
         <button class="btn btn-sm" onclick="closeDialog('manualOrderModal')">✕ Đóng</button>
       </div>
       <form onsubmit="handleCreateManualOrder(event)">
@@ -2975,12 +2975,16 @@
           <div class="form-group">
             <label for="mSource">Nguồn đơn hàng *</label>
             <select id="mSource" class="form-control" required>
-              <option value="Website">Website</option>
-              <option value="Zalo">Zalo</option>
-              <option value="Messenger">Messenger</option>
-              <option value="Phone">Điện thoại</option>
-              <option value="Store">Tại cửa hàng</option>
+              <option value="PHONE">Điện thoại</option>
+              <option value="ZALO">Zalo</option>
+              <option value="MESSENGER">Messenger</option>
+              <option value="STORE">Tại cửa hàng</option>
+              <option value="OTHER">Khác</option>
             </select>
+          </div>
+          <div class="form-group" id="mSourceDetailGroup" style="display:none;">
+            <label for="mSourceDetail">Mô tả nguồn *</label>
+            <input id="mSourceDetail" class="form-control" />
           </div>
           <div class="form-group">
             <label for="mBuyerName">Tên người mua *</label>
@@ -2991,28 +2995,45 @@
             <input type="text" id="mBuyerPhone" class="form-control" placeholder="Ví dụ: 0905123456" required />
           </div>
           <div class="form-group">
-            <label for="mRecipientName">Tên người nhận (Để trống nếu chính người mua nhận)</label>
-            <input type="text" id="mRecipientName" class="form-control" placeholder="Ví dụ: Cô Thu Hà" />
-          </div>
-          <div class="form-group">
             <label for="mProduct">Sản phẩm *</label>
-            <select id="mProduct" class="form-control" required>
-              <option value="P1">Yến chưng Tứ Quý An Nhiên (185.000 ₫)</option>
-              <option value="P2">Hũ Yến 75ml Đường Phèn V2 (145.000 ₫)</option>
-            </select>
+            <select id="mProduct" class="form-control" required></select>
           </div>
           <div class="form-group">
             <label for="mQuantity">Số lượng *</label>
-            <input type="number" id="mQuantity" class="form-control" min="1" max="50" value="2" required />
+            <input type="number" id="mQuantity" class="form-control" min="1" max="50" value="1" required />
           </div>
           <div class="form-group">
-            <label for="mDeliveryText">Địa chỉ giao hàng / Ghi chú</label>
-            <textarea id="mDeliveryText" class="form-control" rows="2" placeholder="Giao buổi sáng, đóng hộp quà..."></textarea>
+            <label for="mZone">Khu vực giao *</label>
+            <select id="mZone" class="form-control" required></select>
           </div>
+          <div class="form-group">
+            <label for="mDate">Ngày giao *</label>
+            <input type="date" id="mDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label for="mSlot">Khung giờ giao *</label>
+            <select id="mSlot" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label for="mAddress">Địa chỉ giao hàng *</label>
+            <input id="mAddress" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="mIsGift" /> Quà tặng</label>
+          </div>
+          <div id="mGiftFields" style="display:none;">
+            <div class="form-group"><label for="mRecipientName">Tên người nhận *</label><input id="mRecipientName" class="form-control" /></div>
+            <div class="form-group"><label for="mRecipientPhone">Số điện thoại người nhận *</label><input id="mRecipientPhone" class="form-control" /></div>
+          </div>
+          <div class="form-group">
+            <label for="mBuyerNote">Yêu cầu thêm</label>
+            <textarea id="mBuyerNote" class="form-control" rows="2"></textarea>
+          </div>
+          <p id="mFormError" role="alert" style="display:none;color:var(--status-red);font-size:12px;"></p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn" onclick="closeDialog('manualOrderModal')">Huỷ</button>
-          <button type="submit" class="btn btn-primary">Ghi nhận đơn hàng</button>
+          <button id="mSubmit" type="submit" class="btn btn-primary">Ghi nhận đơn hàng</button>
         </div>
       </form>
     </div>
@@ -4162,7 +4183,7 @@
         const fin = computeOrderFinancials(ord);
         const itemNames = ord.items.map(it => {
           const p = appState.products[it.productId];
-          return `${it.quantity}x ${p ? p.name : 'Món yến'}`;
+          return `${it.quantity}x ${it.name || it.productName || it.productNameSnapshot || (p && p.name) || 'Món yến'}`;
         }).join(', ');
 
         return `
@@ -4204,7 +4225,7 @@
       completedOrders.forEach(ord => {
         ord.items.forEach(it => {
           if (!stats[it.productId]) {
-            stats[it.productId] = { product: appState.products[it.productId] || { name: 'Món yến', image: '' }, qty: 0, revenue: 0 };
+            stats[it.productId] = { product: appState.products[it.productId] || { name: it.name || it.productName || it.productNameSnapshot || 'Món yến', image: '' }, qty: 0, revenue: 0 };
           }
           stats[it.productId].qty += it.quantity;
           stats[it.productId].revenue += (it.quantity * it.unitPrice);
@@ -4272,6 +4293,17 @@
       const avgWait = waitCount > 0 ? Math.round(waitSum / (waitCount * 60000)) + 'p' : '--';
       const avgKitchen = kitchenCount > 0 ? Math.round(kitchenSum / (kitchenCount * 60000)) + 'p' : '--';
       const avgLead = leadCount > 0 ? Math.round(leadSum / (leadCount * 60000)) + 'p' : '--';
+      const timedDeliveries = completedOrders.filter(o => {
+        const confirmed = o.confirmedAt ? new Date(o.confirmedAt).getTime() : NaN;
+        const completed = o.completedAt ? new Date(o.completedAt).getTime() : NaN;
+        return Number.isFinite(confirmed) && Number.isFinite(completed) && completed >= confirmed;
+      });
+      const onTimeDeliveries = timedDeliveries.filter(o =>
+        new Date(o.completedAt).getTime() - new Date(o.confirmedAt).getTime() <= 2 * 60 * 60 * 1000
+      ).length;
+      const onTimeRate = timedDeliveries.length
+        ? Math.round(onTimeDeliveries / timedDeliveries.length * 100) + '%'
+        : '--';
 
       container.innerHTML = `
         <div class="ops-metric-item">
@@ -4279,7 +4311,7 @@
           <div class="ops-metric-label">Thố/hũ chưng tươi</div>
         </div>
         <div class="ops-metric-item">
-          <div class="ops-metric-val" style="color: #0284c7;">100%</div>
+          <div class="ops-metric-val" style="color: #0284c7;">${onTimeRate}</div>
           <div class="ops-metric-label">Giao nóng &lt;2H</div>
         </div>
         <div class="ops-metric-item">
@@ -5017,49 +5049,101 @@
     }
 
     /* --- 6. MANUAL ORDER CREATION --- */
-    function openManualOrderModal() {
-      document.getElementById('manualOrderModal').showModal();
-    }
-    const openCreateOrderModal = openManualOrderModal;
+    let manualOrderCreateKey = null;
+    const manualField = id => document.getElementById(id);
+    const hcmDate = offsetDays => {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(new Date(Date.now() + offsetDays * 86400000));
+      const value = type => parts.find(part => part.type === type).value;
+      return `${value('year')}-${value('month')}-${value('day')}`;
+    };
+    const setManualOptions = (select, rows) => select.replaceChildren(...rows.map(row => new Option(row.label, row.value)));
 
-    function handleCreateManualOrder(event) {
-      event.preventDefault();
-      const source = document.getElementById('mSource').value;
-      const buyerName = document.getElementById('mBuyerName').value.trim();
-      const buyerPhone = document.getElementById('mBuyerPhone').value.trim();
-      const recipientName = document.getElementById('mRecipientName').value.trim() || null;
-      const productId = document.getElementById('mProduct').value;
-      const quantity = Number(document.getElementById('mQuantity').value);
-      const deliveryText = document.getElementById('mDeliveryText').value.trim();
-
-      const p = appState.products[productId];
-      if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole) || !source || !buyerName || !p || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) {
-        showToast('Thông tin đơn hàng không hợp lệ', 'error'); return;
+    async function loadManualOrderCatalog(refreshProducts = false) {
+      const date = manualField('mDate').value;
+      const zoneId = manualField('mZone').value;
+      const response = await fetch(`/api/catalog?date=${encodeURIComponent(date)}&zoneId=${encodeURIComponent(zoneId)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.errorMessage || 'Không tải được danh mục đặt hàng.');
+      if (refreshProducts) {
+        setManualOptions(manualField('mProduct'), data.products.filter(p => p.status === 'AVAILABLE' && Number.isSafeInteger(p.priceVnd)).map(p => ({ value: p.id, label: `${p.name} - ${formatVND(p.priceVnd)}` })));
+        setManualOptions(manualField('mZone'), data.zones.filter(z => z.deliveryStatus !== 'OUT_OF_ZONE').map(z => ({ value: z.id, label: z.district })));
       }
-      const newOrder = {
-        id: `HM-MANUAL-${Date.now().toString().slice(-6)}`,
-        createdAt: `${SIMULATED_TODAY} 11:30`,
-        completedAt: null,
-        source,
-        buyerName,
-        buyerPhone,
-        recipientName,
-        items: [{ productId, quantity, unitPrice: p.price }],
-        discount: 0,
-        shippingFee: source === 'Store' ? 0 : 20000,
-        status: 'pending',
-        notes: deliveryText,
-        ledger: []
-      };
+      setManualOptions(manualField('mSlot'), data.slots.filter(s => s.isActive && !s.isPastOrInsufficientLead).map(s => ({ value: s.id, label: s.label })));
+      if (!manualField('mProduct').value || !manualField('mZone').value || !manualField('mSlot').value) {
+        throw new Error('Chưa có món hoặc khung giờ phù hợp cho ngày giao này.');
+      }
+    }
 
-      appState.orders.unshift(newOrder);
-      closeDialog('manualOrderModal');
-      showToast(`Đã tạo đơn hàng ${newOrder.id} thành công!`, 'success');
-      playNewOrderSound();
-      sendOrderEmailNotification(newOrder);
-      renderNotificationBadge();
-      renderOrdersTable();
-      updateDashboard();
+    async function openManualOrderModal() {
+      if (!['OWNER', 'MANAGER', 'SALES'].includes(appState.currentRole)) return;
+      const modal = manualField('manualOrderModal');
+      const form = modal.querySelector('form');
+      form.reset();
+      manualOrderCreateKey = crypto.randomUUID();
+      manualField('mDate').min = hcmDate(0);
+      manualField('mDate').value = hcmDate(1);
+      manualField('mFormError').style.display = 'none';
+      manualField('mSource').onchange = () => {
+        const other = manualField('mSource').value === 'OTHER';
+        manualField('mSourceDetailGroup').style.display = other ? '' : 'none';
+        manualField('mSourceDetail').required = other;
+      };
+      manualField('mIsGift').onchange = () => {
+        const gift = manualField('mIsGift').checked;
+        manualField('mGiftFields').style.display = gift ? '' : 'none';
+        manualField('mRecipientName').required = gift;
+        manualField('mRecipientPhone').required = gift;
+      };
+      manualField('mDate').onchange = () => loadManualOrderCatalog().catch(showManualOrderError);
+      manualField('mZone').onchange = () => loadManualOrderCatalog().catch(showManualOrderError);
+      modal.showModal();
+      try { await loadManualOrderCatalog(true); }
+      catch (error) { showManualOrderError(error); }
+    }
+
+    function showManualOrderError(error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const element = manualField('mFormError');
+      element.textContent = message;
+      element.style.display = 'block';
+    }
+
+    async function handleCreateManualOrder(event) {
+      event.preventDefault();
+      if (!['OWNER', 'MANAGER', 'SALES'].includes(appState.currentRole)) return;
+      const button = manualField('mSubmit');
+      const gift = manualField('mIsGift').checked;
+      const body = {
+        idempotencyKey: manualOrderCreateKey,
+        source: manualField('mSource').value,
+        sourceDetail: manualField('mSourceDetail').value.trim(),
+        orderPurpose: gift ? 'GIFT' : 'SELF',
+        buyerName: manualField('mBuyerName').value.trim(),
+        buyerPhone: manualField('mBuyerPhone').value.trim(),
+        recipientName: gift ? manualField('mRecipientName').value.trim() : undefined,
+        recipientPhone: gift ? manualField('mRecipientPhone').value.trim() : undefined,
+        buyerNote: manualField('mBuyerNote').value.trim(),
+        zoneId: manualField('mZone').value,
+        addressDetail: manualField('mAddress').value.trim(),
+        requestedDate: manualField('mDate').value,
+        slotId: manualField('mSlot').value,
+        items: [{ productId: manualField('mProduct').value, quantity: Number(manualField('mQuantity').value) }]
+      };
+      button.disabled = true;
+      manualField('mFormError').style.display = 'none';
+      try {
+        const response = await fetch('/api/admin/orders', { method: 'POST', credentials: 'same-origin', headers: getAdminAuthHeaders(), body: JSON.stringify(body) });
+        const data = await response.json();
+        if (!response.ok || !data.ok || !data.order?.referenceCode) throw new Error(data.errorMessage || 'Máy chủ chưa ghi nhận đơn.');
+        closeDialog('manualOrderModal');
+        await fetchServerOrders(false);
+        showToast(`Đã ghi nhận đơn ${data.order.referenceCode} trên máy chủ.`, 'success');
+      } catch (error) {
+        showManualOrderError(error);
+      } finally {
+        button.disabled = false;
+      }
     }
 
     /* --- 7. KITCHEN QUEUE --- */
@@ -5134,8 +5218,8 @@
              </button>`;
 
         const itemsHtml = (ord.items || []).map(it => {
-          const p = appState.products[it.productId] || { name: it.productName || it.productNameSnapshot || 'Món yến', volumeMl: 180 };
-          const prodName = it.productName || it.productNameSnapshot || p.name || 'Món yến';
+          const p = appState.products[it.productId] || { name: it.name || it.productName || it.productNameSnapshot || 'Món yến', volumeMl: 180 };
+          const prodName = it.name || it.productName || it.productNameSnapshot || p.name || 'Món yến';
           const volume = it.volumeMl || it.volumeMlSnapshot || p.volumeMl || 180;
           const sweetness = it.options || it.option || it.selectedOption || it.selectedOptionSnapshot || 'Đường phèn chuẩn vị';
           const ingredients = it.ingredients || it.ingredientsSnapshot || (p.ingredients ? (Array.isArray(p.ingredients) ? p.ingredients.join(', ') : p.ingredients) : '');
@@ -5216,7 +5300,7 @@
       if (tbody) {
         tbody.innerHTML = activeKitchenOrders.map(ord => {
           return (ord.items || []).map(it => {
-            const p = appState.products[it.productId] || { name: 'Món yến' };
+            const p = appState.products[it.productId] || { name: it.name || it.productName || it.productNameSnapshot || 'Món yến' };
             return `
               <tr>
                 <td><strong>${esc(ord.id)}</strong></td>
@@ -6708,7 +6792,7 @@
 
     function generateOrderEmailHtml(order, fin) {
       const itemsHtml = order.items.map(it => {
-        const p = appState.products[it.productId] || { name: 'Món yến', image: '' };
+        const p = appState.products[it.productId] || { name: it.name || it.productName || it.productNameSnapshot || 'Món yến', image: '' };
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
             <td style="padding: 10px 8px; font-weight: 600; color: #1e293b;">${esc(p.name)}</td>
