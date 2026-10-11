@@ -88,9 +88,26 @@ export const orderRequestsTable = sqliteTable("order_requests", {
   isTotalFinal: integer("is_total_final", { mode: "boolean" }).notNull(),
   orderStatus: text("order_status").notNull(),
   paymentStatus: text("payment_status").notNull(),
+  source: text("source").notNull(),
+  sourceDetail: text("source_detail"),
+  rowVersion: integer("row_version").notNull(),
+  completedAt: text("completed_at"),
   isDemoOrder: integer("is_demo_order", { mode: "boolean" }).notNull(),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
+});
+
+export const paymentEntriesTable = sqliteTable("payment_entries", {
+  id: text("id").primaryKey(),
+  orderRequestId: text("order_request_id").notNull(),
+  type: text("type").notNull(),
+  amountVnd: integer("amount_vnd").notNull(),
+  method: text("method").notNull(),
+  occurredAt: text("occurred_at").notNull(),
+  recordedAt: text("recorded_at").notNull(),
+  staffUsername: text("staff_username").notNull(),
+  reason: text("reason"),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
 });
 
 export const orderItemsTable = sqliteTable("order_items", {
@@ -141,7 +158,15 @@ export type OrderStatus =
   | "DELIVERING"
   | "COMPLETED"
   | "CANCELLED";
-export type PaymentStatus = "UNPAID" | "PAID" | "REFUNDED";
+export type PaymentStatus =
+  | "UNPAID"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "PARTIALLY_REFUNDED"
+  | "REFUNDED";
+export type OrderSource = "WEBSITE" | "ZALO" | "MESSENGER" | "PHONE" | "STORE" | "OTHER" | "UNKNOWN";
+export type PaymentEntryType = "COLLECTION" | "REFUND";
+export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "OTHER";
 
 export interface ProductRecord {
   id: string;
@@ -270,7 +295,7 @@ export interface NotificationLogRecord {
   orderReferenceCode: string;
   channel: "EMAIL" | "ZALO";
   recipient: string;
-  status: "SENT" | "CONFIG_READY" | "FAILED";
+  status: "PENDING" | "SENT" | "CONFIG_READY" | "FAILED";
   messageSummary: string;
   detail: string;
   createdAt: string;

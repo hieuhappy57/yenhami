@@ -25,6 +25,8 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   UNPAID: "Chưa thu tiền (Xác nhận trước khi thanh toán)",
   PAID: "Đã thanh toán",
+  PARTIALLY_PAID: "Đã thu một phần",
+  PARTIALLY_REFUNDED: "Đã hoàn một phần",
   REFUNDED: "Đã hoàn tiền",
 };
 

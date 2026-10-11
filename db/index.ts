@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { resolveProductImage } from "../lib/product-images";
+import { authenticateStaff } from "./staff-repository";
 import {
   DEMO_DELIVERY_SLOTS,
   DEMO_POSTS,
@@ -15,7 +16,10 @@ import type {
   JobPostingRecord,
   NotificationLogRecord,
   NotificationSettings,
+  OrderSource,
   OrderStatus,
+  PaymentEntryType,
+  PaymentMethod,
   PaymentStatus,
   PostRecord,
   ProductCategory,
@@ -32,10 +36,6 @@ const CATEGORY_LABELS: Record<ProductCategory, string> = {
   "ngot-diu": "Vị ngọt dịu tự nhiên",
   "nhieu-tang": "Phối vị truyền thống nhiều tầng",
 };
-
-function hashPassword(password: string, salt = "hami-local-salt-v1"): string {
-  return crypto.scryptSync(password, salt, 32).toString("hex");
-}
 
 /**
  * Returns current date (YYYY-MM-DD) and minutes since midnight in Asia/Ho_Chi_Minh (UTC+7).
@@ -273,6 +273,21 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS payment_entries (
+      id TEXT PRIMARY KEY,
+      order_request_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('COLLECTION', 'REFUND')),
+      amount_vnd INTEGER NOT NULL CHECK(amount_vnd > 0),
+      method TEXT NOT NULL CHECK(method IN ('CASH', 'BANK_TRANSFER', 'OTHER')),
+      occurred_at TEXT NOT NULL,
+      recorded_at TEXT NOT NULL,
+      staff_username TEXT NOT NULL,
+      reason TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      FOREIGN KEY(order_request_id) REFERENCES order_requests(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_payment_entries_order ON payment_entries(order_request_id, recorded_at);
+
     CREATE TABLE IF NOT EXISTS site_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
@@ -325,6 +340,15 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   if (!slotCols.some((c) => c.name === "start_minutes_of_day")) {
     db.exec("ALTER TABLE delivery_slots ADD COLUMN start_minutes_of_day INTEGER NOT NULL DEFAULT 540;");
   }
+
+  const orderCols = db.prepare("PRAGMA table_info(order_requests)").all() as { name: string }[];
+  const ensureOrderColumn = (name: string, sql: string) => {
+    if (!orderCols.some((column) => column.name === name)) db.exec(sql);
+  };
+  ensureOrderColumn("source", "ALTER TABLE order_requests ADD COLUMN source TEXT NOT NULL DEFAULT 'UNKNOWN'");
+  ensureOrderColumn("source_detail", "ALTER TABLE order_requests ADD COLUMN source_detail TEXT");
+  ensureOrderColumn("row_version", "ALTER TABLE order_requests ADD COLUMN row_version INTEGER NOT NULL DEFAULT 1");
+  ensureOrderColumn("completed_at", "ALTER TABLE order_requests ADD COLUMN completed_at TEXT");
 
   const countRow = db.prepare("SELECT COUNT(*) as cnt FROM products").get() as { cnt: number };
   if (countRow.cnt === 0) {
@@ -408,19 +432,6 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       );
     }
 
-    const insertStaff = db.prepare(`
-      INSERT INTO staff_users (id, username, display_name, role, password_hash, is_active, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertStaff.run(
-      "staff-admin-1",
-      "hami_staff",
-      "Điều phối Bếp & CSKH Hà Mi",
-      "OPS_ADMIN",
-      hashPassword(process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!"),
-      1,
-      new Date().toISOString()
-    );
   } else {
     // Sync clean customer-facing copy, catalog products & variants on existing DB
     const upsertProd = db.prepare(`
@@ -429,24 +440,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         short_description, usage_guide, storage_guide, caution_note, image_url,
         is_illustration_image, price_vnd, status, is_demo_fixture, supported_options_json, sort_order
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        slug = excluded.slug,
-        name = excluded.name,
-        category = excluded.category,
-        volume_ml = excluded.volume_ml,
-        ingredients_json = excluded.ingredients_json,
-        taste_profile = excluded.taste_profile,
-        short_description = excluded.short_description,
-        usage_guide = excluded.usage_guide,
-        storage_guide = excluded.storage_guide,
-        caution_note = excluded.caution_note,
-        image_url = excluded.image_url,
-        is_illustration_image = excluded.is_illustration_image,
-        price_vnd = excluded.price_vnd,
-        status = excluded.status,
-        is_demo_fixture = excluded.is_demo_fixture,
-        supported_options_json = excluded.supported_options_json,
-        sort_order = excluded.sort_order
+      ON CONFLICT(id) DO NOTHING
     `);
     for (const p of DEMO_PRODUCTS) {
       upsertProd.run(
@@ -474,11 +468,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     const upsertVariant = db.prepare(`
       INSERT INTO product_variants (id, product_id, name, price_delta_vnd, is_available)
       VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        product_id = excluded.product_id,
-        name = excluded.name,
-        price_delta_vnd = excluded.price_delta_vnd,
-        is_available = excluded.is_available
+      ON CONFLICT(id) DO NOTHING
     `);
     for (const v of DEMO_VARIANTS) {
       upsertVariant.run(v.id, v.productId, v.name, v.priceDeltaVnd, v.isAvailable ? 1 : 0);
@@ -488,16 +478,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         id, slot_code, label, time_window, start_minutes_of_day,
         max_capacity_bowls, reserved_bowls, min_lead_minutes, is_active, sort_order
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        slot_code = excluded.slot_code,
-        label = excluded.label,
-        time_window = excluded.time_window,
-        start_minutes_of_day = excluded.start_minutes_of_day,
-        max_capacity_bowls = excluded.max_capacity_bowls,
-        reserved_bowls = excluded.reserved_bowls,
-        min_lead_minutes = excluded.min_lead_minutes,
-        is_active = excluded.is_active,
-        sort_order = excluded.sort_order
+      ON CONFLICT(id) DO NOTHING
     `);
     for (const s of DEMO_DELIVERY_SLOTS) {
       upsertSlot.run(
@@ -513,92 +494,14 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         s.sortOrder
       );
     }
-    const updateZoneCopy = db.prepare(`
-      UPDATE service_zones
-      SET district = ?, ward_sample = ?, note = ?
-      WHERE id = ?
-    `);
-    for (const z of DEMO_SERVICE_ZONES) {
-      updateZoneCopy.run(z.district, z.wardSample, z.note, z.id);
-    }
   }
 
-  // Always ensure default staff accounts exist
-  const defaultMasterPassword = process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!";
-  const defaultMasterHash = hashPassword(defaultMasterPassword);
-
-  const defaultStaffList = [
-    {
-      id: "staff-admin-1",
-      username: "hami_staff",
-      displayName: "Điều phối Bếp & CSKH Hà Mi",
-      role: "OWNER",
-      passwordHash: defaultMasterHash,
-    },
-    {
-      id: "staff-1",
-      username: "hieunv@yenhami.com",
-      displayName: "Nguyễn Văn Hiếu",
-      role: "OWNER",
-      passwordHash: defaultMasterHash,
-    },
-    {
-      id: "staff-2",
-      username: "vietdh1985@gmail.com",
-      displayName: "Đặng Hữu Việt",
-      role: "MANAGER",
-      passwordHash: defaultMasterHash,
-    },
-    {
-      id: "staff-3",
-      username: "bep@yenhami.com",
-      displayName: "Bộ phận Bếp & Pha chế",
-      role: "KITCHEN",
-      passwordHash: defaultMasterHash,
-    },
-    {
-      id: "staff-4",
-      username: "cskh@yenhami.com",
-      displayName: "Bộ phận CSKH & Tư vấn",
-      role: "SALES",
-      passwordHash: defaultMasterHash,
-    },
-    {
-      id: "staff-5",
-      username: "marketing@yenhami.com",
-      displayName: "Bộ phận Marketing & Nội dung",
-      role: "MARKETING",
-      passwordHash: defaultMasterHash,
-    },
-  ];
-
-  const upsertStaff = db.prepare(`
-    INSERT INTO staff_users (id, username, display_name, role, password_hash, is_active, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(username) DO UPDATE SET
-      display_name = excluded.display_name,
-      role = excluded.role,
-      password_hash = excluded.password_hash,
-      is_active = 1
-  `);
-  for (const s of defaultStaffList) {
-    upsertStaff.run(
-      s.id,
-      s.username.toLowerCase(),
-      s.displayName,
-      s.role,
-      s.passwordHash,
-      1,
-      new Date().toISOString()
-    );
-  }
 
   // Ensure canonical SEO/GEO blog posts are always present
   try {
     db.exec("ALTER TABLE posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;");
   } catch {}
   const nowIso = new Date().toISOString();
-  db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
   const upsertCanonicalPost = db.prepare(`
     INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1223,6 +1126,9 @@ export function calculateServerQuote(params: {
 
 export interface SubmitOrderRequestInput {
   idempotencyKey: string;
+  source?: OrderSource;
+  sourceDetail?: string;
+  isDemoOrder?: boolean;
   orderPurpose: "SELF" | "GIFT";
   buyerName: string;
   buyerPhone: string;
@@ -1263,6 +1169,10 @@ export interface SubmitOrderRequestOutput {
     addressDetail?: string;
     orderStatus: OrderStatus;
     paymentStatus: PaymentStatus;
+    source?: OrderSource;
+    sourceDetail?: string | null;
+    rowVersion?: number;
+    completedAt?: string | null;
     subtotalVnd: number;
     shippingFeeVnd: number | null;
     shippingFeeNote: string;
@@ -1342,6 +1252,12 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
   const addressDetail = (input.addressDetail || "").trim();
   const requestedDate = (input.requestedDate || "").trim();
   const orderPurpose = input.orderPurpose === "GIFT" ? "GIFT" : "SELF";
+  const source = input.source || "WEBSITE";
+  const sourceDetail = (input.sourceDetail || "").trim() || null;
+  const validSources: OrderSource[] = ["WEBSITE", "ZALO", "MESSENGER", "PHONE", "STORE", "OTHER", "UNKNOWN"];
+  if (!validSources.includes(source) || (source === "OTHER" && !sourceDetail)) {
+    fieldErrors.source = "Nguồn đơn không hợp lệ; nguồn OTHER cần mô tả.";
+  }
 
   if (buyerName.length < 2) {
     fieldErrors.buyerName = "Vui lòng nhập họ tên người đặt (tối thiểu 2 ký tự).";
@@ -1505,8 +1421,9 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
         zone_id, zone_name_snapshot, address_detail,
         requested_date, slot_id, slot_label_snapshot,
         subtotal_vnd, shipping_fee_vnd, shipping_fee_note, total_vnd, is_total_final,
-        order_status, payment_status, is_demo_order, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        order_status, payment_status, source, source_detail, row_version, completed_at,
+        is_demo_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       orderId,
       referenceCode,
@@ -1534,7 +1451,11 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
       quote.isTotalFinal ? 1 : 0,
       "PENDING_CONFIRMATION",
       "UNPAID",
+      source,
+      sourceDetail,
       1,
+      null,
+      input.isDemoOrder ? 1 : 0,
       nowIso,
       nowIso
     );
@@ -1586,57 +1507,6 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
 
     db.exec("COMMIT;");
 
-    // Trigger Email & Zalo notifications for the new order
-    try {
-      pendingNotificationPromise = triggerOrderNotificationsAfterCommit({
-        referenceCode,
-        orderPurpose,
-        buyerName,
-        buyerPhone,
-        buyerNote: (input.buyerNote || "").trim() || undefined,
-        recipientName,
-        recipientPhone,
-        giftSenderName:
-          orderPurpose === "GIFT"
-            ? (input.giftSenderName || buyerName).trim()
-            : undefined,
-        giftMessage:
-          orderPurpose === "GIFT" ? (input.giftMessage || "").trim() : "",
-        hidePriceOnReceipt:
-          orderPurpose === "GIFT" ? Boolean(input.hidePriceOnReceipt) : false,
-        addressDetail,
-        requestedDate,
-        slotLabel: quote.slot.label,
-        totalBowls: quote.totalBowls,
-        subtotalVnd: quote.subtotalVnd,
-        shippingFeeVnd: quote.shippingFeeVnd,
-        totalVnd: quote.totalVnd,
-        shippingFeeNote: quote.shippingFeeNote,
-        items: quote.items.map((it) => ({
-          productName: it.productName,
-          variantName: it.variantName,
-          volumeMl: it.volumeMl,
-          selectedOption: it.selectedOption,
-          ingredientsText: it.ingredientsText,
-          quantity: it.quantity,
-          unitPriceVnd: it.unitPriceVnd,
-          lineTotalVnd: it.lineTotalVnd,
-        })),
-        itemsSummary: quote.items
-          .map(
-            (it) =>
-              `${it.productName} (${it.variantName}, ${it.selectedOption}) x${it.quantity}: ${it.lineTotalVnd.toLocaleString("vi-VN")}đ`
-          )
-          .join(" | "),
-      }).catch(() => ({
-        emailSent: false,
-        zaloSent: false,
-        detail: "Notification error ignored",
-      }));
-    } catch {
-      // Never block order creation if notification logging/sending fails
-    }
-
     return {
       ok: true,
       deduplicated: false,
@@ -1661,6 +1531,10 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
         addressDetail,
         orderStatus: "PENDING_CONFIRMATION",
         paymentStatus: "UNPAID",
+        source,
+        sourceDetail,
+        rowVersion: 1,
+        completedAt: null,
         subtotalVnd: quote.subtotalVnd,
         shippingFeeVnd: quote.shippingFeeVnd,
         shippingFeeNote: quote.shippingFeeNote,
@@ -1733,6 +1607,20 @@ export function getOrderRequestByReference(params: {
   const history = db
     .prepare("SELECT * FROM order_status_history WHERE order_request_id = ? ORDER BY created_at DESC")
     .all(String(row.id)) as Record<string, unknown>[];
+  const ledgerRows = db
+    .prepare("SELECT * FROM payment_entries WHERE order_request_id = ? ORDER BY recorded_at ASC, id ASC")
+    .all(String(row.id)) as Record<string, unknown>[];
+  const ledger = ledgerRows.map((entry) => ({
+    id: String(entry.id),
+    type: String(entry.type) as PaymentEntryType,
+    amountVnd: Number(entry.amount_vnd),
+    method: String(entry.method) as PaymentMethod,
+    occurredAt: String(entry.occurred_at),
+    recordedAt: String(entry.recorded_at),
+    staffUsername: String(entry.staff_username),
+    reason: entry.reason ? String(entry.reason) : null,
+    idempotencyKey: String(entry.idempotency_key),
+  }));
 
   return {
     id: String(row.id),
@@ -1760,6 +1648,13 @@ export function getOrderRequestByReference(params: {
     isTotalFinal: Boolean(row.is_total_final),
     orderStatus: String(row.order_status) as OrderStatus,
     paymentStatus: String(row.payment_status) as PaymentStatus,
+    paymentReconciliationRequired:
+      ledger.length === 0 && ["PAID", "REFUNDED"].includes(String(row.payment_status)),
+    ledger,
+    source: String(row.source || "UNKNOWN") as OrderSource,
+    sourceDetail: row.source_detail ? String(row.source_detail) : null,
+    rowVersion: Number(row.row_version || 1),
+    completedAt: row.completed_at ? String(row.completed_at) : null,
     isDemoOrder: Boolean(row.is_demo_order),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -1791,34 +1686,7 @@ export function getOrderRequestByReference(params: {
 }
 
 export function verifyStaffCredentials(username: string, password: string) {
-  const db = getSqliteDb();
-  const cleanUser = username.trim().toLowerCase();
-  const lookupUser = cleanUser === "admin" ? "hami_staff" : cleanUser;
-  const row = db
-    .prepare("SELECT * FROM staff_users WHERE LOWER(username) = ? AND is_active = 1")
-    .get(lookupUser) as Record<string, unknown> | undefined;
-  if (!row) return null;
-  const cleanPwd = password.trim();
-  const computed = hashPassword(cleanPwd);
-  const allowedHashes = new Set(
-    process.env.HAMI_ADMIN_PASSWORD
-      ? [
-          String(row.password_hash),
-          hashPassword(process.env.HAMI_ADMIN_PASSWORD),
-        ]
-      : [
-          String(row.password_hash),
-          hashPassword("HaMi@2026!"),
-          hashPassword("hami2026"),
-        ]
-  );
-  if (!allowedHashes.has(computed)) return null;
-  return {
-    id: String(row.id),
-    username: String(row.username),
-    displayName: String(row.display_name),
-    role: String(row.role),
-  };
+  return authenticateStaff(username, password);
 }
 
 export function listAllOrderRequestsForStaff() {
@@ -1836,14 +1704,107 @@ export function listAllOrderRequestsForStaff() {
     .filter((o): o is NonNullable<typeof o> => o !== null);
 }
 
+export function recordPaymentEntryByStaff(params: {
+  referenceCode: string;
+  type: PaymentEntryType;
+  amountVnd: number;
+  method: PaymentMethod;
+  reason?: string;
+  idempotencyKey: string;
+  expectedVersion: number;
+  staffUsername: string;
+  now?: Date;
+}) {
+  const db = getSqliteDb();
+  const idempotencyKey = params.idempotencyKey.trim();
+  const reason = (params.reason || "").trim();
+  if (!idempotencyKey || idempotencyKey.length < 8) {
+    return { ok: false, errorCode: "INVALID_IDEMPOTENCY_KEY", errorMessage: "Thiếu mã chống ghi trùng." };
+  }
+  if (!Number.isSafeInteger(params.amountVnd) || params.amountVnd <= 0) {
+    return { ok: false, errorCode: "INVALID_AMOUNT", errorMessage: "Số tiền phải là số nguyên VND dương." };
+  }
+  if (!(["COLLECTION", "REFUND"] as PaymentEntryType[]).includes(params.type)) {
+    return { ok: false, errorCode: "INVALID_PAYMENT_TYPE", errorMessage: "Loại giao dịch không hợp lệ." };
+  }
+  if (!(["CASH", "BANK_TRANSFER", "OTHER"] as PaymentMethod[]).includes(params.method)) {
+    return { ok: false, errorCode: "INVALID_PAYMENT_METHOD", errorMessage: "Phương thức thanh toán không hợp lệ." };
+  }
+  if (params.type === "REFUND" && !reason) {
+    return { ok: false, errorCode: "REFUND_REASON_REQUIRED", errorMessage: "Hoàn tiền cần ghi rõ lý do." };
+  }
+
+  db.exec("BEGIN IMMEDIATE TRANSACTION;");
+  try {
+    const prior = db.prepare("SELECT * FROM payment_entries WHERE idempotency_key = ?").get(idempotencyKey) as Record<string, unknown> | undefined;
+    if (prior) {
+      const priorOrder = db.prepare("SELECT reference_code FROM order_requests WHERE id = ?").get(String(prior.order_request_id)) as { reference_code: string };
+      db.exec("COMMIT;");
+      if (priorOrder.reference_code !== params.referenceCode.trim().toUpperCase() || String(prior.type) !== params.type || Number(prior.amount_vnd) !== params.amountVnd || String(prior.method) !== params.method || String(prior.reason || "") !== reason) {
+        return { ok: false, errorCode: "IDEMPOTENCY_CONFLICT", errorMessage: "Mã chống ghi trùng đã dùng cho nội dung khác." };
+      }
+      return { ok: true, deduplicated: true, order: getOrderRequestByReference({ referenceCode: priorOrder.reference_code, isStaff: true }) };
+    }
+    const row = db.prepare("SELECT * FROM order_requests WHERE reference_code = ?").get(params.referenceCode.trim().toUpperCase()) as Record<string, unknown> | undefined;
+    if (!row) {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "ORDER_NOT_FOUND", errorMessage: "Không tìm thấy yêu cầu đặt hàng." };
+    }
+    if (Number(row.row_version || 1) !== params.expectedVersion) {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "VERSION_CONFLICT", errorMessage: "Đơn hàng đã được thay đổi. Vui lòng tải lại." };
+    }
+    if (!Boolean(row.is_total_final) && params.type === "COLLECTION") {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "TOTAL_NOT_FINAL", errorMessage: "Cần chốt tổng tiền trước khi ghi nhận thu." };
+    }
+    const totals = db.prepare(`SELECT
+      COALESCE(SUM(CASE WHEN type = 'COLLECTION' THEN amount_vnd ELSE 0 END), 0) collected,
+      COALESCE(SUM(CASE WHEN type = 'REFUND' THEN amount_vnd ELSE 0 END), 0) refunded
+      FROM payment_entries WHERE order_request_id = ?`).get(String(row.id)) as { collected: number; refunded: number };
+    const collected = Number(totals.collected);
+    const refunded = Number(totals.refunded);
+    if (params.type === "COLLECTION" && collected + params.amountVnd > Number(row.total_vnd)) {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "OVER_COLLECTION", errorMessage: "Số tiền thu vượt quá tổng đơn." };
+    }
+    if (params.type === "REFUND" && params.amountVnd > collected - refunded) {
+      db.exec("ROLLBACK;");
+      return { ok: false, errorCode: "OVER_REFUND", errorMessage: "Số tiền hoàn vượt quá số đã thu còn lại." };
+    }
+    const nowIso = (params.now || new Date()).toISOString();
+    db.prepare(`INSERT INTO payment_entries
+      (id, order_request_id, type, amount_vnd, method, occurred_at, recorded_at, staff_username, reason, idempotency_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(`pay-${crypto.randomUUID()}`, String(row.id), params.type, params.amountVnd, params.method, nowIso, nowIso, params.staffUsername, reason || null, idempotencyKey);
+    const nextCollected = collected + (params.type === "COLLECTION" ? params.amountVnd : 0);
+    const nextRefunded = refunded + (params.type === "REFUND" ? params.amountVnd : 0);
+    const net = nextCollected - nextRefunded;
+    let paymentStatus: PaymentStatus = "UNPAID";
+    if (nextRefunded > 0 && net === 0) paymentStatus = "REFUNDED";
+    else if (nextRefunded > 0) paymentStatus = "PARTIALLY_REFUNDED";
+    else if (nextCollected >= Number(row.total_vnd)) paymentStatus = "PAID";
+    else if (nextCollected > 0) paymentStatus = "PARTIALLY_PAID";
+    db.prepare("UPDATE order_requests SET payment_status = ?, row_version = row_version + 1, updated_at = ? WHERE id = ?")
+      .run(paymentStatus, nowIso, String(row.id));
+    db.exec("COMMIT;");
+    return { ok: true, deduplicated: false, order: getOrderRequestByReference({ referenceCode: params.referenceCode, isStaff: true }) };
+  } catch (error) {
+    try { db.exec("ROLLBACK;"); } catch { /* transaction already ended */ }
+    throw error;
+  }
+}
+
 export function updateOrderStatusByStaff(params: {
   referenceCode: string;
   newOrderStatus: OrderStatus;
-  newPaymentStatus: PaymentStatus;
+  newPaymentStatus?: PaymentStatus;
+  expectedVersion?: number;
   staffUsername: string;
   staffDisplayName: string;
   note: string;
   confirmedShippingFeeVnd?: number | null;
+  now?: Date;
 }) {
   const db = getSqliteDb();
   const row = db
@@ -1853,10 +1814,28 @@ export function updateOrderStatusByStaff(params: {
     return { ok: false, errorMessage: "Không tìm thấy yêu cầu đặt hàng." };
   }
 
-  const nowIso = new Date().toISOString();
+  const nowIso = (params.now || new Date()).toISOString();
   const orderId = String(row.id);
   const prevOrderStatus = String(row.order_status) as OrderStatus;
   const prevPaymentStatus = String(row.payment_status) as PaymentStatus;
+  const currentVersion = Number(row.row_version || 1);
+  if (params.expectedVersion !== undefined && params.expectedVersion !== currentVersion) {
+    return { ok: false, errorCode: "VERSION_CONFLICT", errorMessage: "Đơn hàng đã được thay đổi. Vui lòng tải lại." };
+  }
+  const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+    PENDING_CONFIRMATION: ["CONFIRMED", "CANCELLED"],
+    CONFIRMED: ["PREPARING", "CANCELLED"],
+    PREPARING: ["DELIVERING", "CANCELLED"],
+    DELIVERING: ["COMPLETED"],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+  if (params.newOrderStatus !== prevOrderStatus && !allowedTransitions[prevOrderStatus].includes(params.newOrderStatus)) {
+    return { ok: false, errorCode: "INVALID_TRANSITION", errorMessage: "Chuyển trạng thái đơn hàng không hợp lệ." };
+  }
+  if (params.newPaymentStatus !== undefined && params.newPaymentStatus !== prevPaymentStatus) {
+    return { ok: false, errorCode: "PAYMENT_STATUS_DERIVED", errorMessage: "Trạng thái thanh toán chỉ được tính từ sổ thu chi." };
+  }
   const requestedDate = String(row.requested_date);
   const slotId = String(row.slot_id);
 
@@ -1891,49 +1870,25 @@ export function updateOrderStatusByStaff(params: {
       ).run(orderBowls, requestedDate, slotId);
     }
 
-    // Re-reserve capacity when transitioning from CANCELLED -> active status
-    if (prevOrderStatus === "CANCELLED" && params.newOrderStatus !== "CANCELLED" && orderBowls > 0) {
-      const slotRow = db
-        .prepare("SELECT max_capacity_bowls FROM delivery_slots WHERE id = ?")
-        .get(slotId) as { max_capacity_bowls: number } | undefined;
-      const maxCap = Number(slotRow?.max_capacity_bowls || 12);
-
-      db.prepare(
-        `INSERT OR IGNORE INTO slot_date_reservations (requested_date, slot_id, reserved_bowls)
-         VALUES (?, ?, 0)`
-      ).run(requestedDate, slotId);
-
-      const reReserve = db
-        .prepare(
-          `UPDATE slot_date_reservations
-           SET reserved_bowls = reserved_bowls + ?
-           WHERE requested_date = ? AND slot_id = ? AND (reserved_bowls + ?) <= ?`
-        )
-        .run(orderBowls, requestedDate, slotId, orderBowls, maxCap);
-
-      if (reReserve.changes === 0) {
-        db.exec("ROLLBACK;");
-        return {
-          ok: false,
-          errorMessage: `Không thể khôi phục đơn đã hủy vì ca "${String(row.slot_label_snapshot)}" ngày ${requestedDate} hiện đã đầy chỗ.`,
-        };
-      }
-    }
-
     db.prepare(`
       UPDATE order_requests
       SET order_status = ?, payment_status = ?, shipping_fee_vnd = ?,
-          shipping_fee_note = ?, total_vnd = ?, is_total_final = ?, updated_at = ?
-      WHERE id = ?
+          shipping_fee_note = ?, total_vnd = ?, is_total_final = ?, updated_at = ?,
+          completed_at = CASE WHEN ? = 'COMPLETED' THEN COALESCE(completed_at, ?) ELSE completed_at END,
+          row_version = row_version + 1
+      WHERE id = ? AND row_version = ?
     `).run(
       params.newOrderStatus,
-      params.newPaymentStatus,
+      prevPaymentStatus,
       shippingFeeVnd,
       shippingFeeNote,
       totalVnd,
       isTotalFinal ? 1 : 0,
       nowIso,
-      orderId
+      params.newOrderStatus,
+      nowIso,
+      orderId,
+      currentVersion
     );
 
     db.prepare(`
@@ -1948,7 +1903,7 @@ export function updateOrderStatusByStaff(params: {
       prevOrderStatus,
       params.newOrderStatus,
       prevPaymentStatus,
-      params.newPaymentStatus,
+      prevPaymentStatus,
       params.staffUsername,
       params.staffDisplayName,
       params.note.trim() || `Cập nhật trạng thái sang ${params.newOrderStatus}`,
@@ -2453,7 +2408,7 @@ export function getNotificationLogs(limit = 30): NotificationLogRecord[] {
     orderReferenceCode: String(r.order_reference_code),
     channel: String(r.channel) as "EMAIL" | "ZALO",
     recipient: String(r.recipient),
-    status: String(r.status) as "SENT" | "CONFIG_READY" | "FAILED",
+    status: String(r.status) as "PENDING" | "SENT" | "CONFIG_READY" | "FAILED",
     messageSummary: String(r.message_summary),
     detail: String(r.detail),
     createdAt: String(r.created_at),
@@ -2517,6 +2472,27 @@ export async function triggerOrderNotificationsAfterCommit(
       : [payload.itemsSummary];
 
   const textSummary = `[ĐƠN MỚI #${payload.referenceCode}] Khách: ${payload.buyerName} (${payload.buyerPhone}) • Giao: ${payload.requestedDate} (${payload.slotLabel}) • Đ/c: ${payload.addressDetail} • Chi tiết món: ${itemizedLines.join(" ; ")} • Tổng: ${payload.totalVnd.toLocaleString("vi-VN")}đ`;
+
+  const rawPayload = payload;
+  const escapeHtml = (value: string) => value
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+  payload = {
+    ...payload,
+    referenceCode: escapeHtml(payload.referenceCode), buyerName: escapeHtml(payload.buyerName),
+    buyerPhone: escapeHtml(payload.buyerPhone), buyerNote: payload.buyerNote ? escapeHtml(payload.buyerNote) : undefined,
+    recipientName: escapeHtml(payload.recipientName), recipientPhone: escapeHtml(payload.recipientPhone),
+    giftSenderName: payload.giftSenderName ? escapeHtml(payload.giftSenderName) : undefined,
+    giftMessage: payload.giftMessage ? escapeHtml(payload.giftMessage) : undefined,
+    addressDetail: escapeHtml(payload.addressDetail), requestedDate: escapeHtml(payload.requestedDate),
+    slotLabel: escapeHtml(payload.slotLabel), shippingFeeNote: escapeHtml(payload.shippingFeeNote),
+    itemsSummary: escapeHtml(payload.itemsSummary),
+    items: payload.items?.map((item) => ({ ...item,
+      productName: escapeHtml(item.productName), variantName: escapeHtml(item.variantName),
+      selectedOption: escapeHtml(item.selectedOption),
+      ingredientsText: item.ingredientsText ? escapeHtml(item.ingredientsText) : undefined,
+    })),
+  };
 
   const itemsTableRowsHtml =
     payload.items && payload.items.length > 0
@@ -2628,6 +2604,7 @@ export async function triggerOrderNotificationsAfterCommit(
       </div>
     </div>
   `;
+  payload = rawPayload;
 
   const insertLog = db.prepare(`
     INSERT INTO notification_logs (
@@ -2653,7 +2630,7 @@ export async function triggerOrderNotificationsAfterCommit(
       payload.referenceCode,
       "EMAIL",
       emailToJoined,
-      hasProvider ? "SENT" : "CONFIG_READY",
+      hasProvider ? "PENDING" : "CONFIG_READY",
       textSummary,
       config.emailWebhookUrl
         ? `Đang gửi Email chi tiết đơn hàng tới (${emailToJoined}) qua Google Apps Script...`
@@ -2681,6 +2658,7 @@ export async function triggerOrderNotificationsAfterCommit(
               itemsTextMultiLine: itemizedLines.join("\n"),
             },
           }),
+          signal: AbortSignal.timeout(10_000),
         });
         const respText = await res.text().catch(() => "");
         if (res.ok) {
@@ -2709,6 +2687,7 @@ export async function triggerOrderNotificationsAfterCommit(
             subject: emailSubject,
             html: emailHtml,
           }),
+          signal: AbortSignal.timeout(10_000),
         });
         if (res.ok) {
           emailSent = true;
@@ -2733,7 +2712,7 @@ export async function triggerOrderNotificationsAfterCommit(
       payload.referenceCode,
       "ZALO",
       config.zaloRecipientPhone,
-      config.zaloWebhookUrl ? "SENT" : "CONFIG_READY",
+      config.zaloWebhookUrl ? "PENDING" : "CONFIG_READY",
       textSummary,
       config.zaloWebhookUrl
         ? "Đã bắn tin nhắn tự động qua Zalo OA / Webhook"
@@ -2753,12 +2732,16 @@ export async function triggerOrderNotificationsAfterCommit(
             message: textSummary,
             payload,
           }),
+          signal: AbortSignal.timeout(10_000),
         });
         if (res.ok) {
           zaloSent = true;
+          updateLog.run("SENT", "Zalo webhook đã xác nhận thành công.", zaloLogId);
+        } else {
+          updateLog.run("FAILED", `Zalo webhook HTTP ${res.status}`, zaloLogId);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        updateLog.run("FAILED", `Lỗi kết nối Zalo webhook: ${err instanceof Error ? err.message : String(err)}`, zaloLogId);
       }
     }
   }
@@ -2772,17 +2755,50 @@ export async function triggerOrderNotificationsAfterCommit(
   };
 }
 
-let pendingNotificationPromise: Promise<unknown> | null = null;
+export function buildOrderNotificationPayload(referenceCode: string): OrderNotificationPayload | null {
+  const order = getOrderRequestByReference({ referenceCode, isStaff: true });
+  if (!order) return null;
+  return {
+    referenceCode: order.referenceCode,
+    orderPurpose: order.orderPurpose,
+    buyerName: order.buyerName,
+    buyerPhone: order.buyerPhone,
+    buyerNote: order.buyerNote || undefined,
+    recipientName: order.recipientName,
+    recipientPhone: order.recipientPhone,
+    giftSenderName: order.giftSenderName || undefined,
+    giftMessage: order.giftMessage || undefined,
+    hidePriceOnReceipt: order.hidePriceOnReceipt,
+    addressDetail: order.addressDetail,
+    requestedDate: order.requestedDate,
+    slotLabel: order.slotLabelSnapshot,
+    totalBowls: order.items.reduce((sum, item) => sum + item.quantity, 0),
+    subtotalVnd: order.subtotalVnd,
+    shippingFeeVnd: order.shippingFeeVnd,
+    totalVnd: order.totalVnd,
+    shippingFeeNote: order.shippingFeeNote,
+    items: order.items.map((item) => ({
+      productName: item.productNameSnapshot,
+      variantName: item.variantNameSnapshot,
+      volumeMl: item.volumeMlSnapshot,
+      selectedOption: item.selectedOptionSnapshot,
+      ingredientsText: item.ingredientsSnapshot,
+      quantity: item.quantity,
+      unitPriceVnd: item.unitPriceSnapshot,
+      lineTotalVnd: item.lineTotalSnapshot,
+    })),
+    itemsSummary: order.items.map((item) => `${item.productNameSnapshot} x${item.quantity}`).join(" | "),
+  };
+}
 
-export async function flushPendingOrderNotifications(): Promise<void> {
-  if (!pendingNotificationPromise) return;
-  const p = pendingNotificationPromise;
-  pendingNotificationPromise = null;
-  try {
-    await p;
-  } catch {
-    // ignore
+export async function flushPendingOrderNotifications(referenceCode?: string): Promise<{ emailSent: boolean; zaloSent: boolean; detail: string } | null> {
+  if (referenceCode) {
+    const payload = buildOrderNotificationPayload(referenceCode);
+    if (payload) {
+      return await triggerOrderNotificationsAfterCommit(payload);
+    }
   }
+  return null;
 }
 
 const CLOUD_TABLES = [
@@ -2792,6 +2808,7 @@ const CLOUD_TABLES = [
   "order_requests",
   "order_items",
   "order_status_history",
+  "payment_entries",
   "site_settings",
   "posts",
   "job_postings",
@@ -3034,6 +3051,10 @@ CREATE TABLE IF NOT EXISTS order_requests (
   is_total_final INTEGER NOT NULL DEFAULT 1,
   order_status TEXT NOT NULL,
   payment_status TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'UNKNOWN',
+  source_detail TEXT,
+  row_version INTEGER NOT NULL DEFAULT 1,
+  completed_at TEXT,
   is_demo_order INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -3063,6 +3084,18 @@ CREATE TABLE IF NOT EXISTS order_status_history (
   changed_by_staff_name TEXT NOT NULL,
   note TEXT NOT NULL,
   created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS payment_entries (
+  id TEXT PRIMARY KEY,
+  order_request_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  amount_vnd INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  occurred_at TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  staff_username TEXT NOT NULL,
+  reason TEXT,
+  idempotency_key TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS site_settings (
   key TEXT PRIMARY KEY,
@@ -3181,16 +3214,7 @@ function applyCloudTablesToLocalSqlite(
     const upsertPostStmt = db.prepare(`
       INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        slug = excluded.slug,
-        title = excluded.title,
-        category = excluded.category,
-        excerpt = excluded.excerpt,
-        content = excluded.content,
-        cover_image_url = excluded.cover_image_url,
-        is_published = excluded.is_published,
-        is_pinned = excluded.is_pinned,
-        updated_at = excluded.updated_at
+      ON CONFLICT(id) DO NOTHING
     `);
     for (const post of DEMO_POSTS) {
       upsertPostStmt.run(

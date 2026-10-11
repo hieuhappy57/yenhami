@@ -5,9 +5,11 @@ import {
   deleteProductByStaff,
   getAllJobPostings,
   getAllPosts,
+  getSqliteDb,
   getCloudDatabaseStatus,
   getNotificationLogs,
   getNotificationSettings,
+  getOrderRequestByReference,
   getSiteContentSettings,
   isCloudflareR2Enabled,
   putCloudflareR2Object,
@@ -22,44 +24,80 @@ import {
   upsertProductFullByStaff,
 } from "@/db";
 import type { ProductCategory, ProductStatus } from "@/db/schema";
-import { getAuthenticatedStaff } from "@/lib/staff-auth";
+import { withAuthoritativeMutation } from "@/lib/authoritative-write";
+import { getAuthenticatedStaff, guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
 
-export async function GET() {
-  const staff = await getAuthenticatedStaff();
+const PRODUCT_STATUSES: ProductStatus[] = ["AVAILABLE", "OUT_OF_STOCK", "PENDING_DATA_APPROVAL"];
+const PRODUCT_CATEGORIES: ProductCategory[] = ["nguyen-ban", "ngot-diu", "nhieu-tang"];
+
+function redactNotificationSettings(settings: ReturnType<typeof getNotificationSettings>) {
+  const { resendApiKey, emailWebhookUrl, zaloWebhookUrl, ...publicSettings } = settings;
+  return { ...publicSettings, resendApiKeyConfigured: Boolean(resendApiKey), emailWebhookConfigured: Boolean(emailWebhookUrl), zaloWebhookConfigured: Boolean(zaloWebhookUrl) };
+}
+
+async function readBody(request: Request) {
+  const limit = 10 * 1024 * 1024;
+  if (Number(request.headers.get("content-length") || 0) > limit) throw new Error("BODY_TOO_LARGE");
+  const text = await request.text();
+  if (Buffer.byteLength(text) > limit) throw new Error("BODY_TOO_LARGE");
+  return JSON.parse(text) as Record<string, unknown>;
+}
+
+export async function GET(request: Request) {
+  const staff = await getAuthenticatedStaff(request);
   if (!staff) {
     return NextResponse.json(
       { ok: false, errorMessage: "Yêu cầu đăng nhập nhân viên." },
       { status: 401 }
     );
   }
+  if (!staffCan(staff, "content.write")) {
+    return NextResponse.json({ ok: false, errorMessage: "Không có quyền quản lý nội dung." }, { status: 403, headers: privateJsonHeaders() });
+  }
 
   await syncDbFromCloud(true);
 
+  const sensitive = staffCan(staff, "settings.sensitive");
   return NextResponse.json({
     ok: true,
     siteSettings: getSiteContentSettings(),
     posts: getAllPosts(false),
     jobs: getAllJobPostings(false),
-    notificationSettings: getNotificationSettings(),
-    notificationLogs: getNotificationLogs(30),
-    cloudDbStatus: getCloudDatabaseStatus(),
-  });
+    ...(sensitive ? { notificationSettings: redactNotificationSettings(getNotificationSettings()), notificationLogs: getNotificationLogs(30), cloudDbStatus: getCloudDatabaseStatus() } : {}),
+  }, { headers: privateJsonHeaders() });
 }
 
 export async function POST(request: Request) {
-  const staff = await getAuthenticatedStaff();
+  const staff = await getAuthenticatedStaff(request);
   if (!staff) {
     return NextResponse.json(
       { ok: false, errorMessage: "Yêu cầu đăng nhập nhân viên." },
       { status: 401 }
     );
   }
+  if (!staffCan(staff, "content.write")) {
+    return NextResponse.json({ ok: false, errorMessage: "Không có quyền quản lý nội dung." }, { status: 403, headers: privateJsonHeaders() });
+  }
+  if (!guardMutationOrigin(request)) {
+    return NextResponse.json({ ok: false, errorMessage: "Nguồn yêu cầu không hợp lệ." }, { status: 403, headers: privateJsonHeaders() });
+  }
 
   try {
-    await syncDbFromCloud(true);
-
-    const body = await request.json();
+    const body = await readBody(request);
     const action = String(body.action || "");
+    const sensitiveActions = new Set(["save_notification_settings", "test_notification", "resend_order_notification", "test_init_cloudflare_d1"]);
+    if (sensitiveActions.has(action) && !staffCan(staff, "settings.sensitive")) {
+      return NextResponse.json({ ok: false, errorMessage: "Chỉ chủ sở hữu được thay đổi cấu hình nhạy cảm." }, { status: 403, headers: privateJsonHeaders() });
+    }
+    const canWriteCommercial = staffCan(staff, "catalog.commercial.write");
+    const productPayload = body.product && typeof body.product === "object" ? body.product as Record<string, unknown> : {};
+    if (action === "upsert_product" && !canWriteCommercial && hasForbiddenCommercialProductFields(productPayload)) {
+      return NextResponse.json({ ok: false, errorMessage: "Không có quyền thay đổi dữ liệu thương mại của sản phẩm." }, { status: 403, headers: privateJsonHeaders() });
+    }
+    if (action === "delete_product" && !canWriteCommercial) return NextResponse.json({ ok: false, errorMessage: "Không có quyền xóa sản phẩm." }, { status: 403, headers: privateJsonHeaders() });
+
+    return await withAuthoritativeMutation(async () => {
+    await syncDbFromCloud(true);
 
     if (action === "save_site_settings") {
       const updated = updateSiteContentSettings(body.settings || {});
@@ -68,7 +106,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "upsert_product") {
-      const p = body.product || {};
+      const p = productPayload;
       const ingredients = Array.isArray(p.ingredients)
         ? p.ingredients
         : String(p.ingredientsText || "")
@@ -82,17 +120,34 @@ export async function POST(request: Request) {
             .map((s: string) => s.trim())
             .filter(Boolean);
 
+      if (!canWriteCommercial) {
+        const id = String(p.id || "");
+        if (!id) return NextResponse.json({ ok: false, errorMessage: "Marketing chỉ được sửa nội dung sản phẩm đã có." }, { status: 400, headers: privateJsonHeaders() });
+        const optionalText = (key: string) => typeof p[key] === "string" ? p[key] as string : null;
+        const result = getSqliteDb().prepare(`UPDATE products SET slug = COALESCE(?, slug), name = COALESCE(?, name), category = COALESCE(?, category), volume_ml = COALESCE(?, volume_ml), image_url = COALESCE(?, image_url), ingredients_json = COALESCE(?, ingredients_json), taste_profile = COALESCE(?, taste_profile), short_description = COALESCE(?, short_description), usage_guide = COALESCE(?, usage_guide), storage_guide = COALESCE(?, storage_guide), caution_note = COALESCE(?, caution_note) WHERE id = ?`).run(
+          optionalText("slug"), optionalText("name"), optionalText("category"), Number.isSafeInteger(p.volumeMl) && Number(p.volumeMl) > 0 ? Number(p.volumeMl) : null, optionalText("imageUrl"), Array.isArray(p.ingredients) || typeof p.ingredientsText === "string" ? JSON.stringify(ingredients) : null, optionalText("tasteProfile"), optionalText("shortDescription"), optionalText("usageGuide"), optionalText("storageGuide"), optionalText("cautionNote"), id,
+        );
+        if (!result.changes) return NextResponse.json({ ok: false, errorMessage: "Không tìm thấy sản phẩm." }, { status: 404, headers: privateJsonHeaders() });
+        await syncDbToCloud();
+        return NextResponse.json({ ok: true, id }, { headers: privateJsonHeaders() });
+      }
+
+      const commercialPrice = p.priceVnd === null || p.priceVnd === "" || p.priceVnd === undefined ? null : Number(p.priceVnd);
+      const commercialVolume = Number(p.volumeMl);
+      const commercialStatus = String(p.status || "AVAILABLE") as ProductStatus;
+      const commercialCategory = String(p.category || "nguyen-ban") as ProductCategory;
+      if (!String(p.name || "").trim() || !Number.isSafeInteger(commercialVolume) || commercialVolume <= 0 || (commercialPrice !== null && (!Number.isSafeInteger(commercialPrice) || commercialPrice < 0)) || !PRODUCT_STATUSES.includes(commercialStatus) || !PRODUCT_CATEGORIES.includes(commercialCategory)) {
+        return NextResponse.json({ ok: false, errorMessage: "Dữ liệu sản phẩm không hợp lệ." }, { status: 422, headers: privateJsonHeaders() });
+      }
+
       const res = upsertProductFullByStaff({
-        id: p.id,
-        slug: p.slug,
+        id: typeof p.id === "string" ? p.id : undefined,
+        slug: typeof p.slug === "string" ? p.slug : undefined,
         name: String(p.name || ""),
-        category: (p.category || "nguyen-ban") as ProductCategory,
-        volumeMl: Number(p.volumeMl || 200),
-        priceVnd:
-          p.priceVnd === null || p.priceVnd === "" || p.priceVnd === undefined
-            ? null
-            : Number(p.priceVnd),
-        status: (p.status || "AVAILABLE") as ProductStatus,
+        category: commercialCategory,
+        volumeMl: commercialVolume,
+        priceVnd: commercialPrice,
+        status: commercialStatus,
         imageUrl: String(p.imageUrl || "/brand/dishes/thanh-nguyen-dish.jpg"),
         ingredients,
         tasteProfile: String(p.tasteProfile || ""),
@@ -113,10 +168,10 @@ export async function POST(request: Request) {
     }
 
     if (action === "upsert_post") {
-      const post = body.post || {};
+      const post = (body.post && typeof body.post === "object" ? body.post : {}) as Record<string, unknown>;
       const res = upsertPostByStaff({
-        id: post.id,
-        slug: post.slug,
+        id: typeof post.id === "string" ? post.id : undefined,
+        slug: typeof post.slug === "string" ? post.slug : undefined,
         title: String(post.title || ""),
         category: String(post.category || "Tin tức Hà Mi"),
         excerpt: String(post.excerpt || ""),
@@ -136,9 +191,9 @@ export async function POST(request: Request) {
     }
 
     if (action === "upsert_job") {
-      const job = body.job || {};
+      const job = (body.job && typeof body.job === "object" ? body.job : {}) as Record<string, unknown>;
       const res = upsertJobPostingByStaff({
-        id: job.id,
+        id: typeof job.id === "string" ? job.id : undefined,
         title: String(job.title || ""),
         department: String(job.department || "Kinh doanh & CSKH"),
         location: String(job.location || "Đà Nẵng"),
@@ -162,7 +217,7 @@ export async function POST(request: Request) {
     if (action === "save_notification_settings") {
       const updated = updateNotificationSettings(body.settings || {});
       await syncDbToCloud();
-      return NextResponse.json({ ok: true, notificationSettings: updated });
+      return NextResponse.json({ ok: true, notificationSettings: redactNotificationSettings(updated) }, { headers: privateJsonHeaders() });
     }
 
     if (action === "test_notification") {
@@ -218,8 +273,10 @@ export async function POST(request: Request) {
       });
     }
 
-    if (action === "resend_order_notification" && body.order) {
-      const ord = body.order;
+    if (action === "resend_order_notification") {
+      const referenceCode = typeof body.referenceCode === "string" ? body.referenceCode.trim() : "";
+      const ord = referenceCode ? getOrderRequestByReference({ referenceCode, isStaff: true }) : null;
+      if (!ord) return NextResponse.json({ ok: false, errorMessage: "Không tìm thấy đơn hàng để gửi lại thông báo." }, { status: 404, headers: privateJsonHeaders() });
       const items = Array.isArray(ord.items)
         ? ord.items.map((it: Record<string, unknown>) => ({
             productName: String(it.productNameSnapshot || ""),
@@ -327,14 +384,16 @@ export async function POST(request: Request) {
       { ok: false, errorMessage: "Hành động CMS không hợp lệ." },
       { status: 400 }
     );
+    });
   } catch (err) {
+    const status = typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;
     return NextResponse.json(
       {
         ok: false,
         errorMessage:
-          err instanceof Error ? err.message : "Lỗi xử lý dữ liệu CMS.",
+          status === 503 ? "Kho dữ liệu dùng chung chưa sẵn sàng." : status === 413 ? "Dữ liệu quá lớn." : err instanceof Error ? err.message : "Lỗi xử lý dữ liệu CMS.",
       },
-      { status: 400 }
+      { status, headers: privateJsonHeaders() }
     );
   }
 }

@@ -1,46 +1,35 @@
-import crypto from "node:crypto";
 import { cookies } from "next/headers";
+import { getStaffBySessionToken } from "@/db/staff-repository";
+import type { AuthenticatedStaff } from "@/lib/staff-access";
+export { guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-access";
+export type { AuthenticatedStaff, StaffCapability } from "@/lib/staff-access";
 
-const COOKIE_NAME = "hami_staff_session";
-const SECRET = process.env.HAMI_SESSION_SECRET || "hami-local-mvp-session-secret-2026";
+export const STAFF_COOKIE_NAME = "hami_staff_session";
 
-export interface StaffSessionPayload {
-  id: string;
-  username: string;
-  displayName: string;
-  role: string;
-  exp: number;
-}
+export async function getAuthenticatedStaff(request?: Request): Promise<AuthenticatedStaff | null> {
+  let token: string | undefined;
 
-export function createStaffSessionToken(staff: Omit<StaffSessionPayload, "exp">): string {
-  const payload: StaffSessionPayload = {
-    ...staff,
-    exp: Date.now() + 1000 * 60 * 60 * 12, // 12 hours
-  };
-  const data = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
-  const sig = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
-  return `${data}.${sig}`;
-}
-
-export function verifyStaffSessionToken(token?: string | null): StaffSessionPayload | null {
-  if (!token || !token.includes(".")) return null;
-  const [data, sig] = token.split(".");
-  if (!data || !sig) return null;
-  const expectedSig = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
-  if (sig !== expectedSig) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as StaffSessionPayload;
-    if (!parsed.exp || Date.now() > parsed.exp) return null;
-    return parsed;
-  } catch {
-    return null;
+  if (request) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) {
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (match) token = match[1].trim();
+    }
+    if (!token) {
+      token = request.headers.get("x-staff-token") || undefined;
+    }
   }
-}
 
-export async function getAuthenticatedStaff(): Promise<StaffSessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  return verifyStaffSessionToken(token);
-}
+  if (!token) {
+    try {
+      const cookieStore = await cookies();
+      token = cookieStore.get(STAFF_COOKIE_NAME)?.value;
+    } catch {
+      // ignore
+    }
+  }
 
-export const STAFF_COOKIE_NAME = COOKIE_NAME;
+  if (!token) return null;
+  const staff = getStaffBySessionToken(token);
+  return staff ? { id: staff.id, username: staff.username, displayName: staff.displayName, role: staff.role, roles: staff.roles } : null;
+}

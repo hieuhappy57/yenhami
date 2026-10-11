@@ -74,8 +74,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const res = submitOrderRequest(body);
 
-    if (res.ok) {
-      await flushPendingOrderNotifications();
+    if (res.ok && res.order?.referenceCode) {
+      try {
+        await flushPendingOrderNotifications(res.order.referenceCode);
+      } catch (notifErr) {
+        console.error("Order notification error:", notifErr);
+      }
       await syncDbToCloud();
     }
 

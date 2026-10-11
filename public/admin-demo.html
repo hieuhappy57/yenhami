@@ -2024,23 +2024,25 @@
         </div>
       </div>
 
+      <!-- Live Server Sync Indicator -->
+      <div id="liveSyncStatus" style="font-size: 11px; padding: 4px 8px; border-radius: 12px; background: rgba(21,81,50,0.08); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="Tự động đồng bộ đơn hàng từ máy chủ mỗi 10 giây">
+        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;"></span>
+        <span class="hidden sm:inline">Máy chủ:</span> <strong id="lastSyncTimeText">Trực tiếp</strong>
+      </div>
+
       <!-- Quick Audio Toggle -->
       <button id="audioToggleBtn" type="button" class="btn btn-sm" onclick="toggleSoundAlert()" title="Bật/Tắt chuông báo đơn mới" style="padding: 0 8px;">
         <i data-lucide="volume-2" id="audioToggleIcon"></i>
       </button>
 
-      <!-- Simulate Incoming Order Button -->
-      <button type="button" class="btn btn-sm btn-primary" onclick="simulateIncomingOrder()" title="Bấm để kích hoạt 1 đơn hàng mới mô phỏng">
-        <i data-lucide="sparkles"></i> <span>+ Đơn mới</span>
+      <!-- Quick Server Refresh Button -->
+      <button type="button" class="btn btn-sm btn-primary" onclick="fetchServerOrders(false)" title="Bấm để đồng bộ đơn hàng mới từ máy chủ ngay lập tức">
+        <i data-lucide="refresh-cw"></i> <span>Tải đơn mới</span>
       </button>
 
       <a href="/" target="_blank" class="btn btn-sm" title="Mở trang chủ Yến Sào Hà Mi trong tab mới" style="text-decoration: none;">
         <i data-lucide="external-link"></i> <span class="hidden sm:inline">Trang chủ</span>
       </a>
-
-      <button class="btn btn-sm" onclick="confirmResetDemo()" title="Đặt lại dữ liệu mặc định">
-        <span>Khôi phục mặc định</span>
-      </button>
     </div>
   </header>
 
@@ -3712,6 +3714,7 @@
       if (tabId === 'notifications') {
         loadNotificationSettingsForm();
         renderNotificationLogsTable();
+        if (typeof syncNotificationSettingsFromServer === 'function') syncNotificationSettingsFromServer();
       }
 
       if (window.lucide) lucide.createIcons();
@@ -4201,9 +4204,16 @@
       }
 
       try {
-        const res = await fetch('/api/admin/orders', { cache: 'no-store' });
+        const headers = typeof getAdminAuthHeaders === 'function' ? getAdminAuthHeaders() : { 'Cache-Control': 'no-store' };
+        headers['Cache-Control'] = 'no-store';
+
+        const res = await fetch('/api/admin/orders', { cache: 'no-store', headers });
         if (res.status === 401) {
           console.warn('Phiên đăng nhập quản trị cần xác thực lại.');
+          if (!silent) {
+            showToast('⚠️ Phiên làm việc máy chủ cần xác thực lại. Vui lòng đăng nhập lại.', 'error');
+            if (typeof lockAdminApp === 'function') lockAdminApp();
+          }
           return;
         }
         const data = await res.json();
@@ -4218,9 +4228,11 @@
           const newlyArrived = serverOrders.filter(o => !existingIds.has(o.id));
 
           if (!isInitialLoad && newlyArrived.length > 0) {
-            playAudioNotification();
+            if (typeof playAudioNotification === 'function') playAudioNotification();
             newlyArrived.forEach(no => {
               showToast(`🛎️ ĐƠN ĐẶT MÓN MỚI: #${no.id} — ${no.buyerName} (${formatVND(no.orderTotal)})`, 'success');
+              if (typeof triggerOrderTitleNotification === 'function') triggerOrderTitleNotification(no.id);
+              if (typeof triggerBrowserPushNotification === 'function') triggerBrowserPushNotification(no);
               if (Array.isArray(appState.inAppNotifications)) {
                 appState.inAppNotifications.unshift({
                   id: `notif-${Date.now()}-${no.id}`,
@@ -4241,6 +4253,12 @@
           updateDashboard();
           renderKitchenTable();
           renderCustomersTable();
+
+          const syncTimeEl = document.getElementById('lastSyncTimeText');
+          if (syncTimeEl) {
+            syncTimeEl.textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          }
+
           if (!silent) {
             showToast(`Đã đồng bộ ${serverOrders.length} đơn hàng thực tế từ hệ thống!`, 'info');
           }
@@ -5564,31 +5582,61 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function saveAdminSession(staff, role) {
+    function getStaffToken() {
+      try {
+        const raw = sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) || localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s && s.token) return s.token;
+        }
+        return localStorage.getItem('hami_staff_token') || sessionStorage.getItem('hami_staff_token') || '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function getAdminAuthHeaders() {
+      const token = getStaffToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return headers;
+    }
+
+    function saveAdminSession(staff, role, token) {
       const session = {
         authenticated: true,
         staffId: staff.id,
-        role: role || staff.roles[0] || 'OWNER',
-        username: staff.email,
-        displayName: staff.name,
+        role: role || (staff.roles && staff.roles[0]) || staff.role || 'OWNER',
+        username: staff.username || staff.email,
+        displayName: staff.displayName || staff.name,
+        token: token || getStaffToken() || null,
         timestamp: Date.now()
       };
       try {
         sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
         localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(session));
+        if (token) {
+          localStorage.setItem('hami_staff_token', token);
+          sessionStorage.setItem('hami_staff_token', token);
+        }
       } catch (e) {
         console.warn('Storage unavailable', e);
       }
     }
 
-    function checkExistingSession() {
+    async function checkExistingSession() {
       try {
         const raw = sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY) || localStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
         if (raw) {
           const session = JSON.parse(raw);
           // Session is valid for 12 hours
           if (session && session.authenticated && (Date.now() - session.timestamp < 12 * 60 * 60 * 1000)) {
-            const matched = appState.staff.find(s => s.id === session.staffId) || appState.staff[0];
+            const matched = appState.staff.find(s => s.id === session.staffId) || {
+              id: session.staffId || 'staff-admin-1',
+              name: session.displayName || 'Quản trị viên',
+              email: session.username || 'admin',
+              roles: [session.role || 'OWNER']
+            };
             unlockAdminApp(matched, session.role);
             if (typeof fetchServerOrders === 'function') {
               fetchServerOrders(true);
@@ -5607,7 +5655,9 @@
       try {
         sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
         localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-        fetch('/api/admin/auth', { method: 'DELETE' }).catch(() => {});
+        localStorage.removeItem('hami_staff_token');
+        sessionStorage.removeItem('hami_staff_token');
+        fetch('/api/admin/auth', { method: 'DELETE', headers: getAdminAuthHeaders() }).catch(() => {});
       } catch (e) {}
       lockAdminApp();
       showToast('Đã đăng xuất an toàn khỏi hệ thống!', 'info');
@@ -5661,43 +5711,78 @@
       const username = usernameInput ? usernameInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value.trim() : '';
 
-      const authResult = authenticateUser(username, password);
-      if (!authResult.ok) {
+      if (!username || !password) {
         if (errorEl) {
-          errorEl.innerText = authResult.error || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+          errorEl.innerText = 'Vui lòng nhập tên đăng nhập và mật khẩu!';
           errorEl.style.display = 'block';
         }
         return;
       }
 
-      // Success
-      if (errorEl) errorEl.style.display = 'none';
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = '⏳ Đang đăng nhập...';
+        submitBtn.innerText = '⏳ Đang xác thực...';
       }
 
       try {
-        await fetch('/api/admin/auth', {
+        const res = await fetch('/api/admin/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
-      } catch (e) {
-        console.warn('Server auth sync failed', e);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.ok) {
+          const clientCheck = authenticateUser(username, password);
+          if (!clientCheck.ok) {
+            if (errorEl) {
+              errorEl.innerText = data.errorMessage || clientCheck.error || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+              errorEl.style.display = 'block';
+            }
+            return;
+          }
+        }
+
+        const staffData = (data && data.staff) || {
+          id: 'staff-admin-1',
+          username: username,
+          displayName: 'Quản trị viên Hà Mi',
+          role: 'OWNER',
+          roles: ['OWNER']
+        };
+        const token = data && data.token ? data.token : null;
+        const role = (staffData.roles && staffData.roles[0]) || staffData.role || 'OWNER';
+
+        if (errorEl) errorEl.style.display = 'none';
+        saveAdminSession(staffData, role, token);
+        unlockAdminApp(staffData, role);
+        showToast(`Đăng nhập thành công! Chào mừng ${staffData.displayName || staffData.name} (${role})`, 'success');
+        renderStaffTable();
+        if (typeof fetchServerOrders === 'function') {
+          fetchServerOrders(false);
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        const clientCheck = authenticateUser(username, password);
+        if (clientCheck.ok) {
+          saveAdminSession(clientCheck.staff, clientCheck.role, null);
+          unlockAdminApp(clientCheck.staff, clientCheck.role);
+          showToast(`Đăng nhập thành công! Chào mừng ${clientCheck.staff.name}`, 'success');
+          renderStaffTable();
+          if (typeof fetchServerOrders === 'function') {
+            fetchServerOrders(false);
+          }
+        } else {
+          if (errorEl) {
+            errorEl.innerText = 'Lỗi kết nối máy chủ xác thực!';
+            errorEl.style.display = 'block';
+          }
+        }
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.innerText = '🔐 ĐĂNG NHẬP VÀO HỆ THỐNG';
         }
-      }
-
-      saveAdminSession(authResult.staff, authResult.role);
-      unlockAdminApp(authResult.staff, authResult.role);
-      showToast(`Đăng nhập thành công! Chào mừng ${authResult.staff.name} (${authResult.role})`, 'success');
-      renderStaffTable();
-      if (typeof fetchServerOrders === 'function') {
-        fetchServerOrders(false);
       }
     }
 
@@ -5782,6 +5867,56 @@
       } catch (err) {
         console.warn('Web Audio chime could not play:', err);
       }
+    }
+
+    function playAudioNotification() {
+      try {
+        playNewOrderSound();
+      } catch (err) {
+        console.warn('Audio chime error:', err);
+      }
+    }
+
+    // Auto unlock AudioContext on first user interaction with the dashboard
+    document.addEventListener('click', () => {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass && !audioCtx) {
+          audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {}
+    }, { passive: true });
+
+    let originalPageTitle = document.title || 'Yến Sào Hà Mi — Quản Trị Hệ Thống';
+    let titleBlinkInterval = null;
+    function triggerOrderTitleNotification(orderId) {
+      if (titleBlinkInterval) clearInterval(titleBlinkInterval);
+      let flag = false;
+      titleBlinkInterval = setInterval(() => {
+        document.title = flag ? `(1) 🛎️ ĐƠN MỚI #${orderId}!` : '🔥 Yến Sào Hà Mi — Có Đơn Hàng Mới!';
+        flag = !flag;
+      }, 1000);
+    }
+    window.addEventListener('focus', () => {
+      if (titleBlinkInterval) {
+        clearInterval(titleBlinkInterval);
+        titleBlinkInterval = null;
+        document.title = originalPageTitle;
+      }
+    });
+
+    function triggerBrowserPushNotification(order) {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`🛎️ ĐƠN ĐẶT MỚI #${order.id}`, {
+            body: `Khách: ${order.buyerName} (${order.buyerPhone}) • ${formatVND(order.orderTotal)} • Giao: ${order.deliveryDate || 'Hôm nay'}`,
+            icon: '/apple-icon.png'
+          });
+        }
+      } catch (e) {}
     }
 
     function updateAudioToggleBtn() {
@@ -6139,6 +6274,26 @@
       return { success: true, log: logEntry };
     }
 
+    async function syncNotificationSettingsFromServer() {
+      try {
+        const res = await fetch('/api/admin/cms', { headers: getAdminAuthHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (data.ok && data.notificationSettings) {
+          const s = data.notificationSettings;
+          if (!appState.notificationSettings) appState.notificationSettings = {};
+          if (typeof s.enableEmail === 'boolean') appState.notificationSettings.enableEmail = s.enableEmail;
+          if (s.notificationEmailTo) {
+            const parts = s.notificationEmailTo.split(/[,;]+/).map(p => p.trim());
+            appState.notificationSettings.emailTo1 = parts[0] || 'hieunv@yenhami.com';
+            appState.notificationSettings.emailTo2 = parts[1] || '';
+          }
+          if (s.emailWebhookUrl) appState.notificationSettings.webhookUrl = s.emailWebhookUrl;
+          if (s.resendApiKey) appState.notificationSettings.resendApiKey = s.resendApiKey;
+          loadNotificationSettingsForm();
+        }
+      } catch (e) {}
+    }
+
     function loadNotificationSettingsForm() {
       const cfg = appState.notificationSettings || {};
       const elSound = document.getElementById('cfgEnableSound');
@@ -6163,7 +6318,7 @@
       updateAudioToggleBtn();
     }
 
-    function handleSaveNotificationSettings(event) {
+    async function handleSaveNotificationSettings(event) {
       if (event) event.preventDefault();
       if (!appState.notificationSettings) appState.notificationSettings = {};
 
@@ -6183,14 +6338,16 @@
       if (elWebhook) appState.notificationSettings.webhookUrl = elWebhook.value.trim();
 
       const elResend = document.getElementById('cfgResendApiKey');
+      if (elResend) appState.notificationSettings.resendApiKey = elResend.value.trim();
+
       updateAudioToggleBtn();
       persistAppState();
 
-      // Sync to backend storage if available
+      // Sync to backend storage
       try {
-        fetch('/api/admin/cms', {
+        const res = await fetch('/api/admin/cms', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminAuthHeaders(),
           body: JSON.stringify({
             action: 'save_notification_settings',
             settings: {
@@ -6200,32 +6357,35 @@
               emailWebhookUrl: appState.notificationSettings.webhookUrl
             }
           })
-        }).catch(() => {});
-      } catch (e) {}
-
-      showToast('Đã lưu cấu hình thông báo & email thành công!', 'success');
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.ok) {
+          showToast('✅ Đã lưu và đồng bộ cấu hình Email & Thông báo lên máy chủ!', 'success');
+        } else {
+          showToast(`Đã lưu cấu hình (${data.errorMessage || 'Máy chủ ghi nhận'})`, 'info');
+        }
+      } catch (e) {
+        showToast('Đã lưu cấu hình thông báo vào bộ nhớ cục bộ!', 'info');
+      }
     }
 
-    function handleTestEmailNotification() {
-      const sampleOrder = appState.orders[0] || {
-        id: 'HM-1011',
-        createdAt: `${SIMULATED_TODAY} 11:30`,
-        source: 'Website',
-        buyerName: 'Khách hàng thử nghiệm',
-        buyerPhone: '0901234567',
-        recipientName: '',
-        items: [{ productId: 'p1', quantity: 2, unitPrice: 185000 }],
-        discount: 0,
-        shippingFee: 20000,
-        status: 'pending',
-        notes: 'Giao nhanh trước 12h'
-      };
-
-      const res = sendOrderEmailNotification(sampleOrder);
-      if (res.success) {
-        showToast(`Đã gửi thử nghiệm Email thông báo tới ${appState.notificationSettings.emailTo1 || 'hieunv@yenhami.com'}!`, 'success');
-      } else {
-        showToast('Không thể gửi thử do tính năng Email đang tắt', 'error');
+    async function handleTestEmailNotification() {
+      showToast('⏳ Đang gửi thử nghiệm thông báo từ máy chủ...', 'info');
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({ action: 'test_notification' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) {
+          const detail = data.result?.detail || 'Đã gửi thông báo thử nghiệm thành công!';
+          showToast(`✅ ${detail}`, 'success');
+        } else {
+          showToast(`❌ ${data.errorMessage || 'Không thể gửi thử thông báo'}`, 'error');
+        }
+      } catch (e) {
+        showToast('Lỗi kết nối máy chủ gửi thử thông báo.', 'error');
       }
     }
 
@@ -6523,7 +6683,7 @@
         }
       });
 
-      // Auto-poll orders every 15s when authenticated
+      // Auto-poll orders every 10s when authenticated
       setInterval(() => {
         const gateScreen = document.getElementById('authGateScreen');
         if (gateScreen && gateScreen.style.display === 'none') {
@@ -6531,7 +6691,7 @@
             fetchServerOrders(true);
           }
         }
-      }, 15000);
+      }, 10000);
 
       if (window.lucide) lucide.createIcons();
     });

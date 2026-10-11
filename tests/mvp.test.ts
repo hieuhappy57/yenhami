@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createStaff } from "../db/staff-repository";
 import {
   calculateServerQuote,
   getDeliverySlots,
@@ -322,7 +323,8 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
     assert.equal(eveningBefore.remainingBowls, 8); // 12 - 4 = 8
 
     // Verify staff credentials work
-    const staff = verifyStaffCredentials("hami_staff", "HaMi@2026!");
+    createStaff({ username: "test-ops", displayName: "Test Ops", roles: ["OWNER"], password: "IsolatedTest-Only-4729" });
+    const staff = verifyStaffCredentials("test-ops", "IsolatedTest-Only-4729");
     assert.notEqual(staff, null);
 
     // Staff cancels order -> capacity on cancelTestDate must return to 12
