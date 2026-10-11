@@ -1,14 +1,15 @@
 # Admin feature audit — 2026-10-11
 
-Code revision: `39f3715`. Scope: current admin UI, order pipeline, staff/auth, dashboard/customers, CMS and notifications. This is a release review, not a production acceptance test.
+Production deployment verified on Vercel: `dpl_Fzmp9NYFmE8cDCziJ8p57Wda7iM4` (`yenhami.com`, READY), Git commit `68c22c3`. That commit adds documentation only; application code is the preceding `39f3715`. Scope: current admin UI, order pipeline, staff/auth, dashboard/customers, CMS and notifications. This is a release review, not a production acceptance test.
 
 ## Evidence and coverage
 
 - `npm test`: 75/75 passed. `npm run lint` (`tsc --noEmit`): passed.
-- Browser smoke on the isolated `localhost:3020` demo: all 10 visible admin views opened (overview, orders, kitchen, customers, products, posts, jobs, site, staff, notification settings); no browser console errors were captured during navigation. No shared demo or production record was written in this audit.
+- Browser smoke on the isolated `localhost:3020` demo: all 10 visible admin views opened (overview, orders, kitchen, customers, products, posts, jobs, site, staff, notification settings); no browser console errors were captured during navigation.
+- Browser smoke on the authenticated production admin tab at `https://yenhami.com/admin`: all 10 views opened and no browser console errors were captured during navigation. A fresh unauthenticated session at `/admin.html` displayed the login gate. No production record was written in this audit.
 - Order specialist ran 13 isolated tests and reproduced two notification HTTP sends for one order using temporary SQLite and a fake webhook.
 - Auth/dashboard specialist ran 22 focused tests. The defects below are integration gaps not exercised by those passing tests.
-- Production deployment, actual provider delivery, cross-instance behavior, and every form mutation were not exercised. Passing unit/static tests and view navigation do not establish that every admin operation works.
+- Actual provider delivery, production write workflows, cross-instance behavior, and every form mutation were not exercised. Passing unit/static tests and view navigation do not establish that every admin operation works.
 
 ## Release blockers
 
@@ -39,4 +40,4 @@ Code revision: `39f3715`. Scope: current admin UI, order pipeline, staff/auth, d
 4. Align role UI with server authorization, remove sensitive browser cache, correct customer identity and Vietnam date grouping.
 5. Re-run unit tests, typecheck, isolated end-to-end workflows for all roles/forms, then smoke test a preview deployment before any production release.
 
-Release assessment: **not ready for production promotion** at this revision. No production deploy or production-data mutation was performed.
+Release assessment: **current production release has unresolved code-level blockers**. Production UI navigation passed, but those blockers have not been repaired or cleared by production end-to-end tests. No production deploy or production-data mutation was performed.
