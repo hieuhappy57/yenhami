@@ -56,6 +56,7 @@ function ensureSchema() {
   const names = new Set(columns.map((column) => column.name));
   if (!names.has("email")) db.exec("ALTER TABLE staff_users ADD COLUMN email TEXT");
   if (!names.has("updated_at")) db.exec("ALTER TABLE staff_users ADD COLUMN updated_at TEXT");
+  if (!names.has("auth_version")) db.exec("ALTER TABLE staff_users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1");
   db.prepare("UPDATE staff_users SET updated_at = COALESCE(updated_at, created_at)").run();
   db.prepare(`
     INSERT OR IGNORE INTO staff_roles (staff_id, role)
@@ -190,7 +191,8 @@ export function createStaffSession(staffId: string): { token: string; expiresAt:
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
   const randomPart = crypto.randomBytes(16).toString("base64url");
-  const payload = JSON.stringify({ staffId, expiresAt, v: String(staff?.updated_at || staff?.created_at || ""), r: randomPart });
+  const authVersion = Number(staff?.auth_version || 1);
+  const payload = JSON.stringify({ staffId, expiresAt, v: authVersion, r: randomPart });
   const data = Buffer.from(payload).toString("base64url");
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
   const token = `${data}.${sig}`;
@@ -223,12 +225,12 @@ export function getStaffBySessionToken(token: string): PublicStaff | null {
       try {
         const expectedSig = crypto.createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
         if (Buffer.byteLength(sig) === Buffer.byteLength(expectedSig) && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
-          const parsed = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as { staffId: string; expiresAt: string; v: string };
+          const parsed = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as { staffId: string; expiresAt: string; v: number };
           if (parsed && parsed.expiresAt > nowIso && parsed.staffId) {
             const userRow = db.prepare("SELECT * FROM staff_users WHERE id = ? AND is_active = 1").get(parsed.staffId) as Record<string, unknown> | undefined;
             if (userRow) {
-              const currentV = String(userRow.updated_at || userRow.created_at || "");
-              if (currentV === parsed.v) {
+              const currentV = Number(userRow.auth_version || 1);
+              if (currentV === Number(parsed.v || 1)) {
                 try {
                   db.prepare("INSERT OR IGNORE INTO staff_sessions (token_hash, staff_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(tHash, parsed.staffId, parsed.expiresAt, nowIso);
                 } catch {}
@@ -296,7 +298,7 @@ export function updateStaff(staffId: string, input: { username?: string; email?:
       const activeOwnerCount = (db.prepare("SELECT COUNT(DISTINCT u.id) AS count FROM staff_users u JOIN staff_roles r ON r.staff_id = u.id WHERE u.is_active = 1 AND r.role = 'OWNER'").get() as { count: number }).count;
       if (activeOwnerCount <= 1) throw new Error("Không thể vô hiệu hóa hoặc hạ quyền chủ sở hữu đang hoạt động cuối cùng.");
     }
-    db.prepare("UPDATE staff_users SET username = ?, email = ?, display_name = ?, role = ?, is_active = ?, password_hash = COALESCE(?, password_hash), updated_at = ? WHERE id = ?").run(username, input.email === undefined ? current.email : input.email?.trim().toLowerCase() || null, displayName, roles[0], isActive ? 1 : 0, input.password === undefined ? null : hashStaffPassword(input.password), now, staffId);
+    db.prepare("UPDATE staff_users SET username = ?, email = ?, display_name = ?, role = ?, is_active = ?, password_hash = COALESCE(?, password_hash), updated_at = ?, auth_version = COALESCE(auth_version, 1) + 1 WHERE id = ?").run(username, input.email === undefined ? current.email : input.email?.trim().toLowerCase() || null, displayName, roles[0], isActive ? 1 : 0, input.password === undefined ? null : hashStaffPassword(input.password), now, staffId);
     db.prepare("DELETE FROM staff_roles WHERE staff_id = ?").run(staffId);
     const addRole = db.prepare("INSERT INTO staff_roles (staff_id, role) VALUES (?, ?)");
     roles.forEach((role) => addRole.run(staffId, role));
