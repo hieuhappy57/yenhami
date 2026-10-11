@@ -101,8 +101,26 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = SEO_CONFIG.analytics.gaId || "G-6ZNNFJHFSX";
+
   return (
     <html lang="vi" className={`${plusJakarta.variable} ${brandSerif.variable} ${beVietnamPro.variable}`}>
+      <head>
+        {/* Google tag (gtag.js) */}
+        {gaId && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '${gaId}');`,
+              }}
+            />
+          </>
+        )}
+      </head>
       <body className="min-h-screen flex flex-col bg-white text-[#2B433A] font-sans antialiased selection:bg-[#155132] selection:text-[#FFFCF4]">
         <OrganizationAndLocalBusinessJsonLd />
         <AnalyticsScripts />
