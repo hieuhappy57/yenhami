@@ -2651,7 +2651,7 @@
                 </div>
                 <div style="margin-top: 16px;">
                   <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    Lưu toàn bộ thay đổi Giao diện vào Demo
+                    Lưu toàn bộ thay đổi Giao diện
                   </button>
                 </div>
               </div>
@@ -2975,15 +2975,15 @@
           </div>
           <div class="form-group">
             <label for="mBuyerName">Tên người mua *</label>
-            <input type="text" id="mBuyerName" class="form-control" placeholder="Ví dụ: Nguyễn Văn Demo" required />
+            <input type="text" id="mBuyerName" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required />
           </div>
           <div class="form-group">
-            <label for="mBuyerPhone">Số điện thoại mẫu *</label>
-            <input type="text" id="mBuyerPhone" class="form-control" value="SĐT mẫu 0900-DEMO-99" required />
+            <label for="mBuyerPhone">Số điện thoại *</label>
+            <input type="text" id="mBuyerPhone" class="form-control" placeholder="Ví dụ: 0905123456" required />
           </div>
           <div class="form-group">
             <label for="mRecipientName">Tên người nhận (Để trống nếu chính người mua nhận)</label>
-            <input type="text" id="mRecipientName" class="form-control" placeholder="Ví dụ: Bà ngoại Nguyễn Thị Mẫu" />
+            <input type="text" id="mRecipientName" class="form-control" placeholder="Ví dụ: Cô Thu Hà" />
           </div>
           <div class="form-group">
             <label for="mProduct">Sản phẩm *</label>
@@ -3003,7 +3003,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn" onclick="closeDialog('manualOrderModal')">Huỷ</button>
-          <button type="submit" class="btn btn-primary">Lưu vào demo</button>
+          <button type="submit" class="btn btn-primary">Ghi nhận đơn hàng</button>
         </div>
       </form>
     </div>
@@ -3588,7 +3588,7 @@
           channel: 'EMAIL',
           recipient: 'hieunv@yenhami.com, vietdh1985@gmail.com',
           orderId: 'HM-1009',
-          subject: '[Yến Sào Hà Mi] Đơn đặt món mới #HM-1009 — Ngô Quỳnh Demo I (495.000đ)',
+          subject: '[Yến Sào Hà Mi] Đơn đặt món mới #HM-1009 — Ngô Quỳnh Anh (495.000đ)',
           status: 'SENT',
           detail: 'Đã gửi thông báo đơn hàng thành công qua Email (Mô phỏng)'
         }
@@ -3875,7 +3875,7 @@
         return;
       }
       if ((Date.parse(end.value) - Date.parse(start.value)) / 86400000 > 30) {
-        showToast('Demo hỗ trợ khoảng ngày tối đa 31 ngày', 'error');
+        showToast('Hệ thống hỗ trợ lọc khoảng ngày tối đa 31 ngày', 'error');
         return;
       }
       const inPeriod = date => {
@@ -4686,7 +4686,7 @@
                   <option value="Tiền mặt">Tiền mặt</option>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary btn-sm" style="margin-bottom: 2px;">Lưu vào demo</button>
+              <button type="submit" class="btn btn-primary btn-sm" style="margin-bottom: 2px;">Ghi nhận thu tiền</button>
             </form>
           ` : ''}
 
@@ -4703,7 +4703,7 @@
                   </select>
                 </div>
                 <input type="text" id="refReason_${ord.id}" class="form-control" placeholder="Bắt buộc nhập lý do hoàn tiền..." required />
-                <button type="submit" class="btn btn-danger btn-sm" style="align-self: flex-start;">Lưu vào demo</button>
+                <button type="submit" class="btn btn-danger btn-sm" style="align-self: flex-start;">Xác nhận hoàn tiền</button>
               </form>
             </details>
           ` : ''}
@@ -5041,10 +5041,10 @@
 
       const p = appState.products[productId];
       if (!['OWNER','MANAGER','SALES'].includes(appState.currentRole) || !source || !buyerName || !p || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) {
-        showToast('Thông tin đơn mẫu không hợp lệ', 'error'); return;
+        showToast('Thông tin đơn hàng không hợp lệ', 'error'); return;
       }
       const newOrder = {
-        id: `DEMO-${appState.orders.length + 1}`,
+        id: `HM-MANUAL-${Date.now().toString().slice(-6)}`,
         createdAt: `${SIMULATED_TODAY} 11:30`,
         completedAt: null,
         source,
@@ -5061,7 +5061,7 @@
 
       appState.orders.unshift(newOrder);
       closeDialog('manualOrderModal');
-      showToast(`Đã tạo đơn mẫu ${newOrder.id} thành công!`, 'success');
+      showToast(`Đã tạo đơn hàng ${newOrder.id} thành công!`, 'success');
       playNewOrderSound();
       sendOrderEmailNotification(newOrder);
       renderNotificationBadge();
@@ -5297,7 +5297,7 @@
         appState.products[pId].category = document.getElementById('editProductCategory').value.trim();
         appState.products[pId].price = parseInt(document.getElementById('editProductPrice').value, 10) || 0;
       }
-      showToast('Đã lưu thông tin sản phẩm vào demo', 'success');
+      showToast('Đã lưu thông tin sản phẩm thành công', 'success');
       closeDialog('editProductModal');
       renderProductsTable();
     }
@@ -5646,7 +5646,7 @@
     function deleteJob(jobId) {
       if (window.confirm('Bạn có chắc chắn muốn xóa tin tuyển dụng này?')) {
         appState.jobs = appState.jobs.filter(j => j.id !== jobId);
-        showToast('Đã xóa tin tuyển dụng khỏi demo', 'info');
+        showToast('Đã xóa tin tuyển dụng thành công', 'info');
         renderJobsTable();
       }
     }
