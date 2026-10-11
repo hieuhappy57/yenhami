@@ -59,7 +59,7 @@ export const SEO_CONFIG = {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
   analytics: {
-    gaId: process.env.NEXT_PUBLIC_GA_ID || "",
+    gaId: process.env.NEXT_PUBLIC_GA_ID || "G-6ZNNFJHFSX",
     gtmId: process.env.NEXT_PUBLIC_GTM_ID || "",
     fbPixelId: process.env.NEXT_PUBLIC_FB_PIXEL_ID || "",
   },
