@@ -69,7 +69,11 @@ export async function POST(request: Request) {
       );
     }
 
-    await syncDbFromCloud(true);
+    try {
+      await syncDbFromCloud(false);
+    } catch (syncErr) {
+      console.warn("Pre-order cloud sync warning:", syncErr);
+    }
 
     const body = await request.json();
     const res = submitOrderRequest(body);
@@ -80,11 +84,16 @@ export async function POST(request: Request) {
       } catch (notifErr) {
         console.error("Order notification error:", notifErr);
       }
-      await syncDbToCloud();
+      try {
+        await syncDbToCloud();
+      } catch (cloudErr) {
+        console.warn("Post-order cloud sync warning:", cloudErr);
+      }
     }
 
     return NextResponse.json(res, { status: res.ok ? 200 : 400 });
-  } catch {
+  } catch (error) {
+    console.error("Order submit exception:", error);
     return NextResponse.json(
       {
         ok: false,

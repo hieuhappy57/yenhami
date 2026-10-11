@@ -260,6 +260,13 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS staff_roles (
+      staff_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('OWNER','MANAGER','SALES','KITCHEN','MARKETING')),
+      PRIMARY KEY (staff_id, role),
+      FOREIGN KEY (staff_id) REFERENCES staff_users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS order_status_history (
       id TEXT PRIMARY KEY,
       order_request_id TEXT NOT NULL,
@@ -2813,8 +2820,6 @@ const CLOUD_TABLES = [
   "posts",
   "job_postings",
   "notification_logs",
-  "staff_users",
-  "staff_roles",
 ] as const;
 
 let lastCloudSyncAtMs = 0;
@@ -3163,10 +3168,14 @@ function buildSnapshotsFromLocalSqlite(): {
   const db = getSqliteDb();
   const tables: Record<string, Record<string, unknown>[]> = {};
   for (const table of CLOUD_TABLES) {
-    tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
-      string,
-      unknown
-    >[];
+    try {
+      tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
+        string,
+        unknown
+      >[];
+    } catch {
+      tables[table] = [];
+    }
   }
   return {
     version: 1,
