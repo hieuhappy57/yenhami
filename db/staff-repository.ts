@@ -182,24 +182,67 @@ function tokenHash(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+const SESSION_SECRET = process.env.HAMI_SESSION_SECRET || "hami-production-staff-session-salt-2026";
+
 export function createStaffSession(staffId: string): { token: string; expiresAt: string } {
   const db = ensureSchema();
-  const token = crypto.randomBytes(32).toString("base64url");
+  const staff = db.prepare("SELECT * FROM staff_users WHERE id = ?").get(staffId) as Record<string, unknown> | undefined;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
+  const randomPart = crypto.randomBytes(16).toString("base64url");
+  const payload = JSON.stringify({ staffId, expiresAt, v: String(staff?.updated_at || staff?.created_at || ""), r: randomPart });
+  const data = Buffer.from(payload).toString("base64url");
+  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
+  const token = `${data}.${sig}`;
+
   db.prepare("INSERT INTO staff_sessions (token_hash, staff_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(tokenHash(token), staffId, expiresAt, now.toISOString());
   return { token, expiresAt };
 }
 
 export function getStaffBySessionToken(token: string): PublicStaff | null {
   const db = ensureSchema();
-  const row = db.prepare(`
-    SELECT u.* FROM staff_sessions s JOIN staff_users u ON u.id = s.staff_id
-    WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.is_active = 1
-  `).get(tokenHash(token), new Date().toISOString()) as Record<string, unknown> | undefined;
-  if (!row) return null;
-  const roles = rolesFor(String(row.id));
-  return roles.length ? toPublicStaff(row, roles) : null;
+  const tHash = tokenHash(token);
+  const nowIso = new Date().toISOString();
+
+  const dbRow = db.prepare(`
+    SELECT u.*, s.revoked_at, s.expires_at AS session_expires_at FROM staff_sessions s JOIN staff_users u ON u.id = s.staff_id
+    WHERE s.token_hash = ?
+  `).get(tHash) as Record<string, unknown> | undefined;
+
+  if (dbRow) {
+    if (dbRow.revoked_at || String(dbRow.session_expires_at) <= nowIso || Number(dbRow.is_active) !== 1) {
+      return null;
+    }
+    const roles = rolesFor(String(dbRow.id));
+    return roles.length ? toPublicStaff(dbRow, roles) : null;
+  }
+
+  if (token && token.includes(".")) {
+    const [data, sig] = token.split(".");
+    if (data && sig) {
+      try {
+        const expectedSig = crypto.createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
+        if (Buffer.byteLength(sig) === Buffer.byteLength(expectedSig) && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+          const parsed = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as { staffId: string; expiresAt: string; v: string };
+          if (parsed && parsed.expiresAt > nowIso && parsed.staffId) {
+            const userRow = db.prepare("SELECT * FROM staff_users WHERE id = ? AND is_active = 1").get(parsed.staffId) as Record<string, unknown> | undefined;
+            if (userRow) {
+              const currentV = String(userRow.updated_at || userRow.created_at || "");
+              if (currentV === parsed.v) {
+                try {
+                  db.prepare("INSERT OR IGNORE INTO staff_sessions (token_hash, staff_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(tHash, parsed.staffId, parsed.expiresAt, nowIso);
+                } catch {}
+                const roles = rolesFor(String(userRow.id));
+                return roles.length ? toPublicStaff(userRow, roles) : null;
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  return null;
 }
 
 export function revokeStaffSession(token: string) {
