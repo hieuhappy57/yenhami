@@ -62,6 +62,17 @@ function ensureSchema() {
     SELECT id, CASE WHEN role = 'OPS_ADMIN' THEN 'OWNER' ELSE role END
     FROM staff_users WHERE role IN ('OWNER','MANAGER','SALES','KITCHEN','MARKETING','OPS_ADMIN')
   `).run();
+  try {
+    const legacyDefault = "4fb8e53366c3f2c1aa9ff72dd095ec5f68e514d0161652e3f33350460581035a";
+    const rows = db.prepare("SELECT id FROM staff_users WHERE password_hash = ?").all(legacyDefault) as Array<{ id: string }>;
+    if (rows.length > 0) {
+      const modernHash = hashStaffPassword("HaMi@2026!");
+      const stmt = db.prepare("UPDATE staff_users SET password_hash = ? WHERE id = ?");
+      for (const r of rows) {
+        stmt.run(modernHash, r.id);
+      }
+    }
+  } catch {}
   schemaReadyForPath = dbPathKey();
   return db;
 }
@@ -124,7 +135,20 @@ export function verifyStaffPassword(password: string, encoded: string): boolean 
 export function authenticateStaff(username: string, password: string): PublicStaff | null {
   const db = ensureSchema();
   const row = db.prepare("SELECT * FROM staff_users WHERE LOWER(username) = ? AND is_active = 1").get(normalizeUsername(username)) as Record<string, unknown> | undefined;
-  if (!row || !verifyStaffPassword(password, String(row.password_hash))) return null;
+  if (!row) return null;
+  const currentHash = String(row.password_hash);
+  let isValid = verifyStaffPassword(password, currentHash);
+  if (!isValid && typeof currentHash === "string" && !currentHash.startsWith("scrypt$v1$")) {
+    try {
+      const legacyCandidate = crypto.scryptSync(password, "hami-local-salt-v1", 32).toString("hex");
+      if (Buffer.byteLength(legacyCandidate) === Buffer.byteLength(currentHash) && crypto.timingSafeEqual(Buffer.from(legacyCandidate), Buffer.from(currentHash))) {
+        isValid = true;
+        const upgraded = hashStaffPassword(password);
+        db.prepare("UPDATE staff_users SET password_hash = ? WHERE id = ?").run(upgraded, String(row.id));
+      }
+    } catch {}
+  }
+  if (!isValid) return null;
   const roles = rolesFor(String(row.id));
   return roles.length ? toPublicStaff(row, roles) : null;
 }
