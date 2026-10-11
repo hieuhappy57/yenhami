@@ -12,6 +12,7 @@ mapServerOrderToUiOrder = function (serverOrder) {
   }));
   order.completedAt = serverOrder.completedAt || null;
   order.isTotalFinal = serverOrder.isTotalFinal;
+  if (serverOrder.orderPurpose === 'SELF') {order.recipientName='';order.recipientPhone='';}
   order.source = ({WEBSITE:'Website',ZALO:'Zalo',MESSENGER:'Messenger',PHONE:'Phone',STORE:'Store',OTHER:'Other'})[serverOrder.source] || 'Unknown';
   return order;
 };
@@ -53,16 +54,6 @@ openOrderDetail = function (orderId) {
       if (await sendOrderMutation(orderId,{...payload,idempotencyKey:orderPaymentRetries.get(signature)})) orderPaymentRetries.delete(signature);
     });
     content.appendChild(form);
-  } else if (order?.isTotalFinal === false && !['completed','cancelled'].includes(order.status)) {
-    const content = document.getElementById('orderDetailContent');
-    content.querySelector('form[onsubmit*="handleRecordCollection"]')?.remove();
-    const fee = document.createElement('form');
-    fee.innerHTML = '<p>Đơn chưa chốt phí giao. Xác nhận phí trước khi thu tiền.</p><label>Phí giao (VND)<input type="number" min="0" step="1" required class="form-control"></label><button class="btn btn-primary" type="submit">Chốt phí giao</button>';
-    fee.addEventListener('submit',event => {
-      event.preventDefault();
-      sendOrderMutation(orderId,{action:'delivery_fee',shippingFeeVnd:Number(fee.querySelector('input').value)});
-    });
-    content.appendChild(fee);
   }
   document.querySelectorAll('#orderDetailContent button').forEach(button => {
     const labels = {'Chuyển sang Bếp pha chế':'Chuyển bếp','Xuất giao vận chuyển':'Giao hàng','Xác nhận hoàn tất đơn':'Xác nhận thành công'};

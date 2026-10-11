@@ -51,8 +51,16 @@ test("admin demo dashboard uses completion date for sales and ledger date for re
   assert.equal(elements.kpiNewRequests.innerText, 0);
 });
 
-test("admin demo collection supports integer VND amounts without step offset", () => {
-  assert.match(html, /id="colAmount_\$\{ord.id\}"[^>]*step="1"/);
+test("admin order details retain only the agreed confirmation flow", () => {
+  const details = html.slice(html.indexOf('function openOrderDetail('),html.indexOf('async function progressOrderStatus('));
+  assert.ok(!details.includes('Lịch sử sổ quỹ'));
+  assert.ok(!details.includes('handleRecordRefund'));
+  assert.ok(!details.includes('handleRecordCollection'));
+  assert.ok(!details.includes('promptCancelOrder'));
+  assert.ok(!html.includes('id="orderDetailResendEmailBtn"'));
+  const mutations = readFileSync('public/admin-order-mutations.js','utf8');
+  assert.match(mutations, /name="shippingFee"[^>]*step="1"/);
+  assert.ok(mutations.includes('Xác nhận đơn &amp; ghi nhận thu'));
 });
 
 test("admin demo preserves CMS tabs: products, posts, jobs, site with appropriate role access", () => {
@@ -98,7 +106,7 @@ test("admin demo provides order notifications, audio bell, web push and email di
   assert.ok(html.includes('id="floatingOrderBanner"'), "Missing floatingOrderBanner");
   assert.ok(html.includes('id="previewEmailModal"'), "Missing previewEmailModal");
   assert.ok(html.includes('id="previewEmailIframe"'), "Missing previewEmailIframe");
-  assert.ok(html.includes('id="orderDetailResendEmailBtn"'), "Missing orderDetailResendEmailBtn");
+  assert.ok(!html.includes('id="orderDetailResendEmailBtn"'), "Order details must not expose manual email resend");
 
   // Notification settings controls
   assert.ok(html.includes('id="cfgEnableSound"'), "Missing cfgEnableSound");
