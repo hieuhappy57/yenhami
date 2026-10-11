@@ -21,6 +21,13 @@ export function guardMutationOrigin(request: Request): boolean {
   try {
     const requestUrl = new URL(request.url);
     const originUrl = new URL(origin);
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const forwardedProto = request.headers.get("x-forwarded-proto");
+    if (forwardedHost && originUrl.host === forwardedHost) {
+      if (!forwardedProto || originUrl.protocol.replace(":", "") === forwardedProto) {
+        return true;
+      }
+    }
     return originUrl.protocol === requestUrl.protocol && originUrl.host === requestUrl.host;
   } catch { return false; }
 }

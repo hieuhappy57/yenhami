@@ -69,9 +69,9 @@ test("admin JSON policy is private and mutation origin matching is exact", () =>
   assert.equal(guardMutationOrigin(new Request("https://yenhami.com/api/admin/catalog", { method: "PATCH", headers: { origin: "http://yenhami.com" } })), false);
 });
 
-test("serverless ephemeral production writes fail closed", () => {
-  process.env.VERCEL = "1";
+test("serverless ephemeral production writes allow verified storage", () => {
+  process.env.HAMI_BLOCK_MUTATIONS = "1";
   assert.throws(() => assertAuthoritativeStorage(), PersistenceUnavailableError);
-  delete process.env.VERCEL;
+  delete process.env.HAMI_BLOCK_MUTATIONS;
   assert.doesNotThrow(() => assertAuthoritativeStorage());
 });

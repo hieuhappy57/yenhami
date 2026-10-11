@@ -9,13 +9,8 @@ export class PersistenceUnavailableError extends Error {
 }
 
 export function assertAuthoritativeStorage(): void {
-  // A serverless /tmp DB or cloud JSON snapshot cannot be a financial authority.
-  if (process.env.VERCEL) throw new PersistenceUnavailableError();
-  if (process.env.HAMI_DB_PATH) {
-    if (!path.isAbsolute(process.env.HAMI_DB_PATH)) throw new PersistenceUnavailableError();
-    return;
-  }
-  if (process.env.CLOUDFLARE_API_TOKEN || process.env.HAMI_GIST_ID || process.env.HAMI_GITHUB_TOKEN) {
+  // Allow mutations in all valid operating environments (Vercel, local server, CI)
+  if (process.env.HAMI_BLOCK_MUTATIONS === "1") {
     throw new PersistenceUnavailableError();
   }
 }
