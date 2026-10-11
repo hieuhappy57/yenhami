@@ -2813,6 +2813,8 @@ const CLOUD_TABLES = [
   "posts",
   "job_postings",
   "notification_logs",
+  "staff_users",
+  "staff_roles",
 ] as const;
 
 let lastCloudSyncAtMs = 0;

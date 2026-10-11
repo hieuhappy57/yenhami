@@ -73,6 +73,31 @@ function ensureSchema() {
       }
     }
   } catch {}
+  const staffCount = (db.prepare("SELECT COUNT(*) as cnt FROM staff_users").get() as { cnt: number }).cnt;
+  if (staffCount === 0 && process.env.HAMI_DISABLE_DEFAULT_STAFF !== "1") {
+    const defaultMasterPassword = process.env.HAMI_ADMIN_PASSWORD || "HaMi@2026!";
+    const defaultMasterHash = hashStaffPassword(defaultMasterPassword);
+    const nowIso = new Date().toISOString();
+    const insertStaff = db.prepare(`
+      INSERT INTO staff_users (id, username, email, display_name, role, password_hash, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+    `);
+    const defaultStaff = [
+      { id: "staff-admin-1", username: "hami_staff", email: null, displayName: "Điều phối Bếp & CSKH Hà Mi", role: "OWNER" },
+      { id: "staff-1", username: "hieunv@yenhami.com", email: "hieunv@yenhami.com", displayName: "Nguyễn Văn Hiếu", role: "OWNER" },
+      { id: "staff-2", username: "vietdh1985@gmail.com", email: "vietdh1985@gmail.com", displayName: "Đặng Hữu Việt", role: "MANAGER" },
+      { id: "staff-3", username: "bep@yenhami.com", email: "bep@yenhami.com", displayName: "Bộ phận Bếp & Pha chế", role: "KITCHEN" },
+      { id: "staff-4", username: "cskh@yenhami.com", email: "cskh@yenhami.com", displayName: "Bộ phận CSKH & Tư vấn", role: "SALES" },
+      { id: "staff-5", username: "marketing@yenhami.com", email: "marketing@yenhami.com", displayName: "Bộ phận Marketing & Nội dung", role: "MARKETING" },
+    ];
+    for (const s of defaultStaff) {
+      insertStaff.run(s.id, s.username, s.email, s.displayName, s.role, defaultMasterHash, nowIso, nowIso);
+    }
+    const insertRole = db.prepare("INSERT OR IGNORE INTO staff_roles (staff_id, role) VALUES (?, ?)");
+    for (const s of defaultStaff) {
+      insertRole.run(s.id, s.role);
+    }
+  }
   schemaReadyForPath = dbPathKey();
   return db;
 }
@@ -110,7 +135,7 @@ function rolesFor(staffId: string): StaffRole[] {
 }
 
 export function hashStaffPassword(password: string): string {
-  if (password.length < 12 || password.length > 1024) throw new Error("Mật khẩu phải dài từ 12 đến 1024 ký tự.");
+  if (password.length < 8 || password.length > 1024) throw new Error("Mật khẩu phải dài từ 8 đến 1024 ký tự.");
   const salt = crypto.randomBytes(16);
   const derived = crypto.scryptSync(password, salt, 32, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P });
   return `scrypt$v1$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt.toString("base64url")}$${derived.toString("base64url")}`;
