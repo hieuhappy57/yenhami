@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listAllOrderRequestsForStaff, recordPaymentEntryByStaff, submitOrderRequest, syncDbFromCloud, syncDbToCloud, updateOrderStatusByStaff } from "@/db";
+import { finalizeDeliveryFeeByStaff, listAllOrderRequestsForStaff, recordPaymentEntryByStaff, submitOrderRequest, syncDbFromCloud, syncDbToCloud, updateOrderStatusByStaff } from "@/db";
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, staffCan } from "@/lib/staff-auth";
@@ -44,6 +44,12 @@ export async function PATCH(request: Request) {
     if (!referenceCode || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return fail("Mã đơn hoặc phiên bản không hợp lệ.", 400, "VALIDATION_ERROR");
     const result = await withAuthoritativeMutation(async () => {
       await syncDbFromCloud(true);
+      if (action === "delivery_fee") {
+        if (!staffCan(staff, "orders.write")) return {ok:false,forbidden:true,errorMessage:"Bạn không có quyền chốt phí giao."};
+        const updated = finalizeDeliveryFeeByStaff({referenceCode,expectedVersion,shippingFeeVnd:Number(body.shippingFeeVnd)});
+        if (updated.ok) await syncDbToCloud();
+        return updated;
+      }
       if (action === "status") {
         const newOrderStatus = String(body.newOrderStatus || "") as OrderStatus;
         if (!ORDER_STATUSES.includes(newOrderStatus)) return { ok: false, errorCode: "INVALID_STATUS", errorMessage: "Trạng thái đơn không hợp lệ." };

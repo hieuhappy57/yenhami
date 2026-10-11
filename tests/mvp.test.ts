@@ -6,6 +6,8 @@ import os from "node:os";
 import { createStaff } from "../db/staff-repository";
 import {
   calculateServerQuote,
+  finalizeDeliveryFeeByStaff,
+  recordPaymentEntryByStaff,
   getDeliverySlots,
   getOrderRequestByReference,
   isValidCalendarDateString,
@@ -35,6 +37,26 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
 
   // Fixed reference time: 2026-10-06 08:15 Asia/Ho_Chi_Minh (01:15 UTC)
   const fixedNow = new Date("2026-10-06T01:15:00.000Z");
+
+  it("finalizes a pending delivery fee before collecting and rejects stale or repeated changes", () => {
+    const created = submitOrderRequest({
+      idempotencyKey:"qa-delivery-fee-finalize",orderPurpose:"SELF",buyerName:"QA Fee",buyerPhone:"0900000004",addressDetail:"QA Cam Le",
+      zoneId:"zone-cam-le-lien-chieu",requestedDate:"2026-10-20",slotId:"slot-morning",now:fixedNow,
+      items:[{productId:"prod-thanh-nguyen",quantity:1}],
+    });
+    assert.equal(created.ok,true);
+    const referenceCode = created.order!.referenceCode;
+    const payment = {referenceCode,expectedVersion:1,type:"COLLECTION" as const,amountVnd:100,method:"CASH" as const,idempotencyKey:"qa-fee-collection",staffUsername:"qa"};
+    assert.equal(recordPaymentEntryByStaff(payment).ok,false);
+    assert.equal(finalizeDeliveryFeeByStaff({referenceCode,expectedVersion:1,shippingFeeVnd:-1}).ok,false);
+    const finalized = finalizeDeliveryFeeByStaff({referenceCode,expectedVersion:1,shippingFeeVnd:20000});
+    assert.equal(finalized.ok,true);
+    assert.equal(finalized.order!.totalVnd,315000);
+    assert.equal(finalized.order!.isTotalFinal,true);
+    assert.equal(finalizeDeliveryFeeByStaff({referenceCode,expectedVersion:1,shippingFeeVnd:30000}).errorCode,"VERSION_CONFLICT");
+    assert.equal(finalizeDeliveryFeeByStaff({referenceCode,expectedVersion:2,shippingFeeVnd:30000}).ok,false);
+    assert.equal(recordPaymentEntryByStaff({...payment,expectedVersion:2}).ok,true);
+  });
 
   it("1. Rejects client unit-price tampering and calculates authoritative server quote", () => {
     const tampered = calculateServerQuote({

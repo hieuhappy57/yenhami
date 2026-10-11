@@ -4398,7 +4398,7 @@
     let isFetchingOrders = false;
     let hasInitialOrderLoadCompleted = false;
     async function fetchServerOrders(silent = false) {
-      if (isFetchingOrders) return;
+      if (isFetchingOrders || (typeof orderMutationPending !== 'undefined' && orderMutationPending.size)) return;
       isFetchingOrders = true;
       const refreshBtn = document.getElementById('btnRefreshOrders');
       if (refreshBtn && !silent) {
@@ -4421,6 +4421,7 @@
         }
         const data = await res.json();
         if (data.ok && Array.isArray(data.orders)) {
+          if (typeof orderMutationPending !== 'undefined' && orderMutationPending.size) return;
           const serverOrders = data.orders.map(mapServerOrderToUiOrder);
 
           const isInitialLoad = !hasInitialOrderLoadCompleted;
@@ -7016,5 +7017,6 @@
       if (window.lucide) lucide.createIcons();
     });
   </script>
+  <script src="/admin-order-mutations.js"></script>
 </body>
 </html>

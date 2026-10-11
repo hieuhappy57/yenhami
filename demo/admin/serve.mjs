@@ -32,11 +32,12 @@ const server = http.createServer(async (req, res) => {
   const assetPath = url.pathname.startsWith('/assets/') ? url.pathname.slice(7) : null;
   const file = url.pathname === '/' || url.pathname === '/index.html'
     ? path.join(root, 'index.html')
+    : url.pathname === '/admin-order-mutations.js' ? path.join(publicRoot, 'admin-order-mutations.js')
     : assetPath && assets.has(assetPath) ? path.join(publicRoot, assetPath) : null;
   if (!file) { res.writeHead(404).end('Not found'); return; }
   try {
     const data = await readFile(file);
-    const type = file.endsWith('.webp')
+    const type = file.endsWith('.js') ? 'text/javascript; charset=utf-8' : file.endsWith('.webp')
       ? 'image/webp'
       : file.endsWith('.png')
       ? 'image/png'

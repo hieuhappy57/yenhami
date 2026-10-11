@@ -1757,6 +1757,26 @@ export function listAllOrderRequestsForStaff() {
     .filter((o): o is NonNullable<typeof o> => o !== null);
 }
 
+export function finalizeDeliveryFeeByStaff(params: {referenceCode: string; expectedVersion: number; shippingFeeVnd: number}) {
+  if (!Number.isSafeInteger(params.shippingFeeVnd) || params.shippingFeeVnd < 0) {
+    return {ok:false,errorCode:"INVALID_AMOUNT",errorMessage:"Phí giao phải là số nguyên VND không âm."};
+  }
+  const db = getSqliteDb();
+  const reference = params.referenceCode.trim().toUpperCase();
+  const row = db.prepare("SELECT * FROM order_requests WHERE reference_code = ?").get(reference) as Record<string,unknown> | undefined;
+  if (!row) return {ok:false,errorCode:"ORDER_NOT_FOUND",errorMessage:"Không tìm thấy đơn."};
+  if (Number(row.row_version) !== params.expectedVersion) return {ok:false,errorCode:"VERSION_CONFLICT",errorMessage:"Đơn đã thay đổi. Vui lòng tải lại."};
+  if (Boolean(row.is_total_final) || ["COMPLETED","CANCELLED"].includes(String(row.order_status))) {
+    return {ok:false,errorCode:"INVALID_STATE",errorMessage:"Đơn đã chốt giá hoặc đã kết thúc."};
+  }
+  const result = db.prepare(`UPDATE order_requests SET shipping_fee_vnd = ?, total_vnd = subtotal_vnd + ?,
+    shipping_fee_note = 'Phí giao đã xác nhận', is_total_final = 1, row_version = row_version + 1,
+    updated_at = ? WHERE reference_code = ? AND row_version = ? AND is_total_final = 0`)
+    .run(params.shippingFeeVnd,params.shippingFeeVnd,new Date().toISOString(),reference,params.expectedVersion);
+  if (Number(result.changes) !== 1) return {ok:false,errorCode:"VERSION_CONFLICT",errorMessage:"Đơn đã thay đổi. Vui lòng tải lại."};
+  return {ok:true,order:getOrderRequestByReference({referenceCode:reference,isStaff:true})};
+}
+
 export function recordPaymentEntryByStaff(params: {
   referenceCode: string;
   type: PaymentEntryType;
