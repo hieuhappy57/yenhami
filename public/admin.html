@@ -2143,13 +2143,13 @@
               </div>
 
               <select id="dashPeriod" class="filter-select" aria-label="Kỳ báo cáo" onchange="updateDashboard()" style="display: none;">
-                <option value="7days">7 ngày qua (03 - 09/10)</option>
-                <option value="today">Hôm nay (09/10/2026)</option>
+                <option value="7days">7 ngày qua</option>
+                <option value="today">Hôm nay</option>
                 <option value="custom">Khoảng ngày</option>
               </select>
 
-              <input id="dashStart" class="filter-input" type="date" value="2026-10-03" aria-label="Từ ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
-              <input id="dashEnd" class="filter-input" type="date" value="2026-10-09" aria-label="Đến ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
+              <input id="dashStart" class="filter-input" type="date" aria-label="Từ ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
+              <input id="dashEnd" class="filter-input" type="date" aria-label="Đến ngày" onchange="document.getElementById('dashPeriod').value='custom';updateDashboard()" />
 
               <label class="filter-label" style="margin-left: 6px;">Kênh:</label>
               <select id="dashSource" class="filter-select" aria-label="Nguồn đơn" onchange="updateDashboard()">
@@ -3297,7 +3297,71 @@
 
   <script>
     /* --- 1. CONFIG & UTILS --- */
-    const SIMULATED_TODAY = '2026-10-09';
+    function getVietnamTodayIso() {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+        const part = t => parts.find(x => x.type === t)?.value;
+        return `${part('year')}-${part('month')}-${part('day')}`;
+      } catch (_) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    }
+
+    function getVietnamDaysAgoIso(daysAgo, baseIso) {
+      try {
+        const base = baseIso ? new Date(baseIso + 'T12:00:00+07:00') : new Date();
+        const target = new Date(base.getTime() - daysAgo * 86400000);
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(target);
+        const part = t => parts.find(x => x.type === t)?.value;
+        return `${part('year')}-${part('month')}-${part('day')}`;
+      } catch (_) {
+        const base = baseIso ? new Date(baseIso + 'T12:00:00+07:00') : new Date();
+        const target = new Date(base.getTime() - daysAgo * 86400000);
+        const y = target.getFullYear();
+        const m = String(target.getMonth() + 1).padStart(2, '0');
+        const d = String(target.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    }
+
+    function toIsoDateOnly(val) {
+      if (!val) return '';
+      if (typeof val === 'string') {
+        val = val.trim();
+        const isoMatch = val.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+        if (isoMatch) {
+          return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
+        }
+        const dmyMatch = val.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+        if (dmyMatch) {
+          return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+        }
+        const timeDmyMatch = val.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/);
+        if (timeDmyMatch) {
+          return `${timeDmyMatch[3]}-${timeDmyMatch[2].padStart(2, '0')}-${timeDmyMatch[1].padStart(2, '0')}`;
+        }
+      }
+      const parsed = new Date(val);
+      if (!isNaN(parsed.getTime())) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(parsed);
+          const part = t => parts.find(x => x.type === t)?.value;
+          return `${part('year')}-${part('month')}-${part('day')}`;
+        } catch (_) {
+          const y = parsed.getFullYear();
+          const m = String(parsed.getMonth() + 1).padStart(2, '0');
+          const d = String(parsed.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+      }
+      return '';
+    }
+
+    const SIMULATED_TODAY = getVietnamTodayIso();
 
     const PRODUCTS = {
       P1: {
@@ -3754,15 +3818,59 @@
 
     /* --- 4. DASHBOARD --- */
     function updateDashboard() {
-      const period = document.getElementById('dashPeriod').value;
-      const source = document.getElementById('dashSource').value;
+      const toIsoDate = typeof toIsoDateOnly === 'function' ? toIsoDateOnly : (val) => {
+        if (!val) return '';
+        if (typeof val === 'string') {
+          val = val.trim();
+          const isoMatch = val.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+          if (isoMatch) return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
+          const dmyMatch = val.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+          if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+          const timeDmyMatch = val.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/);
+          if (timeDmyMatch) return `${timeDmyMatch[3]}-${timeDmyMatch[2].padStart(2, '0')}-${timeDmyMatch[1].padStart(2, '0')}`;
+        }
+        const parsed = new Date(val);
+        if (!isNaN(parsed.getTime())) {
+          try {
+            const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(parsed);
+            const part = t => parts.find(x => x.type === t)?.value;
+            return `${part('year')}-${part('month')}-${part('day')}`;
+          } catch (_) {
+            const y = parsed.getFullYear();
+            const m = String(parsed.getMonth() + 1).padStart(2, '0');
+            const d = String(parsed.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          }
+        }
+        return '';
+      };
+
+      const getToday = () => {
+        if (typeof SIMULATED_TODAY !== 'undefined' && SIMULATED_TODAY) return SIMULATED_TODAY;
+        if (typeof getVietnamTodayIso === 'function') return getVietnamTodayIso();
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      };
+
+      const getDaysAgo = (daysAgo, baseIso) => {
+        if (typeof getVietnamDaysAgoIso === 'function') return getVietnamDaysAgoIso(daysAgo, baseIso);
+        const base = baseIso ? new Date(baseIso + 'T12:00:00Z') : new Date();
+        const target = new Date(base.getTime() - daysAgo * 86400000);
+        return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}-${String(target.getUTCDate()).padStart(2, '0')}`;
+      };
+
+      const todayIso = getToday();
+      const periodSelect = document.getElementById('dashPeriod');
+      const period = periodSelect ? periodSelect.value : '7days';
+      const sourceSelect = document.getElementById('dashSource');
+      const source = sourceSelect ? sourceSelect.value : 'ALL';
       const start = document.getElementById('dashStart');
       const end = document.getElementById('dashEnd');
-      if (period !== 'custom') {
-        start.value = period === 'today' ? SIMULATED_TODAY : '2026-10-03';
-        end.value = SIMULATED_TODAY;
+      if (start && end && (period !== 'custom' || (!start.value && !end.value))) {
+        start.value = period === 'today' ? todayIso : getDaysAgo(6, todayIso);
+        end.value = todayIso;
       }
-      if (!start.value || !end.value || start.value > end.value) {
+      if (!start || !end || !start.value || !end.value || start.value > end.value) {
         showToast('Khoảng ngày không hợp lệ', 'error');
         return;
       }
@@ -3770,8 +3878,11 @@
         showToast('Demo hỗ trợ khoảng ngày tối đa 31 ngày', 'error');
         return;
       }
-      const inPeriod = date => date && date.slice(0, 10) >= start.value && date.slice(0, 10) <= end.value;
-      const sourceOrders = appState.orders.filter(o => source === 'ALL' || o.source === source);
+      const inPeriod = date => {
+        const iso = toIsoDate(date);
+        return Boolean(iso && iso >= start.value && iso <= end.value);
+      };
+      const sourceOrders = (appState.orders || []).filter(o => source === 'ALL' || o.source === source);
 
       // Filter orders
       let filtered = sourceOrders.filter(ord => inPeriod(ord.createdAt));
@@ -3790,7 +3901,7 @@
 
       // Net collected: All ledger collections minus refunds within period regardless of completion
       let netCollectedSum = 0;
-      appState.orders.forEach(ord => {
+      (appState.orders || []).forEach(ord => {
         if (source !== 'ALL' && ord.source !== source) return;
         (ord.ledger || []).forEach(tx => {
           if (!inPeriod(tx.date)) return;
@@ -3799,21 +3910,32 @@
         });
       });
 
-      document.getElementById('kpiNewRequests').innerText = newRequests;
-      document.getElementById('kpiPending').innerText = inProgress;
-      document.getElementById('kpiCompleted').innerText = completedOrders.length;
-      document.getElementById('kpiSales').innerText = formatVND(completedSales);
-      document.getElementById('kpiNetCollected').innerText = formatVND(netCollectedSum);
-      document.getElementById('kpiCancelled').innerText = cancelled;
+      const elNew = document.getElementById('kpiNewRequests');
+      if (elNew) elNew.innerText = newRequests;
+      const elPend = document.getElementById('kpiPending');
+      if (elPend) elPend.innerText = inProgress;
+      const elComp = document.getElementById('kpiCompleted');
+      if (elComp) elComp.innerText = completedOrders.length;
+      const elSales = document.getElementById('kpiSales');
+      if (elSales) elSales.innerText = formatVND(completedSales);
+      const elNet = document.getElementById('kpiNetCollected');
+      if (elNet) elNet.innerText = formatVND(netCollectedSum);
+      const elCanc = document.getElementById('kpiCancelled');
+      if (elCanc) elCanc.innerText = cancelled;
 
       renderDailyChart(source);
       let summary = document.getElementById('sourceSummary');
       if (!summary) {
-        summary = document.createElement('div'); summary.id = 'sourceSummary'; summary.className = 'source-summary';
-        document.getElementById('chartBars').parentElement.appendChild(summary);
+        const chartParent = document.getElementById('chartBars')?.parentElement;
+        if (chartParent) {
+          summary = document.createElement('div'); summary.id = 'sourceSummary'; summary.className = 'source-summary';
+          chartParent.appendChild(summary);
+        }
       }
-      summary.innerHTML = ['Website','Zalo','Messenger','Phone','Store','Other'].map(s =>
-        `<span>${esc({Phone:'Điện thoại',Store:'Cửa hàng',Other:'Khác'}[s] || s)}: <strong>${filtered.filter(o=>o.source===s).length}</strong></span>`).join('');
+      if (summary) {
+        summary.innerHTML = ['Website','Zalo','Messenger','Phone','Store','Other'].map(s =>
+          `<span>${esc({Phone:'Điện thoại',Store:'Cửa hàng',Other:'Khác'}[s] || s)}: <strong>${filtered.filter(o=>o.source===s).length}</strong></span>`).join('');
+      }
 
       // Enhanced dashboard sections (guarded for node:vm test runner compatibility)
       if (typeof document !== 'undefined') {
@@ -3847,11 +3969,42 @@
     }
 
     function renderDailyChart(sourceFilter) {
+      const toIsoDate = typeof toIsoDateOnly === 'function' ? toIsoDateOnly : (val) => {
+        if (!val) return '';
+        if (typeof val === 'string') {
+          val = val.trim();
+          const isoMatch = val.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+          if (isoMatch) return `${isoMatch[1]}-${isoMatch[2].padStart(2, '0')}-${isoMatch[3].padStart(2, '0')}`;
+          const dmyMatch = val.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+          if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+          const timeDmyMatch = val.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/);
+          if (timeDmyMatch) return `${timeDmyMatch[3]}-${timeDmyMatch[2].padStart(2, '0')}-${timeDmyMatch[1].padStart(2, '0')}`;
+        }
+        const parsed = new Date(val);
+        if (!isNaN(parsed.getTime())) {
+          try {
+            const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(parsed);
+            const part = t => parts.find(x => x.type === t)?.value;
+            return `${part('year')}-${part('month')}-${part('day')}`;
+          } catch (_) {
+            const y = parsed.getFullYear();
+            const m = String(parsed.getMonth() + 1).padStart(2, '0');
+            const d = String(parsed.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          }
+        }
+        return '';
+      };
+
       const chartContainer = document.getElementById('chartBars');
       if (!chartContainer) return;
       chartContainer.innerHTML = '';
-      const start = document.getElementById('dashStart').value;
-      const end = document.getElementById('dashEnd').value;
+      const startInput = document.getElementById('dashStart');
+      const endInput = document.getElementById('dashEnd');
+      if (!startInput || !endInput) return;
+      const start = startInput.value;
+      const end = endInput.value;
+      if (!start || !end) return;
       const days = [];
       for (let date = new Date(start + 'T00:00:00Z'); date.toISOString().slice(0,10) <= end && days.length < 31; date.setUTCDate(date.getUTCDate()+1)) {
         days.push(date.toISOString().slice(0,10));
@@ -3865,9 +4018,10 @@
       const dailyData = days.map(day => {
         let totalSales = 0;
         let orderCount = 0;
-        appState.orders.forEach(ord => {
+        (appState.orders || []).forEach(ord => {
           if (sourceFilter !== 'ALL' && ord.source !== sourceFilter) return;
-          if (ord.status === 'completed' && ord.completedAt && ord.completedAt.startsWith(day)) {
+          const orderDoneDate = toIsoDate(ord.completedAt);
+          if (ord.status === 'completed' && orderDoneDate === day) {
             const fin = computeOrderFinancials(ord);
             totalSales += fin.netGoods;
             orderCount++;
@@ -3885,11 +4039,11 @@
       const totalLabelEl = document.getElementById('chartTotalLabel');
       if (totalLabelEl) totalLabelEl.innerText = formatVND(totalSalesInPeriod);
       const peakLabelEl = document.getElementById('chartPeakLabel');
-      if (peakLabelEl) peakLabelEl.innerText = peakSales > 0 ? `${peakDay.slice(8, 10)}/10 (${formatVND(peakSales)})` : '0 ₫';
+      if (peakLabelEl) peakLabelEl.innerText = peakSales > 0 ? `${peakDay.slice(8, 10)}/${peakDay.slice(5, 7)} (${formatVND(peakSales)})` : '0 ₫';
 
       dailyData.forEach(item => {
         const heightPct = item.totalSales === 0 ? 0 : Math.round((item.totalSales / maxVal) * 100);
-        const shortDate = item.day.slice(8, 10) + '/10';
+        const shortDate = `${item.day.slice(8, 10)}/${item.day.slice(5, 7)}`;
         const col = document.createElement('div');
         col.className = 'chart-col';
         col.innerHTML = `
@@ -4007,7 +4161,7 @@
               </div>
               <div class="urgent-order-dishes" title="${esc(itemNames)}">🍲 ${esc(itemNames)}</div>
               <div class="urgent-order-meta">
-                <span>🕒 ${esc(ord.createdAt.slice(11, 16))} (${esc(ord.createdAt.slice(0, 10))})</span>
+                <span>🕒 ${esc(ord.createdAt)}</span>
                 <span>·</span>
                 <strong style="color: var(--primary);">${formatVND(fin.orderTotal)}</strong>
                 ${ord.recipientName ? `<span>· 🎁 Tặng: ${esc(ord.recipientName)}</span>` : ''}
@@ -4141,11 +4295,13 @@
       const shippingFee = srv.shippingFeeVnd !== null && srv.shippingFeeVnd !== undefined ? Number(srv.shippingFeeVnd) : 0;
       const orderTotal = Number(srv.totalVnd) || (merchandiseTotal + shippingFee);
 
+      const srvDateOnly = toIsoDateOnly(srv.createdAt);
+
       const ledger = [];
       if (srv.paymentStatus === 'PAID') {
         ledger.push({
           id: `L-${srv.referenceCode}`,
-          date: srv.requestedDate || srv.createdAt.slice(0, 10),
+          date: srv.requestedDate || srvDateOnly,
           type: 'collection',
           amount: orderTotal,
           method: 'Chuyển khoản / Tiền mặt'
@@ -4153,7 +4309,7 @@
       } else if (srv.paymentStatus === 'REFUNDED') {
         ledger.push({
           id: `L-REF-${srv.referenceCode}`,
-          date: srv.requestedDate || srv.createdAt.slice(0, 10),
+          date: srv.requestedDate || srvDateOnly,
           type: 'refund',
           amount: orderTotal,
           method: 'Hoàn tiền'
@@ -4165,6 +4321,8 @@
         serverOrderId: srv.id,
         referenceCode: srv.referenceCode || srv.id,
         createdAt: dateFormatted,
+        createdAtIso: srv.createdAt,
+        createdAtDateOnly: srvDateOnly,
         completedAt: srv.orderStatus === 'COMPLETED' ? (srv.updatedAt || dateFormatted) : null,
         source: 'Website',
         buyerName: srv.buyerName || 'Khách đặt',
@@ -4288,8 +4446,9 @@
         if (statusFilter === 'in_progress' && !['confirmed', 'preparing', 'delivering'].includes(ord.status)) return false;
         if (statusFilter !== 'ALL' && statusFilter !== 'in_progress' && ord.status !== statusFilter) return false;
         if (sourceFilter !== 'ALL' && ord.source !== sourceFilter) return false;
-        if (startDate && ord.createdAt.slice(0, 10) < startDate) return false;
-        if (endDate && ord.createdAt.slice(0, 10) > endDate) return false;
+        const ordDate = toIsoDateOnly(ord.createdAt);
+        if (startDate && ordDate && ordDate < startDate) return false;
+        if (endDate && ordDate && ordDate > endDate) return false;
         if (q) {
           const matchId = ord.id.toLowerCase().includes(q);
           const matchBuyer = ord.buyerName.toLowerCase().includes(q);
@@ -4776,8 +4935,9 @@
 
       appState.orders.forEach(ord => {
         // ONLY buyer counts as customer, NOT gift recipient
-        if (start && ord.createdAt.slice(0, 10) < start) return;
-        if (end && ord.createdAt.slice(0, 10) > end) return;
+        const ordDate = toIsoDateOnly(ord.createdAt);
+        if (start && ordDate && ordDate < start) return;
+        if (end && ordDate && ordDate > end) return;
         const key = ord.buyerName;
         if (!customerMap[key]) {
           customerMap[key] = {
@@ -4793,7 +4953,7 @@
           const fin = computeOrderFinancials(ord);
           customerMap[key].totalSpent += fin.netGoods;
         }
-        if (ord.createdAt > customerMap[key].lastOrderDate) {
+        if (ordDate > toIsoDateOnly(customerMap[key].lastOrderDate)) {
           customerMap[key].lastOrderDate = ord.createdAt;
         }
       });
@@ -4836,8 +4996,9 @@
       const end = document.getElementById('custEndDate')?.value;
       const custOrders = appState.orders.filter(o => {
         if (o.buyerName !== buyerName) return false;
-        if (start && o.createdAt.slice(0, 10) < start) return false;
-        if (end && o.createdAt.slice(0, 10) > end) return false;
+        const oDate = toIsoDateOnly(o.createdAt);
+        if (start && oDate && oDate < start) return false;
+        if (end && oDate && oDate > end) return false;
         return true;
       });
       document.getElementById('custProfileTitle').innerText = `Hồ sơ: ${buyerName}`;
