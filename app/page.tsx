@@ -256,7 +256,7 @@ export default async function HomePage() {
                 href={`/bai-viet/${post.slug}`}
                 className="group flex flex-col gap-3 bg-white rounded-3xl"
               >
-                <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={post.coverImageUrl}
@@ -267,6 +267,11 @@ export default async function HomePage() {
                     height={400}
                     className="h-full w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
                   />
+                  {post.isPinned && (
+                    <span className="absolute top-2.5 right-2.5 rounded-full bg-[#D4AF37] px-2.5 py-0.5 text-[11px] font-bold text-[#1B1B1B] shadow-xs flex items-center gap-1">
+                      📌 Ghim
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1 px-0.5">
                   <span className="text-xs font-semibold text-[#8A6632]">

@@ -552,16 +552,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   const upsertCanonicalPost = db.prepare(`
     INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      slug = excluded.slug,
-      title = excluded.title,
-      category = excluded.category,
-      excerpt = excluded.excerpt,
-      content = excluded.content,
-      cover_image_url = excluded.cover_image_url,
-      is_published = excluded.is_published,
-      is_pinned = excluded.is_pinned,
-      updated_at = excluded.updated_at
+    ON CONFLICT(id) DO NOTHING
   `);
   for (const post of DEMO_POSTS) {
     upsertCanonicalPost.run(
@@ -2359,11 +2350,16 @@ export function upsertPostByStaff(params: {
   const db = getSqliteDb();
   const nowIso = new Date().toISOString();
   const cleanTitle = params.title.trim();
-  const postId = params.id?.trim() || `post-${Date.now().toString(36)}`;
+  const rawId = params.id?.trim() || "";
   const postSlug =
     params.slug?.trim() ||
     slugifyVietnamese(cleanTitle) ||
     `bai-viet-${Date.now().toString(36)}`;
+
+  const existing = db
+    .prepare("SELECT id FROM posts WHERE id = ? OR slug = ?")
+    .get(rawId, postSlug) as { id: string } | undefined;
+  const postId = existing ? existing.id : (rawId || `post-${Date.now().toString(36)}`);
 
   db.prepare(`
     INSERT INTO posts (

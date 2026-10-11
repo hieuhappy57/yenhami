@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   deleteJobPostingByStaff,
   deletePostByStaff,
@@ -181,12 +182,21 @@ export async function POST(request: Request) {
         isPinned: Boolean(post.isPinned ?? false),
       });
       await syncDbToCloud();
+      try {
+        revalidatePath("/bai-viet");
+        revalidatePath("/");
+        if (res.slug) revalidatePath(`/bai-viet/${res.slug}`);
+      } catch {}
       return NextResponse.json(res);
     }
 
     if (action === "delete_post") {
       const res = deletePostByStaff(String(body.postId || ""));
       await syncDbToCloud();
+      try {
+        revalidatePath("/bai-viet");
+        revalidatePath("/");
+      } catch {}
       return NextResponse.json(res);
     }
 

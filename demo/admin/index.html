@@ -3419,7 +3419,7 @@
       orders: [],
       posts: [
         {
-          id: 'post-1',
+          id: 'post-seo-1',
           slug: 'tai-sao-nguoi-sanh-yen-uu-tien-yen-tuoi-chung-nong-tho-su',
           title: 'Tại Sao Người Sành Yến Ưu Tiên Yến Tươi Chưng Nóng Thố Sứ Thay Vì Yến Hũ Công Nghiệp?',
           category: 'Khoa học dinh dưỡng',
@@ -3431,7 +3431,7 @@
           content: 'Trong hành trình chăm sóc sức khỏe gia đình, đặc biệt khi bồi bổ cho mẹ bầu, ông bà lớn tuổi hay người thân đang hồi phục sau bệnh, những người tiêu dùng tinh tế và sành yến ngày càng khắt khe hơn. Thay vì chọn những hũ yến chưng sẵn đóng nắp kim loại sản xuất hàng loạt lưu kho dài ngày, xu hướng thưởng thức Yến tươi chưng nóng trong thố sứ 200ml đang trở thành chuẩn mực mới của sự an tâm.'
         },
         {
-          id: 'post-2',
+          id: 'post-seo-2',
           slug: 'dich-vu-giao-yen-tuoi-chung-nong-hoa-toc-2-gio-da-nang',
           title: 'Dịch Vụ Giao Yến Tươi Chưng Nóng Hỏa Tốc 2 Giờ Tại Đà Nẵng: Món Quà Sức Khỏe Kịp Thời Cho Người Thân',
           category: 'Dịch vụ Giao Nóng 2H',
@@ -3443,7 +3443,7 @@
           content: 'Khi một người thân đang nằm viện cần bồi bổ ngay sau ca phẫu thuật, khi mẹ bầu mệt mỏi nghén ăn vào buổi chiều, hay khi bạn ở xa muốn gửi gấp một thố yến ấm nóng về biếu ông bà tại Đà Nẵng — sự kịp thời và độ tươi mới chính là điều quý giá nhất. Thấu hiểu trọn vẹn tâm ý đó, Yến Sào Hà Mi tiên phong chuẩn hóa dịch vụ: Yến Tươi Chưng Nóng Thố Sứ 200ml — Giao Ngay Trong 2H Nội Thành Đà Nẵng.'
         },
         {
-          id: 'post-3',
+          id: 'post-seo-3',
           slug: 'cam-nang-dinh-duong-thoi-diem-vang-dung-yen-sao',
           title: 'Cẩm Nang Dinh Dưỡng: Thời Điểm Vàng Và Cách Dùng Yến Sào Cho Mẹ Bầu, Người Bệnh & Người Cao Tuổi',
           category: 'Cẩm nang sức khỏe',
@@ -3455,7 +3455,7 @@
           content: 'Yến sào từ lâu đã được trân quý nhờ hàm lượng đạm tự nhiên cao cùng 18 loại axit amin không thể thay thế. Tuy nhiên, để từng sợi yến thực sự chuyển hóa thành sinh lực, việc ăn yến đúng thời điểm và đúng liều lượng đóng vai trò quyết định.'
         },
         {
-          id: 'post-4',
+          id: 'post-seo-4',
           slug: 'nghe-thuat-chon-qua-bieu-suc-khoe-da-nang',
           title: 'Nghệ Thuật Chọn Quà Biếu Sức Khỏe Tại Đà Nẵng: Gửi Gắm Tình Thân Trọn Vẹn Trong Thố Yến Ấm Nóng',
           category: 'Nghệ thuật quà biếu',
@@ -3467,13 +3467,13 @@
           content: 'Trong nét đẹp văn hóa của người Việt, một món quà biếu ý nghĩa không nằm ở sự phô trương cầu kỳ, mà ở sự thấu hiểu và tấm lòng chân thành dành cho sức khỏe của người nhận.'
         },
         {
-          id: 'post-5',
-          slug: 'to-yen-co-mau-gi-la-tu-nhien',
+          id: 'post-seo-8',
+          slug: 'to-yen-co-mau-gi',
           title: 'Tổ Yến Có Màu Gì Là Tự Nhiên? Cách Phân Biệt Bạch Yến, Hồng Yến & Yến Tẩy Trắng',
           category: 'Kiến thức chọn yến',
           excerpt: 'Cách nhận biết màu sắc tự nhiên của tổ yến thật và 5 dấu hiệu nhận biết yến không ngâm hóa chất tẩy trắng.',
           coverImageUrl: '/assets/bai-viet/banner_bai_1_yen_tuoi_tho_su.jpg',
-          status: 'draft',
+          status: 'published',
           isPinned: false,
           updatedAt: '2026-10-09',
           content: 'Có một lời khuyên mà những người thợ nhặt yến lành nghề luôn dặn người thân khi đi mua tổ yến khô: “Đừng chọn những tai yến trắng tinh như tuyết và đều màu răm rắp như đúc khuôn”.'
@@ -7195,7 +7195,16 @@
               // Purge obsolete demo orders HM-1001 through HM-1010
               appState.orders = parsed.orders.filter(o => !/^HM-10(0[1-9]|10)$/.test(o.id));
             }
-            if (Array.isArray(parsed.posts) && parsed.posts.length > 0) appState.posts = parsed.posts;
+            if (Array.isArray(parsed.posts) && parsed.posts.length > 0) {
+              appState.posts = parsed.posts.map(p => {
+                if (p.id === 'post-1') p.id = 'post-seo-1';
+                if (p.id === 'post-2') p.id = 'post-seo-2';
+                if (p.id === 'post-3') p.id = 'post-seo-3';
+                if (p.id === 'post-4') p.id = 'post-seo-4';
+                if (p.id === 'post-5') p.id = 'post-seo-8';
+                return p;
+              });
+            }
             if (Array.isArray(parsed.jobs) && parsed.jobs.length > 0) appState.jobs = parsed.jobs;
             if (parsed.site) appState.site = parsed.site;
             if (parsed.currentStaffId) appState.currentStaffId = parsed.currentStaffId;
