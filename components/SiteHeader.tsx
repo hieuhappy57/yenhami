@@ -126,7 +126,7 @@ export function SiteHeader() {
                   className="inline-block w-3.5 sm:w-5 h-[1.5px] rounded-full bg-gradient-to-r from-[#BD9342] to-[#E5C168]"
                   aria-hidden="true"
                 />
-                <span className="text-[9.5px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.22em] text-[#9A6F21] whitespace-nowrap">
+                <span className="text-[9.5px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.22em] text-[#7A5410] whitespace-nowrap">
                   CHẤT TỪNG SỢI YẾN
                 </span>
                 <span
@@ -209,7 +209,7 @@ export function SiteHeader() {
                 <PhoneCall className="w-4 h-4 text-[#B88628]" aria-hidden="true" />
               </span>
               <span className="flex flex-col leading-tight">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A6F21]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#7A5410]">
                   Giao nóng 2H
                 </span>
                 <span className="text-sm font-extrabold text-[#11462B]">

@@ -79,7 +79,7 @@ export default async function HomePage() {
       >
         <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
           <div className="text-center mb-4 sm:mb-7">
-            <span className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#9A7432] mb-1">
+            <span className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#7A5410] mb-1">
               Tinh Hoa Dưỡng Chất Tự Nhiên
             </span>
             <h2 className="font-serif-display text-xl sm:text-3xl lg:text-4xl font-bold text-[#155132]">

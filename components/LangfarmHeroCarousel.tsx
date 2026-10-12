@@ -161,8 +161,8 @@ export function LangfarmHeroCarousel() {
           </div>
         </div>
 
-        {/* Bottom-Center Pagination Dots (Langfarm style pill indicator) */}
-        <div className="absolute bottom-2.5 sm:bottom-3.5 inset-x-0 z-10 flex items-center justify-center gap-2">
+        {/* Bottom-Center Pagination Dots (Langfarm style pill indicator with accessible touch target) */}
+        <div className="absolute bottom-1 sm:bottom-2 inset-x-0 z-10 flex items-center justify-center">
           {HERO_SLIDES.map((s, idx) => {
             const isActive = idx === activeIndex;
             return (
@@ -171,12 +171,16 @@ export function LangfarmHeroCarousel() {
                 type="button"
                 aria-label={`Chuyển đến slide ${idx + 1}`}
                 onClick={() => setActiveIndex(idx)}
-                className={`h-2.5 rounded-full transition-all cursor-pointer ${
-                  isActive
-                    ? "w-7 bg-[#6EC3B5]"
-                    : "w-2.5 bg-white/50 hover:bg-white/80"
-                }`}
-              />
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 cursor-pointer focus:outline-hidden"
+              >
+                <span
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    isActive
+                      ? "w-7 bg-[#6EC3B5]"
+                      : "w-2.5 bg-white/50 hover:bg-white/80"
+                  }`}
+                />
+              </button>
             );
           })}
         </div>

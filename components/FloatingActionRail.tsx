@@ -140,7 +140,7 @@ export function FloatingActionRail() {
           {totalBowls > 0 && (
             <span
               data-testid="rail-order-badge"
-              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-[#BD9342] text-[#155132] font-bold text-[11px] flex items-center justify-center border border-white"
+              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-[#0E3B23] text-[#F9E498] font-bold text-[11px] flex items-center justify-center border border-white"
             >
               {totalBowls}
             </span>
@@ -170,7 +170,7 @@ export function FloatingActionRail() {
           >
             <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z" />
           </svg>
-          <span className="absolute -top-2 -left-1.5 rounded-full bg-[#BD9342] text-[#155132] px-1.5 py-0.2 text-[9px] font-extrabold leading-4 shadow-xs border border-white">
+          <span className="absolute -top-2 -left-1.5 rounded-full bg-[#0E3B23] text-[#F9E498] px-1.5 py-0.2 text-[9px] font-extrabold leading-4 shadow-xs border border-white">
             2H
           </span>
         </a>

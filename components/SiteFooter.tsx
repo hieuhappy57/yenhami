@@ -48,7 +48,7 @@ export function SiteFooter() {
                   className="inline-block w-4 h-[1.5px] rounded-full bg-gradient-to-r from-[#BD9342] to-[#E5C168]"
                   aria-hidden="true"
                 />
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9A6F21]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7A5410]">
                   CHẤT TỪNG SỢI YẾN • ĐÀ NẴNG
                 </p>
               </div>
