@@ -11,7 +11,7 @@ import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { FaqJsonLd } from "@/components/SeoJsonLd";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const FEATURED_CATEGORIES = [
   {
@@ -67,6 +67,20 @@ export default async function HomePage() {
 
   return (
     <div className="bg-white">
+      {/* Preload critical LCP Hero images to eliminate mobile and desktop resource load delay */}
+      <link
+        rel="preload"
+        as="image"
+        href="/brand/banners/hero-slide-1-tho-su-mobile-v3.webp"
+        media="(max-width: 767px)"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="/brand/banners/hero-slide-1-tho-su-v2.webp"
+        media="(min-width: 768px)"
+      />
+
       <FaqJsonLd items={FAQ_ITEMS} />
 
       {/* 1. LANGFARM-STYLE FULL-BLEED HERO CAROUSEL */}

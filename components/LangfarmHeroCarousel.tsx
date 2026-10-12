@@ -89,6 +89,8 @@ export function LangfarmHeroCarousel() {
             src={currentSlide.mobileImage}
             alt={currentSlide.title}
             fetchPriority="high"
+            decoding="sync"
+            sizes="100vw"
             width={1640}
             height={680}
             className="w-full h-full object-cover object-center transition-all duration-500"
