@@ -2490,6 +2490,7 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
     process.env.HAMI_NOTIFY_EMAIL ||
     "hieunv@yenhami.com, vietdh1985@gmail.com",
   resendApiKey: process.env.RESEND_API_KEY || "",
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || "",
   emailWebhookUrl: process.env.HAMI_EMAIL_WEBHOOK_URL || "",
   enableZalo: true,
   zaloRecipientPhone: process.env.HAMI_NOTIFY_ZALO_PHONE || "0935052959",
@@ -2504,7 +2505,11 @@ export function getNotificationSettings(): NotificationSettings {
   if (!row) return { ...DEFAULT_NOTIFICATION_SETTINGS };
   try {
     const parsed = JSON.parse(row.value) as Partial<NotificationSettings>;
-    return { ...DEFAULT_NOTIFICATION_SETTINGS, ...parsed };
+    return {
+      ...DEFAULT_NOTIFICATION_SETTINGS,
+      ...parsed,
+      resendApiKey: parsed.resendApiKey || DEFAULT_NOTIFICATION_SETTINGS.resendApiKey,
+    };
   } catch {
     return { ...DEFAULT_NOTIFICATION_SETTINGS };
   }
@@ -2514,9 +2519,11 @@ export function updateNotificationSettings(
   updates: Partial<NotificationSettings>
 ): NotificationSettings {
   const db = getSqliteDb();
+  const { resendApiKey, ...otherUpdates } = updates;
   const merged: NotificationSettings = {
     ...getNotificationSettings(),
-    ...updates,
+    ...otherUpdates,
+    ...(resendApiKey?.trim() ? { resendApiKey: resendApiKey.trim() } : {}),
   };
   const nowIso = new Date().toISOString();
   db.prepare(`
@@ -2752,7 +2759,7 @@ export async function triggerOrderNotificationsAfterCommit(
   // 1. EMAIL NOTIFICATION (Google Apps Script Webhook or Resend API — supports 2+ emails)
   if (config.enableEmail && emailList.length > 0) {
     const emailLogId = `notif-email-${crypto.randomUUID()}`;
-    const hasProvider = Boolean(config.emailWebhookUrl || config.resendApiKey);
+    const hasProvider = Boolean(config.emailWebhookUrl || (config.resendApiKey && config.resendFromEmail));
 
     insertLog.run(
       emailLogId,
@@ -2763,9 +2770,9 @@ export async function triggerOrderNotificationsAfterCommit(
       textSummary,
       config.emailWebhookUrl
         ? `Đang gửi Email chi tiết đơn hàng tới (${emailToJoined}) qua Google Apps Script...`
-        : config.resendApiKey
+        : config.resendApiKey && config.resendFromEmail
           ? `Đang gửi Email tới (${emailToJoined}) qua Resend API...`
-          : "Đã ghi nhận đơn (Hãy dán link Google Apps Script Web App vào mục Cài đặt Email để tự động gửi Gmail)",
+          : "Đã ghi nhận đơn; cần cấu hình webhook hoặc API key và email gửi Resend để gửi thông báo.",
       nowIso
     );
 
@@ -2802,7 +2809,7 @@ export async function triggerOrderNotificationsAfterCommit(
         detailMsg = `Lỗi kết nối Google Apps Script: ${err instanceof Error ? err.message : String(err)}`;
         updateLog.run("FAILED", detailMsg, emailLogId);
       }
-    } else if (config.resendApiKey) {
+    } else if (config.resendApiKey && config.resendFromEmail) {
       try {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -2811,7 +2818,7 @@ export async function triggerOrderNotificationsAfterCommit(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Yến Sào Hà Mi <onboarding@resend.dev>",
+            from: config.resendFromEmail,
             to: emailList,
             subject: emailSubject,
             html: emailHtml,
@@ -3825,6 +3832,19 @@ export async function syncDbToCloud(): Promise<void> {
 async function syncDbToGist(): Promise<boolean> {
   if (!isGistSyncEnabled()) return false;
   try {
+    const snapshot = buildSnapshotsFromLocalSqlite();
+    snapshot.tables.site_settings = (snapshot.tables.site_settings || []).map((row) => {
+      if (row.key !== "notification_settings") return row;
+      try {
+        const settings = JSON.parse(String(row.value)) as Record<string, unknown>;
+        delete settings.resendApiKey;
+        delete settings.emailWebhookUrl;
+        delete settings.zaloWebhookUrl;
+        return { ...row, value: JSON.stringify(settings) };
+      } catch {
+        return { ...row, value: "{}" };
+      }
+    });
     const response = await fetch(`https://api.github.com/gists/${process.env.HAMI_GIST_ID!}`, {
       method: "PATCH",
       headers: {
@@ -3833,7 +3853,7 @@ async function syncDbToGist(): Promise<boolean> {
         "Content-Type": "application/json",
         "User-Agent": "ha-mi-website-cloud-sync",
       },
-      body: JSON.stringify({ files: { "ha-mi-db-state.json": { content: JSON.stringify(buildSnapshotsFromLocalSqlite()) } } }),
+      body: JSON.stringify({ files: { "ha-mi-db-state.json": { content: JSON.stringify(snapshot) } } }),
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return false;

@@ -2808,9 +2808,16 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="cfgResendApiKey">Resend API Key (Tùy chọn dành cho Domain riêng)</label>
+                  <label for="cfgResendFromEmail">Email gửi qua Resend</label>
+                  <input type="text" id="cfgResendFromEmail" class="form-control" placeholder="Yến Sào Hà Mi <donhang@yenhami.com>" autocomplete="off" />
+                  <small style="color: var(--text-muted); font-size: 11px;">Dùng địa chỉ thuộc domain anh đã xác minh trên Resend.</small>
+                </div>
+
+                <div class="form-group">
+                  <label for="cfgResendApiKey">Resend API Key</label>
                   <input type="password" id="cfgResendApiKey" class="form-control" placeholder="re_xxxxxxxxxxxxxx" autocomplete="off" />
-                  <small style="color: var(--text-muted); font-size: 11px;">Nếu không điền Webhook hoặc Resend, hệ thống sẽ chạy ở chế độ giả lập an toàn, ghi nhật ký và cho phép xem trước mẫu thư.</small>
+                  <small id="cfgResendKeyStatus" style="color: var(--text-muted); font-size: 11px;">Chưa cấu hình. Dán key rồi bấm Lưu; để trống sẽ giữ key đã lưu.</small>
+                  <small style="color: var(--text-muted); font-size: 11px;">Dán key mới sẽ chuyển từ webhook sang Resend. Nếu không dán key, cấu hình hiện tại được giữ nguyên.</small>
                 </div>
 
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
@@ -3598,7 +3605,8 @@
         emailTo1: 'hieunv@yenhami.com',
         emailTo2: 'vietdh1985@gmail.com',
         webhookUrl: '',
-        resendApiKey: '',
+        resendFromEmail: '',
+        resendApiKeyConfigured: false,
         enableSound: true
       },
       notificationLogs: [
@@ -6976,8 +6984,10 @@
             appState.notificationSettings.emailTo1 = parts[0] || 'hieunv@yenhami.com';
             appState.notificationSettings.emailTo2 = parts[1] || '';
           }
-          if (s.emailWebhookUrl) appState.notificationSettings.webhookUrl = s.emailWebhookUrl;
-          if (s.resendApiKey) appState.notificationSettings.resendApiKey = s.resendApiKey;
+          appState.notificationSettings.webhookUrl = '';
+          appState.notificationSettings.emailWebhookConfigured = Boolean(s.emailWebhookConfigured);
+          appState.notificationSettings.resendFromEmail = s.resendFromEmail || '';
+          appState.notificationSettings.resendApiKeyConfigured = Boolean(s.resendApiKeyConfigured);
           loadNotificationSettingsForm();
         }
       } catch (e) {}
@@ -7000,8 +7010,15 @@
       const elWebhook = document.getElementById('cfgEmailWebhookUrl');
       if (elWebhook) elWebhook.value = cfg.webhookUrl || '';
 
+      const elFrom = document.getElementById('cfgResendFromEmail');
+      if (elFrom) elFrom.value = cfg.resendFromEmail || '';
+
       const elResend = document.getElementById('cfgResendApiKey');
-      if (elResend) elResend.value = cfg.resendApiKey || '';
+      if (elResend) elResend.value = '';
+      const keyStatus = document.getElementById('cfgResendKeyStatus');
+      if (keyStatus) keyStatus.textContent = cfg.resendApiKeyConfigured
+        ? 'Đã lưu API key trên máy chủ. Để trống để giữ nguyên; dán key mới để thay thế.'
+        : 'Chưa cấu hình. Dán key rồi bấm Lưu; để trống sẽ giữ key đã lưu.';
 
       updateBrowserPushBadge();
       updateAudioToggleBtn();
@@ -7026,8 +7043,11 @@
       const elWebhook = document.getElementById('cfgEmailWebhookUrl');
       if (elWebhook) appState.notificationSettings.webhookUrl = elWebhook.value.trim();
 
+      const elFrom = document.getElementById('cfgResendFromEmail');
+      if (elFrom) appState.notificationSettings.resendFromEmail = elFrom.value.trim();
+
       const elResend = document.getElementById('cfgResendApiKey');
-      if (elResend) appState.notificationSettings.resendApiKey = elResend.value.trim();
+      const resendApiKey = elResend ? elResend.value.trim() : '';
 
       updateAudioToggleBtn();
       persistAppState();
@@ -7042,19 +7062,23 @@
             settings: {
               enableEmail: appState.notificationSettings.enableEmail,
               notificationEmailTo: [appState.notificationSettings.emailTo1, appState.notificationSettings.emailTo2].filter(Boolean).join(', '),
-              resendApiKey: appState.notificationSettings.resendApiKey,
+              ...(resendApiKey ? { resendApiKey } : {}),
+              resendFromEmail: appState.notificationSettings.resendFromEmail,
               emailWebhookUrl: appState.notificationSettings.webhookUrl
             }
           })
         });
         const data = await res.json().catch(() => ({}));
         if (data && data.ok) {
+          if (elResend) elResend.value = '';
+          appState.notificationSettings.resendApiKeyConfigured = Boolean(data.notificationSettings?.resendApiKeyConfigured);
+          loadNotificationSettingsForm();
           showToast('✅ Đã lưu và đồng bộ cấu hình Email & Thông báo lên máy chủ!', 'success');
         } else {
-          showToast(`Đã lưu cấu hình (${data.errorMessage || 'Máy chủ ghi nhận'})`, 'info');
+          showToast(`Không lưu được cấu hình: ${data.errorMessage || 'Máy chủ từ chối'}`, 'error');
         }
       } catch (e) {
-        showToast('Đã lưu cấu hình thông báo vào bộ nhớ cục bộ!', 'info');
+        showToast('Không kết nối được máy chủ; API key chưa được lưu.', 'error');
       }
     }
 
@@ -7257,7 +7281,10 @@
           staff: appState.staff,
           currentStaffId: appState.currentStaffId,
           products: appState.products,
-          notificationSettings: appState.notificationSettings,
+          notificationSettings: (() => {
+            const { resendApiKey, ...safeSettings } = appState.notificationSettings || {};
+            return safeSettings;
+          })(),
           notificationLogs: appState.notificationLogs,
           inAppNotifications: appState.inAppNotifications
         }));
@@ -7297,7 +7324,14 @@
               appState.staff = hasObsoleteDemoStaff ? JSON.parse(JSON.stringify(INITIAL_FIXTURES.staff)) : parsed.staff;
             }
             if (parsed.products) appState.products = parsed.products;
-            if (parsed.notificationSettings) appState.notificationSettings = parsed.notificationSettings;
+            if (parsed.notificationSettings) {
+              const { resendApiKey, ...safeSettings } = parsed.notificationSettings;
+              appState.notificationSettings = safeSettings;
+              if (resendApiKey) {
+                delete parsed.notificationSettings.resendApiKey;
+                localStorage.setItem('ha_mi_admin_state_v2', JSON.stringify(parsed));
+              }
+            }
             if (Array.isArray(parsed.notificationLogs)) appState.notificationLogs = parsed.notificationLogs;
             if (Array.isArray(parsed.inAppNotifications)) {
               appState.inAppNotifications = parsed.inAppNotifications.filter(n => !/^notif-[12]$/.test(n.id));

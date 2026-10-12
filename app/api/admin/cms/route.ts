@@ -225,7 +225,26 @@ export async function POST(request: Request) {
     }
 
     if (action === "save_notification_settings") {
-      const updated = updateNotificationSettings(body.settings || {});
+      const input = body.settings && typeof body.settings === "object" && !Array.isArray(body.settings)
+        ? body.settings as Record<string, unknown>
+        : {};
+      const resendApiKey = typeof input.resendApiKey === "string" ? input.resendApiKey.trim() : "";
+      const resendFromEmail = typeof input.resendFromEmail === "string" ? input.resendFromEmail.trim() : "";
+      if (resendApiKey && (!resendApiKey.startsWith("re_") || /\s/.test(resendApiKey))) {
+        return NextResponse.json({ ok: false, errorMessage: "Resend API key không hợp lệ." }, { status: 400, headers: privateJsonHeaders() });
+      }
+      if (resendFromEmail && (/[\r\n]/.test(resendFromEmail) || !/^(?:[^<>]+\s+<)?[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>?$/.test(resendFromEmail))) {
+        return NextResponse.json({ ok: false, errorMessage: "Email gửi Resend không hợp lệ." }, { status: 400, headers: privateJsonHeaders() });
+      }
+      const updated = updateNotificationSettings({
+        ...(typeof input.enableEmail === "boolean" ? { enableEmail: input.enableEmail } : {}),
+        ...(typeof input.notificationEmailTo === "string" ? { notificationEmailTo: input.notificationEmailTo.trim() } : {}),
+        ...(typeof input.emailWebhookUrl === "string" && input.emailWebhookUrl.trim()
+          ? { emailWebhookUrl: input.emailWebhookUrl.trim() }
+          : resendApiKey ? { emailWebhookUrl: "" } : {}),
+        ...(typeof input.resendFromEmail === "string" ? { resendFromEmail } : {}),
+        ...(resendApiKey ? { resendApiKey } : {}),
+      });
       await syncDbToCloud();
       return NextResponse.json({ ok: true, notificationSettings: redactNotificationSettings(updated) }, { headers: privateJsonHeaders() });
     }

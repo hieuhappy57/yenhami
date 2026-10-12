@@ -287,6 +287,7 @@ export interface NotificationSettings {
   enableEmail: boolean;
   notificationEmailTo: string;
   resendApiKey: string;
+  resendFromEmail: string;
   emailWebhookUrl: string;
   enableZalo: boolean;
   zaloRecipientPhone: string;

@@ -125,7 +125,7 @@ export async function flushOrderNotificationOutbox(options: { now?: Date; limit?
       const payload = canonicalPayload(String(row.reference_code));
       if (!payload) throw new Error("Canonical order no longer exists");
       const config = getNotificationSettings();
-      const expectedEmail = config.enableEmail && Boolean(config.notificationEmailTo) && Boolean(config.emailWebhookUrl || config.resendApiKey);
+      const expectedEmail = config.enableEmail && Boolean(config.notificationEmailTo) && Boolean(config.emailWebhookUrl || (config.resendApiKey && config.resendFromEmail));
       const expectedZalo = config.enableZalo && Boolean(config.zaloRecipientPhone) && Boolean(config.zaloWebhookUrl);
       if (!expectedEmail && !expectedZalo) throw new Error("No notification provider is configured");
       const result = await triggerOrderNotificationsAfterCommit(payload);
