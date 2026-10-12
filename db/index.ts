@@ -2945,6 +2945,41 @@ const CLOUD_TABLES = [
   "notification_logs",
 ] as const;
 
+// One-time prelaunch cleanup approved on 2026-10-12. Use exact references so
+// orders placed after launch can never be selected by this migration.
+const PRELAUNCH_TEST_ORDER_REFERENCES = [
+  "HM-261012-F8F692DA", "HM-261012-3D71CD72", "HM-261011-489E06CE",
+  "HM-261012-A1B5F3F1", "HM-261012-6DEBE572", "HM-261012-BDEC2212",
+  "HM-261012-7683D3A3", "HM-261012-D20CBB83", "HM-261012-605C644A",
+  "HM-261012-FECEED19", "HM-261008-E4E4089D",
+] as const;
+const PRELAUNCH_BACKUP_KEY = "db/backups/prelaunch-test-orders-2026-10-12.json";
+
+export function purgePrelaunchTestOrders(db: DatabaseSync): number {
+  const refs = [...PRELAUNCH_TEST_ORDER_REFERENCES];
+  const placeholders = refs.map(() => "?").join(", ");
+  const rows = db.prepare(
+    `SELECT id, requested_date, slot_id, order_status FROM order_requests WHERE reference_code IN (${placeholders})`
+  ).all(...refs) as { id: string; requested_date: string; slot_id: string; order_status: string }[];
+
+  for (const order of rows) {
+    if (order.order_status !== "CANCELLED") {
+      const bowls = db.prepare("SELECT COALESCE(SUM(quantity), 0) AS count FROM order_items WHERE order_request_id = ?")
+        .get(order.id) as { count: number };
+      db.prepare(`UPDATE slot_date_reservations SET reserved_bowls = MAX(0, reserved_bowls - ?)
+        WHERE requested_date = ? AND slot_id = ?`).run(bowls.count, order.requested_date, order.slot_id);
+    }
+    db.prepare("DELETE FROM order_notification_outbox WHERE order_request_id = ?").run(order.id);
+    db.prepare("DELETE FROM payment_entries WHERE order_request_id = ?").run(order.id);
+    db.prepare("DELETE FROM order_status_history WHERE order_request_id = ?").run(order.id);
+    db.prepare("DELETE FROM order_items WHERE order_request_id = ?").run(order.id);
+    db.prepare("DELETE FROM order_requests WHERE id = ?").run(order.id);
+  }
+  db.prepare(`DELETE FROM order_confirmations WHERE reference_code IN (${placeholders})`).run(...refs);
+  db.prepare(`DELETE FROM notification_logs WHERE order_reference_code IN (${placeholders})`).run(...refs);
+  return rows.length;
+}
+
 let lastCloudSyncAtMs = 0;
 let d1SchemaInitialized = false;
 let r2BucketInitialized = false;
@@ -3352,6 +3387,8 @@ function applyCloudTablesToLocalSqlite(
       }
     }
 
+    purgePrelaunchTestOrders(db);
+
     // Ensure canonical SEO/GEO posts and updated 295.000đ+ fresh bowl prices are always present
     const syncNowIso = new Date().toISOString();
     db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
@@ -3635,8 +3672,39 @@ async function pullFromCloudflareR2IntoLocalSqlite(): Promise<boolean> {
     };
     if (!parsed.tables) return false;
 
+    const hasPrelaunchOrders = (parsed.tables.order_requests || []).some((row) =>
+      PRELAUNCH_TEST_ORDER_REFERENCES.includes(String(row.reference_code) as typeof PRELAUNCH_TEST_ORDER_REFERENCES[number])
+    );
+    if (hasPrelaunchOrders) {
+      const backup = await getCloudflareR2Object(PRELAUNCH_BACKUP_KEY);
+      if (!backup.ok && backup.error !== "HTTP 404") return false;
+      if (!backup.ok) {
+        const saved = await putCloudflareR2Object(PRELAUNCH_BACKUP_KEY, rawJson, "application/json; charset=utf-8");
+        if (!saved.ok) return false;
+      }
+    }
+
     applyCloudTablesToLocalSqlite(parsed.tables);
     r2BucketInitialized = true;
+    if (hasPrelaunchOrders) {
+      const cleaned = await syncDbToCloudflareR2();
+      if (!cleaned.ok) return false;
+      if (isCloudflareD1Enabled() && !d1AuthFailed) {
+        const d1Sync = await syncDbToCloudflareD1();
+        if (d1Sync.ok) {
+          const refs = PRELAUNCH_TEST_ORDER_REFERENCES.map(escapeSqlLiteral).join(", ");
+          await executeCloudflareD1Query(`
+            DELETE FROM payment_entries WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
+            DELETE FROM order_status_history WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
+            DELETE FROM order_items WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
+            DELETE FROM order_requests WHERE reference_code IN (${refs});
+            DELETE FROM order_confirmations WHERE reference_code IN (${refs});
+            DELETE FROM notification_logs WHERE order_reference_code IN (${refs});
+          `);
+        }
+      }
+      await syncDbToGist();
+    }
     return true;
   } catch {
     return false;
@@ -3751,33 +3819,28 @@ export async function syncDbToCloud(): Promise<void> {
     return;
   }
 
-  if (!isGistSyncEnabled()) return;
-  const gistId = process.env.HAMI_GIST_ID!;
-  const token = process.env.HAMI_GITHUB_TOKEN!;
+  await syncDbToGist();
+}
 
+async function syncDbToGist(): Promise<boolean> {
+  if (!isGistSyncEnabled()) return false;
   try {
-    const payload = buildSnapshotsFromLocalSqlite();
-
-    await fetch(`https://api.github.com/gists/${gistId}`, {
+    const response = await fetch(`https://api.github.com/gists/${process.env.HAMI_GIST_ID!}`, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${process.env.HAMI_GITHUB_TOKEN!}`,
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
         "User-Agent": "ha-mi-website-cloud-sync",
       },
-      body: JSON.stringify({
-        files: {
-          "ha-mi-db-state.json": {
-            content: JSON.stringify(payload),
-          },
-        },
-      }),
+      body: JSON.stringify({ files: { "ha-mi-db-state.json": { content: JSON.stringify(buildSnapshotsFromLocalSqlite()) } } }),
       signal: AbortSignal.timeout(5000),
     });
+    if (!response.ok) return false;
     lastCloudSyncAtMs = Date.now();
+    return true;
   } catch {
-    // Ignore transient network errors
+    return false;
   }
 }
 
