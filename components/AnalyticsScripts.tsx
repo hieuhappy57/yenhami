@@ -3,10 +3,28 @@ import Script from "next/script";
 import { SEO_CONFIG } from "@/config/seo";
 
 export function AnalyticsScripts() {
-  const { gtmId, fbPixelId } = SEO_CONFIG.analytics;
+  const { gaId, gtmId, fbPixelId } = SEO_CONFIG.analytics;
 
   return (
     <>
+      {gaId && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga-init" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${gaId}', {
+                page_path: window.location.pathname,
+              });
+            `}
+          </Script>
+        </>
+      )}
 
       {gtmId && (
         <Script id="gtm-init" strategy="afterInteractive">
