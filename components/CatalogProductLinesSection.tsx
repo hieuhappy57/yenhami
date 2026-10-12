@@ -116,8 +116,8 @@ export function CatalogProductLinesSection({
               const isJustAdded = justAddedId === product.id;
               const fallbackImg =
                 index === 0
-                  ? "/brand/catalog/set-qua-hop-sen-en.jpg"
-                  : "/brand/catalog/set-qua-6-hu-6-vi.jpg";
+                  ? "/brand/catalog/set-qua-hop-sen-en-v2.webp"
+                  : "/brand/catalog/set-qua-6-hu-6-vi-v2.webp";
               return (
                 <article
                   key={product.id}
@@ -180,7 +180,7 @@ export function CatalogProductLinesSection({
             >
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                 <img
-                  src="/brand/catalog/set-qua-hop-sen-en.jpg"
+                  src="/brand/catalog/set-qua-hop-sen-en-v2.webp"
                   alt="Hộp quà Hoa Sen & Đàn Én ép kim"
                   loading="lazy"
                   className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
@@ -202,7 +202,7 @@ export function CatalogProductLinesSection({
             >
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F5EC]">
                 <img
-                  src="/brand/catalog/set-qua-6-hu-6-vi.jpg"
+                  src="/brand/catalog/set-qua-6-hu-6-vi-v2.webp"
                   alt="Trọn bộ 6 hũ 6 hương vị thảo mộc"
                   loading="lazy"
                   className="h-full w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"

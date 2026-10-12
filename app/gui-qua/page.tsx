@@ -15,7 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Xem các sản phẩm yến sào biếu tặng tại Đà Nẵng. Chọn sản phẩm và gửi yêu cầu quà tặng để Hà Mi xác nhận thông tin người nhận.",
   path: "/gui-qua",
-  image: "/brand/catalog/set-qua-hop-sen-en.jpg",
+  image: "/brand/catalog/set-qua-hop-sen-en-v2.webp",
 });
 
 const GIFT_PRIVILEGES = [

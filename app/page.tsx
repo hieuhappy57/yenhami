@@ -26,7 +26,7 @@ const FEATURED_CATEGORIES = [
     subtitle: "Hộp Hoa Sen & Đàn Én",
     badge: "Quà biếu",
     href: "/gui-qua",
-    image: "/brand/catalog/set-qua-hop-sen-en.jpg",
+    image: "/brand/catalog/set-qua-hop-sen-en-v2.webp",
   },
   {
     title: "Yến Hũ Chưng Sẵn",
@@ -40,7 +40,7 @@ const FEATURED_CATEGORIES = [
     subtitle: "Nguyên tổ 100g • ISO/FDA",
     badge: "Thượng hạng",
     href: "#danh-muc-yen-tinh-che",
-    image: "/brand/catalog/yen-tinh-che-to-yen.jpg",
+    image: "/brand/catalog/yen-tinh-che-to-yen-v2.webp",
   },
 ];
 

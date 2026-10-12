@@ -104,8 +104,10 @@ export function LangfarmHeroCarousel() {
         {/* Top-Right Gold Brand Seal (Langfarm signature touch) */}
         <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-10 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#F7DF94] via-[#D9AE54] to-[#AA7C2C] p-1 shadow-lg flex items-center justify-center border border-white/60">
           <img
-            src="/brand/ha-mi-logo-web-640.png"
+            src="/brand/ha-mi-logo-web.webp"
             alt="Huy hiệu Yến Sào Hà Mi"
+            width={64}
+            height={64}
             className="w-full h-full object-contain rounded-full bg-[#FFFCF4] p-0.5"
           />
         </div>

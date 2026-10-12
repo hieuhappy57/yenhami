@@ -31,7 +31,7 @@ export function SiteFooter() {
             <div className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-[#FFFDF9] via-[#FFFBF2] to-[#F9EED8] p-1 border-[1.5px] border-[#C89B3C]/75 ring-3 ring-[#BD9342]/12 shadow-[0_4px_14px_rgba(189,147,66,0.22)] shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/ha-mi-logo-web-640.png"
+                src="/brand/ha-mi-logo-web.webp"
                 alt="Logo YẾN SÀO HÀ MI"
                 width={60}
                 height={60}
