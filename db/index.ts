@@ -2945,15 +2945,15 @@ const CLOUD_TABLES = [
   "notification_logs",
 ] as const;
 
-// One-time prelaunch cleanup approved on 2026-10-12. Use exact references so
-// orders placed after launch can never be selected by this migration.
+// Exact QA references only. Never select orders by name, phone, or date.
 const PRELAUNCH_TEST_ORDER_REFERENCES = [
   "HM-261012-F8F692DA", "HM-261012-3D71CD72", "HM-261011-489E06CE",
   "HM-261012-A1B5F3F1", "HM-261012-6DEBE572", "HM-261012-BDEC2212",
   "HM-261012-7683D3A3", "HM-261012-D20CBB83", "HM-261012-605C644A",
   "HM-261012-FECEED19", "HM-261008-E4E4089D",
+  "HM-261013-92596235",
 ] as const;
-const PRELAUNCH_BACKUP_KEY = "db/backups/prelaunch-test-orders-2026-10-12.json";
+const PRELAUNCH_BACKUP_KEY = "db/backups/order-test-cleanup-2026-10-12-v2.json";
 
 export function purgePrelaunchTestOrders(db: DatabaseSync): number {
   const refs = [...PRELAUNCH_TEST_ORDER_REFERENCES];

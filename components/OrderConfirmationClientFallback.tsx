@@ -101,7 +101,6 @@ export function OrderConfirmationClientFallback({
         ) {
           setCachedOrder(parsed);
           setCheckedStorage(true);
-          return;
         }
       }
     } catch {
@@ -116,6 +115,10 @@ export function OrderConfirmationClientFallback({
       .then((data: { ok?: boolean; order?: OrderConfirmationSnapshot }) => {
         if (data?.ok && data.order) {
           setCachedOrder(data.order);
+        } else {
+          setCachedOrder(null);
+          window.sessionStorage.removeItem(`hami_order_${normalizedRef}`);
+          window.localStorage.removeItem(`hami_order_${normalizedRef}`);
         }
       })
       .catch(() => {
@@ -137,7 +140,7 @@ export function OrderConfirmationClientFallback({
           const val = window.localStorage.getItem(key);
           if (val) {
             const parsed = JSON.parse(val) as OrderConfirmationSnapshot;
-            if (parsed && parsed.referenceCode) {
+            if (parsed?.referenceCode && (parsed.lookupToken || parsed.buyerPhone)) {
               found.push(parsed);
             }
           }
@@ -368,10 +371,9 @@ export function OrderConfirmationClientFallback({
           </p>
           <div className="mt-2.5 space-y-2">
             {recentOrders.map((ord) => (
-              <button
+              <Link
                 key={ord.referenceCode}
-                type="button"
-                onClick={() => setCachedOrder(ord)}
+                href={`/yeu-cau-da-nhan?ref=${encodeURIComponent(ord.referenceCode)}&token=${encodeURIComponent(ord.lookupToken || ord.buyerPhone || "")}`}
                 className="flex w-full items-center justify-between rounded-xl border border-[#155132]/15 bg-white px-3.5 py-2.5 text-left text-xs transition hover:border-[#155132] cursor-pointer"
               >
                 <div>
@@ -385,7 +387,7 @@ export function OrderConfirmationClientFallback({
                 <span className="font-bold text-[#8A6632] underline">
                   {formatVnd(ord.totalVnd)} →
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
