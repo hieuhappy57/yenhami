@@ -14,6 +14,7 @@ import {
   getSiteContentSettings,
   isCloudflareR2Enabled,
   putCloudflareR2Object,
+  getCloudflareR2Object,
   syncDbFromCloud,
   syncDbToCloud,
   testAndInitCloudflareD1,
@@ -26,7 +27,7 @@ import {
 } from "@/db";
 import type { ProductCategory, ProductStatus } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
-import { isSafePublicMediaContentType } from "@/lib/media-storage-policy";
+import { MediaUploadError, storeVerifiedImage } from "@/lib/media-upload";
 import { getAuthenticatedStaff, guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
 
 const PRODUCT_STATUSES: ProductStatus[] = ["AVAILABLE", "OUT_OF_STOCK", "PENDING_DATA_APPROVAL"];
@@ -98,6 +99,12 @@ export async function POST(request: Request) {
     }
     if (action === "delete_product" && !canWriteCommercial) return NextResponse.json({ ok: false, errorMessage: "Không có quyền xóa sản phẩm." }, { status: 403, headers: privateJsonHeaders() });
 
+    if(action==="upload_media_r2") {
+      const uploaded=await storeVerifiedImage({dataUrl:String(body.dataUrl || ""),fileName:String(body.fileName || "image")},
+        {enabled:isCloudflareR2Enabled(),put:putCloudflareR2Object,get:getCloudflareR2Object});
+      return NextResponse.json(uploaded,{headers:privateJsonHeaders()});
+    }
+
     return await withAuthoritativeMutation(async () => {
     await syncDbFromCloud(true);
 
@@ -150,7 +157,7 @@ export async function POST(request: Request) {
         volumeMl: commercialVolume,
         priceVnd: commercialPrice,
         status: commercialStatus,
-        imageUrl: String(p.imageUrl || "/brand/dishes/thanh-nguyen-dish.jpg"),
+        imageUrl: String(p.imageUrl || "/brand/dishes/thanh-nguyen-v2.webp"),
         ingredients,
         tasteProfile: String(p.tasteProfile || ""),
         shortDescription: String(p.shortDescription || ""),
@@ -365,59 +372,13 @@ export async function POST(request: Request) {
       });
     }
 
-    if (action === "upload_media_r2" && body.dataUrl) {
-      const dataUrl = String(body.dataUrl || "");
-      if (!isCloudflareR2Enabled() || !dataUrl.startsWith("data:")) {
-        return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
-      }
-      const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (!match) {
-        return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
-      }
-      const contentType = match[1] || "image/jpeg";
-      if (!isSafePublicMediaContentType(contentType)) return NextResponse.json({ok:false,errorMessage:"Chỉ hỗ trợ ảnh PNG, JPEG, WebP, GIF hoặc AVIF."},{status:422,headers:privateJsonHeaders()});
-      const base64Data = match[2];
-      const buffer = Buffer.from(base64Data, "base64");
-      const ext = contentType.includes("png")
-        ? "png"
-        : contentType.includes("webp")
-          ? "webp"
-          : "jpg";
-      const safeName = String(body.fileName || "image")
-        .toLowerCase()
-        .replace(/[^a-z0-9-_]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 40) || "image";
-      const objectKey = `uploads/${Date.now()}-${safeName}.${ext}`;
-      const putRes = await putCloudflareR2Object(
-        objectKey,
-        buffer,
-        contentType
-      );
-      if (putRes.ok) {
-        const publicBase = (process.env.CLOUDFLARE_R2_PUBLIC_URL || "").replace(
-          /\/$/,
-          ""
-        );
-        const finalUrl = publicBase
-          ? `${publicBase}/${objectKey}`
-          : `/api/media/${objectKey}`;
-        return NextResponse.json({
-          ok: true,
-          url: finalUrl,
-          storedInR2: true,
-        });
-      }
-      return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
-    }
-
     return NextResponse.json(
       { ok: false, errorMessage: "Hành động CMS không hợp lệ." },
       { status: 400 }
     );
     });
   } catch (err) {
-    const status = typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;
+    const status = err instanceof MediaUploadError ? err.status : typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;
     return NextResponse.json(
       {
         ok: false,

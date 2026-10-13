@@ -1,0 +1,8 @@
+public/brand/**
+public/bai-viet/**
+public/assets/brand/**
+output/**
+data/**
+.next*/**
+demo/**
+docs/**

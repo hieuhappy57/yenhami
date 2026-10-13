@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareR2Object, isCloudflareR2Enabled } from "@/db";
 import { isPublicMediaKey, isSafePublicMediaContentType } from "@/lib/media-storage-policy";
+import { findStaticMedia } from "@/lib/static-media";
 
 export async function GET(
   _request: Request,
@@ -11,7 +12,8 @@ export async function GET(
   }
 
   const { key } = await context.params;
-  const objectKey = Array.isArray(key) ? key.join("/") : String(key || "");
+  const staticAsset=key[0]==="static" ? findStaticMedia(key.slice(1)) : undefined;
+  const objectKey=staticAsset?.key || (key[0]==="static" ? "" : key.join("/"));
   // Prevent access to internal database snapshot via public media route
   if (!isPublicMediaKey(objectKey)) {
     return new NextResponse("Not found", { status: 404 });
@@ -27,8 +29,11 @@ export async function GET(
     headers: {
       "Content-Type": res.contentType || "image/jpeg",
       "X-Content-Type-Options": "nosniff",
+      "X-Media-Storage": "R2",
       "Content-Security-Policy": "default-src 'none'; sandbox",
-      "Cache-Control": "public, max-age=31536000, immutable",
+      "Cache-Control": staticAsset ? "public, max-age=3600" : "public, max-age=31536000, immutable",
+      "Vercel-CDN-Cache-Control": "public, max-age=31536000, immutable",
+      ...(staticAsset ? {ETag:`"${staticAsset.sha256}"`} : {}),
     },
   });
 }

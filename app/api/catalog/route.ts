@@ -7,9 +7,8 @@ import {
 } from "@/db";
 
 export async function GET(request: Request) {
-  await syncDbFromCloud();
-
   const url = new URL(request.url);
+  await syncDbFromCloud(url.searchParams.get("refresh")==="1");
   const requestedDate = url.searchParams.get("date") || undefined;
   const zoneId = url.searchParams.get("zoneId") || undefined;
 
