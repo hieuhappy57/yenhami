@@ -23,7 +23,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
     product.variants[0]?.id || ""
   );
   const [selectedOption, setSelectedOption] = useState<string>(
-    product.supportedOptions[0] || "Độ ngọt tiêu chuẩn"
+    product.supportedOptions.includes("Bình thường") ? "Bình thường" : product.supportedOptions[0] || "Độ ngọt tiêu chuẩn"
   );
   const [quantity, setQuantity] = useState<number>(1);
 
@@ -372,7 +372,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
                   {product.storageGuide}
                 </p>
               </div>
-              <div className="p-4 rounded-2xl bg-[#FAEFCA]/65 flex items-start gap-2.5">
+              {product.cautionNote.trim() && <div className="p-4 rounded-2xl bg-[#FAEFCA]/65 flex items-start gap-2.5">
                 <AlertCircle
                   className="w-4 h-4 text-[#7C4D2B] shrink-0 mt-0.5"
                   aria-hidden="true"
@@ -380,7 +380,7 @@ export function ProductDetailClient({ product }: { product: ProductRecord }) {
                 <p className="text-xs text-[#2B433A] leading-relaxed">
                   <strong>Lưu ý thành phần:</strong> {product.cautionNote}
                 </p>
-              </div>
+              </div>}
             </div>
           </div>
         </div>

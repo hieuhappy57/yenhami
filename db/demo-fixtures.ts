@@ -1,4 +1,5 @@
 import type { ProductCategory, ProductStatus, ZoneDeliveryStatus } from "./schema";
+import { COCONUT_PRODUCT_COPY } from "../lib/product-copy";
 
 export interface SeedProductInput {
   id: string;
@@ -56,18 +57,15 @@ export const DEMO_PRODUCTS: SeedProductInput[] = [
     tasteProfile: "Ngọt dịu thanh mát, hương thơm thoang thoảng từ mật hoa dừa hữu cơ",
     shortDescription:
       "35g yến tươi thật chưng nóng trong thố sứ 200ml kết hợp mật hoa dừa tự nhiên giàu khoáng chất. Vị ngọt dịu nhẹ, chỉ số đường huyết thấp, lý tưởng cho người lớn tuổi, mẹ bầu và người ăn kiêng.",
-    usageGuide:
-      "Thưởng thức ngon nhất khi thố còn ấm nóng vừa giao. Dùng muỗng sứ đi kèm, thưởng thức từ tốn từng muỗng nhỏ.",
-    storageGuide:
-      "Bảo quản ngăn mát tủ lạnh nếu chưa dùng ngay; xem thời hạn sử dụng trên tem niêm phong thố.",
-    cautionNote:
-      "Sản phẩm sử dụng mật hoa dừa tự nhiên, hoàn toàn không hương liệu và không chất bảo quản.",
+    usageGuide: COCONUT_PRODUCT_COPY.usageGuide,
+    storageGuide: COCONUT_PRODUCT_COPY.storageGuide,
+    cautionNote: COCONUT_PRODUCT_COPY.cautionNote,
     imageUrl: "/brand/dishes/dua-mat-thanh-diu.jpg",
     isIllustrationImage: true,
     priceVnd: 295000,
     status: "AVAILABLE",
     isDemoFixture: true,
-    supportedOptions: ["Độ ngọt mật hoa dừa tiêu chuẩn"],
+    supportedOptions: [...COCONUT_PRODUCT_COPY.supportedOptions],
     sortOrder: 2,
   },
   {

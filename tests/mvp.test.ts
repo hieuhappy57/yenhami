@@ -39,6 +39,16 @@ describe("Yến Sào Hà Mi MVP — Server Validation, Capacity, Security & Orde
   // Fixed reference time: 2026-10-06 08:15 Asia/Ho_Chi_Minh (01:15 UTC)
   const fixedNow = new Date("2026-10-06T01:15:00.000Z");
 
+  it("retains all approved coconut sweetness options in the server quote", () => {
+    for (const selectedOption of ["Không đường", "Bình thường", "Đường kiêng"]) {
+      const quote = calculateServerQuote({items:[{productId:"prod-dua-mat-thanh-diu",quantity:1,selectedOption}],now:fixedNow});
+      assert.equal(quote.ok, true);
+      assert.equal(quote.items[0].selectedOption, selectedOption);
+    }
+    const legacy = calculateServerQuote({items:[{productId:"prod-dua-mat-thanh-diu",quantity:1,selectedOption:"Độ ngọt mật hoa dừa tiêu chuẩn"}],now:fixedNow});
+    assert.equal(legacy.items[0].selectedOption, "Bình thường");
+  });
+
   it("confirms fee, payment and order atomically with replay protection", () => {
     const created = submitOrderRequest({idempotencyKey:"qa-atomic-confirm-order",orderPurpose:"SELF",
       buyerName:"QA Confirm",buyerPhone:"0900000004",addressDetail:"QA Cam Le",zoneId:"zone-cam-le-lien-chieu",

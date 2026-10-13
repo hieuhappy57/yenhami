@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { gzipSync } from "node:zlib";
 import { resolveProductImage } from "../lib/product-images";
+import { resolveProductCopy } from "../lib/product-copy";
 import { authenticateStaff, listStaff } from "./staff-repository";
 import { CloudPersistenceError, DurableCloudStore, type CloudSnapshot, type CloudStatement } from "./durable-cloud";
 import { isDatabaseMutation, withDatabaseLock } from "../lib/database-lock";
@@ -655,14 +656,16 @@ export function getAllProducts(): ProductRecord[] {
       ingredients: JSON.parse(String(r.ingredients_json)) as string[],
       tasteProfile: String(r.taste_profile),
       shortDescription: String(r.short_description),
-      usageGuide: String(r.usage_guide),
-      storageGuide: String(r.storage_guide),
-      cautionNote: String(r.caution_note),
+      ...resolveProductCopy(prodId, {
+        usageGuide: String(r.usage_guide),
+        storageGuide: String(r.storage_guide),
+        cautionNote: String(r.caution_note),
+        supportedOptions: JSON.parse(String(r.supported_options_json)) as string[],
+      }),
       ...resolveProductImage(prodId, String(r.image_url), Boolean(r.is_illustration_image)),
       priceVnd: r.price_vnd === null || r.price_vnd === undefined ? null : Number(r.price_vnd),
       status: String(r.status) as ProductStatus,
       isDemoFixture: Boolean(r.is_demo_fixture),
-      supportedOptions: JSON.parse(String(r.supported_options_json)) as string[],
       sortOrder: Number(r.sort_order),
       variants: prodVariants,
     };
@@ -956,7 +959,9 @@ export function calculateServerQuote(params: {
     const selectedOption =
       rawItem.selectedOption && product.supportedOptions.includes(rawItem.selectedOption)
         ? rawItem.selectedOption
-        : product.supportedOptions[0] || "Độ ngọt tiêu chuẩn";
+        : product.supportedOptions.includes("Bình thường")
+          ? "Bình thường"
+          : product.supportedOptions[0] || "Độ ngọt tiêu chuẩn";
 
     const lineTotal = authoritativeUnitPrice * qty;
     subtotalVnd += lineTotal;
