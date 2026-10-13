@@ -48,6 +48,14 @@ export function getOrderNotificationOutbox(referenceCode: string) {
     .get(referenceCode.trim().toUpperCase()) as Record<string, unknown> | undefined;
 }
 
+export function hasDueOrderNotifications(now = new Date()): boolean {
+  ensureOrderNotificationOutbox();
+  return Boolean(getSqliteDb().prepare(`SELECT 1 FROM order_notification_outbox
+    WHERE (status IN ('PENDING','FAILED') AND retry_count<5 AND next_attempt_at<=?)
+      OR (status='PROCESSING' AND claimed_at<?) LIMIT 1`)
+    .get(now.toISOString(),new Date(now.getTime()-5*60_000).toISOString()));
+}
+
 function canonicalPayload(referenceCode: string): OrderNotificationPayload | null {
   const order = getOrderRequestByReference({ referenceCode, isStaff: true });
   if (!order) return null;

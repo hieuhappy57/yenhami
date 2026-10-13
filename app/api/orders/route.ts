@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  flushPendingOrderNotifications,
   getOrderRequestByReference,
   submitOrderRequest,
   syncDbFromCloud,
-  syncDbToCloud,
 } from "@/db";
+import { withAuthoritativeMutation } from "@/lib/authoritative-write";
+import { readBoundedJson, privateJsonHeaders } from "@/lib/staff-access";
 import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox } from "@/db/order-outbox";
 import { getAuthenticatedStaff } from "@/lib/staff-auth";
 
@@ -70,15 +70,9 @@ export async function POST(request: Request) {
       );
     }
 
-    try {
-      await syncDbFromCloud(false);
-    } catch (syncErr) {
-      console.warn("Pre-order cloud sync warning:", syncErr);
-    }
-
     let body: Record<string, unknown>;
     try {
-      body = await request.json();
+      body = await readBoundedJson(request,64 * 1024);
     } catch {
       return NextResponse.json(
         { ok: false, errorCode: "INVALID_BODY", errorMessage: "Dữ liệu yêu cầu không hợp lệ." },
@@ -91,32 +85,30 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const res = submitOrderRequest(body as any);
+    const res = await withAuthoritativeMutation(() => {
+      ensureOrderNotificationOutbox();
+      return submitOrderRequest({...body,source:"WEBSITE",isDemoOrder:false} as any);
+    });
 
     if (res.ok && res.order?.referenceCode) {
       try {
-        await flushPendingOrderNotifications(res.order.referenceCode);
-        await flushOrderNotificationOutbox({ limit: 5 });
+        await withAuthoritativeMutation(() => flushOrderNotificationOutbox({ limit: 1 }));
       } catch (notifErr) {
         console.error("Order notification error:", notifErr);
       }
-      try {
-        await syncDbToCloud();
-      } catch (cloudErr) {
-        console.warn("Post-order cloud sync warning:", cloudErr);
-      }
     }
 
-    return NextResponse.json(res, { status: res.ok ? 200 : 400 });
+    return NextResponse.json(res, { status: res.ok ? 200 : 400, headers:privateJsonHeaders() });
   } catch (error) {
     console.error("Order submit exception:", error);
+    const unavailable = typeof error === "object" && error && "status" in error && error.status === 503;
     return NextResponse.json(
       {
         ok: false,
-        errorCode: "SERVER_ERROR",
-        errorMessage: "Không thể xử lý yêu cầu đặt hàng lúc này. Vui lòng thử lại.",
+        errorCode: unavailable ? "CLOUD_PERSISTENCE_UNAVAILABLE" : "SERVER_ERROR",
+        errorMessage: unavailable ? "Chưa xác nhận được việc lưu đơn. Vui lòng thử lại, hệ thống sẽ kiểm tra để tránh trùng đơn." : "Không thể xử lý yêu cầu đặt hàng lúc này. Vui lòng thử lại.",
       },
-      { status: 500 }
+      { status: unavailable ? 503 : 500, headers:privateJsonHeaders() }
     );
   }
 }

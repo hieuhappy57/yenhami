@@ -9,3 +9,4 @@ data/*.sqlite*
 *.log
 *.tsbuildinfo
 .next-qa-build
+.next-storage-review

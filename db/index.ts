@@ -2,8 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { gzipSync } from "node:zlib";
 import { resolveProductImage } from "../lib/product-images";
-import { authenticateStaff } from "./staff-repository";
+import { authenticateStaff, listStaff } from "./staff-repository";
+import { CloudPersistenceError, DurableCloudStore, type CloudSnapshot, type CloudStatement } from "./durable-cloud";
+import { isDatabaseMutation, withDatabaseLock } from "../lib/database-lock";
 import {
   DEMO_DELIVERY_SLOTS,
   DEMO_POSTS,
@@ -377,6 +380,16 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         NEW.created_at, NEW.created_at, NEW.created_at
       );
     END;
+    CREATE TABLE IF NOT EXISTS customers (
+      phone TEXT PRIMARY KEY, name TEXT NOT NULL,
+      first_order_at TEXT NOT NULL, last_order_at TEXT NOT NULL,
+      first_source TEXT NOT NULL, last_source TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS customer_addresses (
+      id TEXT PRIMARY KEY, customer_phone TEXT NOT NULL, recipient_name TEXT NOT NULL,
+      recipient_phone TEXT NOT NULL, address_detail TEXT NOT NULL, zone_id TEXT NOT NULL,
+      last_used_at TEXT NOT NULL, FOREIGN KEY(customer_phone) REFERENCES customers(phone)
+    );
   `);
 
   // Ensure start_minutes_of_day column exists if DB was created before this migration
@@ -1523,6 +1536,9 @@ export function submitOrderRequest(input: SubmitOrderRequestInput): SubmitOrderR
       nowIso
     );
 
+    updateCustomerFromOrder({ buyer_phone: buyerPhone, buyer_name: buyerName, recipient_name: recipientName,
+      recipient_phone: recipientPhone, address_detail: addressDetail, zone_id: quote.zone.id,
+      source, created_at: nowIso });
     db.exec("COMMIT;");
 
     return {
@@ -2816,6 +2832,7 @@ export async function triggerOrderNotificationsAfterCommit(
           headers: {
             Authorization: `Bearer ${config.resendApiKey}`,
             "Content-Type": "application/json",
+            "Idempotency-Key": `hami-new-order-${payload.referenceCode}`,
           },
           body: JSON.stringify({
             from: config.resendFromEmail,
@@ -2940,7 +2957,13 @@ export async function flushPendingOrderNotifications(referenceCode?: string): Pr
 const CLOUD_TABLES = [
   "products",
   "product_variants",
+  "service_zones",
+  "delivery_slots",
   "slot_date_reservations",
+  "staff_users",
+  "staff_roles",
+  "staff_sessions",
+  "staff_login_attempts",
   "order_requests",
   "order_items",
   "order_status_history",
@@ -2950,6 +2973,9 @@ const CLOUD_TABLES = [
   "posts",
   "job_postings",
   "notification_logs",
+  "order_notification_outbox",
+  "customers",
+  "customer_addresses",
 ] as const;
 
 // Exact QA references only. Never select orders by name, phone, or date.
@@ -2988,11 +3014,8 @@ export function purgePrelaunchTestOrders(db: DatabaseSync): number {
 }
 
 let lastCloudSyncAtMs = 0;
-let d1SchemaInitialized = false;
 let r2BucketInitialized = false;
 let resolvedAccountIdCache: string | null = null;
-let cloudflareBackoffUntilMs = 0;
-let d1AuthFailed = false;
 
 function cleanEnvVal(v: string | undefined): string {
   let raw = (v || "").trim();
@@ -3078,10 +3101,6 @@ export function isCloudflareD1Enabled(): boolean {
   );
 }
 
-function isGistSyncEnabled(): boolean {
-  if (process.env.HAMI_DB_PATH) return false;
-  return Boolean(process.env.HAMI_GIST_ID && process.env.HAMI_GITHUB_TOKEN);
-}
 
 export function getCloudDatabaseStatus(): {
   provider: "CLOUDFLARE_D1" | "CLOUDFLARE_R2" | "GITHUB_GIST" | "LOCAL_SQLITE";
@@ -3092,248 +3111,18 @@ export function getCloudDatabaseStatus(): {
   r2BucketName: string | null;
 } {
   return {
-    provider: "LOCAL_SQLITE",
-    label: "Hệ thống Cơ sở dữ liệu Bảo mật Nội bộ",
-    isCloudflareD1Configured: false,
-    isCloudflareR2Configured: false,
-    databaseIdMasked: null,
-    r2BucketName: null,
+    provider: isCloudflareD1Enabled() ? "CLOUDFLARE_D1" : isCloudflareR2Enabled() ? "CLOUDFLARE_R2" : "LOCAL_SQLITE",
+    label: isCloudflareD1Enabled() ? "Cloudflare D1 · Dữ liệu giao dịch" : "SQLite nội bộ",
+    isCloudflareD1Configured: isCloudflareD1Enabled(),
+    isCloudflareR2Configured: isCloudflareR2Enabled(),
+    databaseIdMasked: isCloudflareD1Enabled() ? `${getCloudflareD1DatabaseId().slice(0, 8)}…` : null,
+    r2BucketName: isCloudflareR2Enabled() ? getCloudflareR2BucketName() : null,
   };
 }
 
-function escapeSqlLiteral(val: unknown): string {
-  if (val === null || val === undefined) return "NULL";
-  if (typeof val === "number") {
-    return Number.isFinite(val) ? String(val) : "NULL";
-  }
-  if (typeof val === "boolean") {
-    return val ? "1" : "0";
-  }
-  const str = String(val).replace(/'/g, "''");
-  return `'${str}'`;
-}
 
-async function executeCloudflareD1Query<T = Record<string, unknown>>(
-  sql: string,
-  params?: (string | number | null)[]
-): Promise<{ ok: boolean; results: T[]; error?: string }> {
-  const accountId = getCloudflareAccountId();
-  const databaseId = getCloudflareD1DatabaseId();
-  const apiToken = getCloudflareApiToken();
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
-  const bodyObj: Record<string, unknown> = { sql };
-  if (params && params.length > 0) {
-    bodyObj.params = params;
-  }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(bodyObj),
-    cache: "no-store",
-    signal: AbortSignal.timeout(5000),
-  });
-
-  const data = (await res.json()) as {
-    success?: boolean;
-    errors?: { code?: number; message?: string }[];
-    result?: { results?: T[]; success?: boolean }[];
-  };
-
-  if (!res.ok || !data.success) {
-    const errMsg =
-      data.errors?.map((e) => `${e.message} (code ${e.code})`).join("; ") ||
-      `HTTP ${res.status}`;
-    return { ok: false, results: [], error: errMsg };
-  }
-
-  const firstResult = data.result?.[0];
-  return {
-    ok: true,
-    results: Array.isArray(firstResult?.results) ? firstResult!.results : [],
-  };
-}
-
-const CLOUDFLARE_D1_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS hami_cloud_state (
-  id TEXT PRIMARY KEY,
-  updated_at TEXT NOT NULL,
-  payload_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS products (
-  id TEXT PRIMARY KEY,
-  slug TEXT NOT NULL,
-  name TEXT NOT NULL,
-  category TEXT NOT NULL,
-  volume_ml INTEGER NOT NULL,
-  ingredients_json TEXT NOT NULL,
-  taste_profile TEXT NOT NULL,
-  short_description TEXT NOT NULL,
-  usage_guide TEXT NOT NULL,
-  storage_guide TEXT NOT NULL,
-  caution_note TEXT NOT NULL,
-  image_url TEXT NOT NULL,
-  is_illustration_image INTEGER NOT NULL DEFAULT 1,
-  price_vnd INTEGER,
-  status TEXT NOT NULL,
-  is_demo_fixture INTEGER NOT NULL DEFAULT 1,
-  supported_options_json TEXT NOT NULL,
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS product_variants (
-  id TEXT PRIMARY KEY,
-  product_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  price_delta_vnd INTEGER NOT NULL DEFAULT 0,
-  is_available INTEGER NOT NULL DEFAULT 1
-);
-CREATE TABLE IF NOT EXISTS slot_date_reservations (
-  requested_date TEXT NOT NULL,
-  slot_id TEXT NOT NULL,
-  reserved_bowls INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (requested_date, slot_id)
-);
-CREATE TABLE IF NOT EXISTS order_requests (
-  id TEXT PRIMARY KEY,
-  reference_code TEXT NOT NULL,
-  lookup_token TEXT NOT NULL,
-  idempotency_key TEXT NOT NULL,
-  order_purpose TEXT NOT NULL,
-  buyer_name TEXT NOT NULL,
-  buyer_phone TEXT NOT NULL,
-  buyer_note TEXT,
-  recipient_name TEXT NOT NULL,
-  recipient_phone TEXT NOT NULL,
-  gift_sender_name TEXT,
-  gift_message TEXT,
-  hide_price_on_receipt INTEGER NOT NULL DEFAULT 0,
-  zone_id TEXT NOT NULL,
-  zone_name_snapshot TEXT NOT NULL,
-  address_detail TEXT NOT NULL,
-  requested_date TEXT NOT NULL,
-  slot_id TEXT NOT NULL,
-  slot_label_snapshot TEXT NOT NULL,
-  subtotal_vnd INTEGER NOT NULL,
-  shipping_fee_vnd INTEGER,
-  shipping_fee_note TEXT NOT NULL,
-  total_vnd INTEGER NOT NULL,
-  is_total_final INTEGER NOT NULL DEFAULT 1,
-  order_status TEXT NOT NULL,
-  payment_status TEXT NOT NULL,
-  source TEXT NOT NULL DEFAULT 'UNKNOWN',
-  source_detail TEXT,
-  row_version INTEGER NOT NULL DEFAULT 1,
-  confirmed_at TEXT,
-  preparing_started_at TEXT,
-  prepared_done_at TEXT,
-  completed_at TEXT,
-  is_demo_order INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS order_items (
-  id TEXT PRIMARY KEY,
-  order_request_id TEXT NOT NULL,
-  product_id TEXT NOT NULL,
-  variant_id TEXT NOT NULL,
-  product_name_snapshot TEXT NOT NULL,
-  variant_name_snapshot TEXT NOT NULL,
-  volume_ml_snapshot INTEGER NOT NULL,
-  ingredients_snapshot TEXT NOT NULL,
-  selected_option_snapshot TEXT NOT NULL,
-  unit_price_snapshot INTEGER NOT NULL,
-  quantity INTEGER NOT NULL,
-  line_total_snapshot INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS order_status_history (
-  id TEXT PRIMARY KEY,
-  order_request_id TEXT NOT NULL,
-  from_status TEXT,
-  to_status TEXT NOT NULL,
-  from_payment_status TEXT,
-  to_payment_status TEXT NOT NULL,
-  changed_by_staff_username TEXT NOT NULL,
-  changed_by_staff_name TEXT NOT NULL,
-  note TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS payment_entries (
-  id TEXT PRIMARY KEY,
-  order_request_id TEXT NOT NULL,
-  type TEXT NOT NULL,
-  amount_vnd INTEGER NOT NULL,
-  method TEXT NOT NULL,
-  occurred_at TEXT NOT NULL,
-  recorded_at TEXT NOT NULL,
-  staff_username TEXT NOT NULL,
-  reason TEXT,
-  idempotency_key TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS order_confirmations (
-  idempotency_key TEXT PRIMARY KEY,
-  reference_code TEXT NOT NULL,
-  payload TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS site_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS posts (
-  id TEXT PRIMARY KEY,
-  slug TEXT NOT NULL,
-  title TEXT NOT NULL,
-  category TEXT NOT NULL,
-  excerpt TEXT NOT NULL,
-  content TEXT NOT NULL,
-  cover_image_url TEXT NOT NULL,
-  is_published INTEGER NOT NULL DEFAULT 1,
-  is_pinned INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS job_postings (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  department TEXT NOT NULL,
-  location TEXT NOT NULL,
-  employment_type TEXT NOT NULL,
-  salary_range TEXT NOT NULL,
-  description TEXT NOT NULL,
-  requirements TEXT NOT NULL,
-  contact_info TEXT NOT NULL,
-  is_open INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS notification_logs (
-  id TEXT PRIMARY KEY,
-  order_reference_code TEXT NOT NULL,
-  channel TEXT NOT NULL,
-  recipient TEXT NOT NULL,
-  status TEXT NOT NULL,
-  message_summary TEXT NOT NULL,
-  detail TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-`;
-
-async function ensureCloudflareD1Schema(force = false): Promise<{
-  ok: boolean;
-  error?: string;
-}> {
-  if (d1SchemaInitialized && !force) return { ok: true };
-  const res = await executeCloudflareD1Query(CLOUDFLARE_D1_SCHEMA_SQL);
-  if (res.ok) {
-    d1SchemaInitialized = true;
-  }
-  return { ok: res.ok, error: res.error };
-}
 
 function buildSnapshotsFromLocalSqlite(): {
   version: number;
@@ -3343,14 +3132,7 @@ function buildSnapshotsFromLocalSqlite(): {
   const db = getSqliteDb();
   const tables: Record<string, Record<string, unknown>[]> = {};
   for (const table of CLOUD_TABLES) {
-    try {
-      tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<
-        string,
-        unknown
-      >[];
-    } catch {
-      tables[table] = [];
-    }
+    tables[table] = db.prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[];
   }
   return {
     version: 1,
@@ -3359,149 +3141,7 @@ function buildSnapshotsFromLocalSqlite(): {
   };
 }
 
-function applyCloudTablesToLocalSqlite(
-  parsedTables: Record<string, Record<string, unknown>[]>
-): void {
-  const db = getSqliteDb();
-  db.exec("BEGIN IMMEDIATE TRANSACTION;");
-  try {
-    for (const table of CLOUD_TABLES) {
-      const rows = parsedTables[table];
-      if (!Array.isArray(rows) || rows.length === 0) continue;
 
-      if (
-        table === "products" ||
-        table === "product_variants" ||
-        table === "posts" ||
-        table === "job_postings"
-      ) {
-        db.exec(`DELETE FROM ${table};`);
-      }
-
-      const cols = Object.keys(rows[0]);
-      if (cols.length === 0) continue;
-      const placeholders = cols.map(() => "?").join(", ");
-      const colList = cols.join(", ");
-      const stmt = db.prepare(
-        `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${placeholders})`
-      );
-      for (const r of rows) {
-        const vals = cols.map((c) => {
-          const v = r[c];
-          return v === undefined ? null : (v as string | number | null);
-        });
-        stmt.run(...vals);
-      }
-    }
-
-    purgePrelaunchTestOrders(db);
-
-    // Ensure canonical SEO/GEO posts and updated 295.000đ+ fresh bowl prices are always present
-    const syncNowIso = new Date().toISOString();
-    db.exec("DELETE FROM posts WHERE id IN ('post-1', 'post-2', 'post-3');");
-    const upsertPostStmt = db.prepare(`
-      INSERT INTO posts (id, slug, title, category, excerpt, content, cover_image_url, is_published, is_pinned, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO NOTHING
-    `);
-    for (const post of DEMO_POSTS) {
-      upsertPostStmt.run(
-        post.id,
-        post.slug,
-        post.title,
-        post.category,
-        post.excerpt,
-        post.content,
-        post.coverImageUrl,
-        post.isPublished ? 1 : 0,
-        post.isPinned ? 1 : 0,
-        syncNowIso,
-        syncNowIso
-      );
-    }
-
-    const upsertFreshProdStmt = db.prepare(`
-      UPDATE products
-      SET ingredients_json = ?, taste_profile = ?, short_description = ?, usage_guide = ?, caution_note = ?, price_vnd = ?
-      WHERE id = ? AND (price_vnd IS NULL OR price_vnd < 295000)
-    `);
-    for (const p of DEMO_PRODUCTS) {
-      if (p.id.startsWith("prod-")) {
-        upsertFreshProdStmt.run(
-          JSON.stringify(p.ingredients),
-          p.tasteProfile,
-          p.shortDescription,
-          p.usageGuide,
-          p.cautionNote,
-          p.priceVnd,
-          p.id
-        );
-      }
-    }
-
-    db.exec("COMMIT;");
-  } catch {
-    try {
-      db.exec("ROLLBACK;");
-    } catch {
-      // ignore
-    }
-  }
-}
-
-async function syncDbToCloudflareD1(): Promise<{ ok: boolean; error?: string }> {
-  const schemaRes = await ensureCloudflareD1Schema();
-  if (!schemaRes.ok) {
-    return { ok: false, error: schemaRes.error };
-  }
-
-  const payload = buildSnapshotsFromLocalSqlite();
-  const payloadStr = JSON.stringify(payload);
-
-  // 1. Save authoritative snapshot in hami_cloud_state (instant 1-query read on page loads)
-  const stateRes = await executeCloudflareD1Query(
-    `INSERT OR REPLACE INTO hami_cloud_state (id, updated_at, payload_json) VALUES (?, ?, ?);`,
-    ["main", payload.updatedAt, payloadStr]
-  );
-  if (!stateRes.ok) {
-    return { ok: false, error: stateRes.error };
-  }
-
-  // 2. Also populate relational SQL tables on Cloudflare D1 so all tables & rows are visible in Cloudflare Dashboard -> D1 -> Tables
-  const sqlStatements: string[] = [];
-  for (const table of CLOUD_TABLES) {
-    const rows = payload.tables[table];
-    if (!Array.isArray(rows)) continue;
-
-    if (
-      table === "products" ||
-      table === "product_variants" ||
-      table === "posts" ||
-      table === "job_postings"
-    ) {
-      sqlStatements.push(`DELETE FROM ${table};`);
-    }
-
-    if (rows.length === 0) continue;
-    const cols = Object.keys(rows[0]);
-    if (cols.length === 0) continue;
-    const colList = cols.join(", ");
-
-    for (const r of rows) {
-      const valLiterals = cols.map((c) => escapeSqlLiteral(r[c])).join(", ");
-      sqlStatements.push(
-        `INSERT OR REPLACE INTO ${table} (${colList}) VALUES (${valLiterals});`
-      );
-    }
-  }
-
-  if (sqlStatements.length > 0) {
-    await executeCloudflareD1Query(sqlStatements.join("\n"));
-  }
-
-  lastCloudSyncAtMs = Date.now();
-  return { ok: true };
-}
 
 export async function ensureCloudflareR2Bucket(force = false): Promise<{
   ok: boolean;
@@ -3650,318 +3290,245 @@ export async function getCloudflareR2Object(objectKey: string): Promise<{
   return { ok: true, arrayBuffer, contentType };
 }
 
-async function syncDbToCloudflareR2(): Promise<{
-  ok: boolean;
-  error?: string;
-}> {
-  const payload = buildSnapshotsFromLocalSqlite();
-  const res = await putCloudflareR2Object(
-    "db/ha-mi-db-state.json",
-    JSON.stringify(payload),
-    "application/json; charset=utf-8"
-  );
-  if (res.ok) {
-    lastCloudSyncAtMs = Date.now();
-  }
-  return res;
-}
 
-async function pullFromCloudflareR2IntoLocalSqlite(): Promise<boolean> {
-  if (!isCloudflareR2Enabled()) return false;
-  try {
-    const res = await getCloudflareR2Object("db/ha-mi-db-state.json");
-    if (!res.ok || !res.arrayBuffer) return false;
-    const rawJson = Buffer.from(res.arrayBuffer).toString("utf-8");
-    if (!rawJson) return false;
 
-    const parsed = JSON.parse(rawJson) as {
-      tables?: Record<string, Record<string, unknown>[]>;
-    };
-    if (!parsed.tables) return false;
-
-    const hasPrelaunchOrders = (parsed.tables.order_requests || []).some((row) =>
-      PRELAUNCH_TEST_ORDER_REFERENCES.includes(String(row.reference_code) as typeof PRELAUNCH_TEST_ORDER_REFERENCES[number])
-    );
-    if (hasPrelaunchOrders) {
-      const backup = await getCloudflareR2Object(PRELAUNCH_BACKUP_KEY);
-      if (!backup.ok && backup.error !== "HTTP 404") return false;
-      if (!backup.ok) {
-        const saved = await putCloudflareR2Object(PRELAUNCH_BACKUP_KEY, rawJson, "application/json; charset=utf-8");
-        if (!saved.ok) return false;
-      }
-    }
-
-    applyCloudTablesToLocalSqlite(parsed.tables);
-    r2BucketInitialized = true;
-    if (hasPrelaunchOrders) {
-      const cleaned = await syncDbToCloudflareR2();
-      if (!cleaned.ok) return false;
-      if (isCloudflareD1Enabled() && !d1AuthFailed) {
-        const d1Sync = await syncDbToCloudflareD1();
-        if (d1Sync.ok) {
-          const refs = PRELAUNCH_TEST_ORDER_REFERENCES.map(escapeSqlLiteral).join(", ");
-          await executeCloudflareD1Query(`
-            DELETE FROM payment_entries WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
-            DELETE FROM order_status_history WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
-            DELETE FROM order_items WHERE order_request_id IN (SELECT id FROM order_requests WHERE reference_code IN (${refs}));
-            DELETE FROM order_requests WHERE reference_code IN (${refs});
-            DELETE FROM order_confirmations WHERE reference_code IN (${refs});
-            DELETE FROM notification_logs WHERE order_reference_code IN (${refs});
-          `);
-        }
-      }
-      await syncDbToGist();
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function maskDiag(val: string | undefined): string {
-  const s = (val || "").trim();
-  if (!s) return "empty";
-  if (s.length <= 8) return `${s.length}chars`;
-  return `${s.slice(0, 4)}...${s.slice(-4)}(${s.length}c)`;
-}
 
 export async function testAndInitCloudflareD1(): Promise<{
   ok: boolean;
   message: string;
 }> {
-  if (!isCloudflareR2Enabled() && !isCloudflareD1Enabled()) {
-    return {
-      ok: false,
-      message:
-        "Chưa tìm thấy biến môi trường CLOUDFLARE_ACCOUNT_ID và CLOUDFLARE_API_TOKEN trên Vercel / môi trường hiện tại.",
-    };
-  }
-
   try {
-    cloudflareBackoffUntilMs = 0;
-    const results: string[] = [];
-
-    // 1. Test & Sync Cloudflare R2 FIRST (so D1 auth errors never rate-limit the token)
-    let r2Succeeded = false;
-    if (isCloudflareR2Enabled()) {
-      const r2Res = await ensureCloudflareR2Bucket(true);
-      if (r2Res.ok) {
-        const r2Sync = await syncDbToCloudflareR2();
-        if (r2Sync.ok) {
-          r2Succeeded = true;
-          results.push(
-            `Cloudflare R2 Bucket (${getCloudflareR2BucketName()}): Đã kết nối & lưu trữ thành công!`
-          );
-        } else {
-          results.push(`Cloudflare R2 lỗi ghi dữ liệu: ${r2Sync.error}`);
-        }
-      } else {
-        const diag = `[Chẩn đoán biến Vercel: ACCOUNT_ID=${maskDiag(process.env.CLOUDFLARE_ACCOUNT_ID)}, API_TOKEN=${maskDiag(process.env.CLOUDFLARE_API_TOKEN)}]`;
-        results.push(`Cloudflare R2: ${r2Res.error} ${diag}`);
-      }
-    }
-
-    // 2. Only test D1 if configured and not previously rejected as R2-only token
-    if (isCloudflareD1Enabled() && !d1AuthFailed) {
-      const schemaRes = await ensureCloudflareD1Schema(true);
-      if (schemaRes.ok) {
-        const syncRes = await syncDbToCloudflareD1();
-        if (syncRes.ok) {
-          results.push(
-            "Cloudflare D1 SQL: Đã khởi tạo 10 bảng SQL & đồng bộ thành công!"
-          );
-        }
-      } else if (schemaRes.error?.includes("10000")) {
-        d1AuthFailed = true;
-        if (!r2Succeeded) {
-          results.push(`Cloudflare D1: ${schemaRes.error}`);
-        }
-      }
-    }
-
-    const db = getSqliteDb();
-    const prodCount = (
-      db.prepare("SELECT COUNT(*) as c FROM products").get() as { c: number }
-    ).c;
-    const orderCount = (
-      db.prepare("SELECT COUNT(*) as c FROM order_requests").get() as { c: number }
-    ).c;
-    const postCount = (
-      db.prepare("SELECT COUNT(*) as c FROM posts").get() as { c: number }
-    ).c;
-
-    return {
-      ok: r2Succeeded || d1SchemaInitialized,
-      message: `${results.join(" • ")} (Đang quản lý ${prodCount} sản phẩm, ${postCount} bài viết và ${orderCount} đơn hàng).`,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      message:
-        err instanceof Error
-          ? err.message
-          : "Lỗi kết nối tới Cloudflare API.",
-    };
-  }
+    await runDurableMutation(() => {});
+    const report = getDurableStorageReport();
+    return {ok:isCloudflareD1Enabled(),message:`D1 đã kiểm chứng: ${report.counts.order_requests} đơn, ${report.counts.order_items} dòng món, ${report.counts.customers} khách, ${report.counts.payment_entries} giao dịch, ${report.counts.order_status_history} lịch sử xử lý.`};
+  } catch (error) { return {ok:false,message:error instanceof Error ? error.message : "Chưa kiểm chứng được kho dữ liệu."}; }
 }
+
 
 export async function syncDbToCloud(): Promise<void> {
-  if (
-    (isCloudflareR2Enabled() || (isCloudflareD1Enabled() && !d1AuthFailed)) &&
-    Date.now() >= cloudflareBackoffUntilMs
-  ) {
-    if (isCloudflareR2Enabled()) {
-      const r2Res = await syncDbToCloudflareR2();
-      if (!r2Res.ok) {
-        cloudflareBackoffUntilMs = Date.now() + 5 * 60 * 1000;
-        return;
-      }
-    }
-    if (isCloudflareD1Enabled() && !d1AuthFailed) {
-      const d1Res = await syncDbToCloudflareD1();
-      if (!d1Res.ok && d1Res.error?.includes("10000")) {
-        d1AuthFailed = true;
-      }
-    }
-    return;
-  }
-
-  await syncDbToGist();
+  if (isDatabaseMutation()) return;
+  await runDurableMutation(() => {});
 }
 
-async function syncDbToGist(): Promise<boolean> {
-  if (!isGistSyncEnabled()) return false;
+
+
+
+
+function updateCustomerFromOrder(row: Record<string, unknown>): void {
+  const db = getSqliteDb();
+  const phone = String(row.buyer_phone || "");
+  if (!phone) return;
+  const date = String(row.created_at);
+  db.prepare(`INSERT INTO customers(phone,name,first_order_at,last_order_at,first_source,last_source,updated_at)
+    VALUES(?,?,?,?,?,?,?) ON CONFLICT(phone) DO UPDATE SET
+    name=CASE WHEN excluded.last_order_at>=customers.last_order_at THEN excluded.name ELSE customers.name END,
+    first_order_at=MIN(customers.first_order_at,excluded.first_order_at),
+    first_source=CASE WHEN excluded.first_order_at<customers.first_order_at THEN excluded.first_source ELSE customers.first_source END,
+    last_source=CASE WHEN excluded.last_order_at>=customers.last_order_at THEN excluded.last_source ELSE customers.last_source END,
+    last_order_at=MAX(customers.last_order_at,excluded.last_order_at),updated_at=MAX(customers.updated_at,excluded.updated_at)`)
+    .run(phone,String(row.buyer_name),date,date,String(row.source || "UNKNOWN"),String(row.source || "UNKNOWN"),date);
+  const addressId = crypto.createHash("sha256").update(JSON.stringify([phone,row.recipient_phone,row.address_detail,row.zone_id])).digest("hex");
+  db.prepare(`INSERT INTO customer_addresses(id,customer_phone,recipient_name,recipient_phone,address_detail,zone_id,last_used_at)
+    VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+    recipient_name=CASE WHEN excluded.last_used_at>=customer_addresses.last_used_at THEN excluded.recipient_name ELSE customer_addresses.recipient_name END,
+    last_used_at=MAX(customer_addresses.last_used_at,excluded.last_used_at)`)
+    .run(addressId,phone,String(row.recipient_name),String(row.recipient_phone),String(row.address_detail),String(row.zone_id),date);
+}
+
+function durableSnapshot(): CloudSnapshot {
+  listStaff(); // Ensure authentication migrations exist before building the cloud schema.
+  return buildSnapshotsFromLocalSqlite() as CloudSnapshot;
+}
+
+function restoreDurableSnapshot(snapshot: CloudSnapshot): void {
+  const db = getSqliteDb();
+  const trigger = db.prepare("SELECT sql FROM sqlite_master WHERE type='trigger' AND name='queue_order_notification_after_insert'").get() as {sql: string} | undefined;
+  db.exec("BEGIN IMMEDIATE;");
   try {
-    const snapshot = buildSnapshotsFromLocalSqlite();
-    snapshot.tables.site_settings = (snapshot.tables.site_settings || []).map((row) => {
-      if (row.key !== "notification_settings") return row;
+    db.exec("DROP TRIGGER IF EXISTS queue_order_notification_after_insert;");
+    for (const table of [...CLOUD_TABLES].reverse()) db.exec(`DELETE FROM "${table}";`);
+    for (const table of CLOUD_TABLES) {
+      const columns = new Set((db.prepare(`PRAGMA table_info("${table}")`).all() as {name:string}[]).map((column) => column.name));
+      for (const row of snapshot.tables[table] || []) {
+        const names = Object.keys(row).filter((name) => columns.has(name));
+        if (!names.length) continue;
+        db.prepare(`INSERT INTO "${table}" (${names.map((name) => `"${name}"`).join(",")}) VALUES(${names.map(() => "?").join(",")})`)
+          .run(...names.map((name) => row[name] ?? null));
+      }
+    }
+    if (trigger) db.exec(trigger.sql);
+    db.exec("COMMIT;");
+  } catch (error) {
+    db.exec("ROLLBACK;");
+    throw error;
+  }
+}
+
+let durableStore: DurableCloudStore | undefined;
+let durableStoreKey = "";
+function getDurableStore(): DurableCloudStore {
+  const key = `${getCloudflareAccountId()}/${getCloudflareD1DatabaseId()}/${getDbPath()}`;
+  if (durableStore && durableStoreKey === key) return durableStore;
+  durableSnapshot();
+  const db = getSqliteDb();
+  const tableKeys: Record<string, string[]> = {};
+  const schema: CloudStatement[] = [];
+  for (const table of CLOUD_TABLES) {
+    const info = db.prepare(`PRAGMA table_info("${table}")`).all() as {name:string;type:string;pk:number;dflt_value:string|null}[];
+    tableKeys[table] = info.filter((column) => column.pk).sort((a,b) => a.pk-b.pk).map((column) => column.name);
+    const definition = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(table) as {sql:string};
+    schema.push({sql:definition.sql.replace(/^CREATE TABLE /i,"CREATE TABLE IF NOT EXISTS ")});
+    for (const column of info.filter((column) => !column.pk)) schema.push({sql:
+      `--column:${table}:${column.name}\nALTER TABLE "${table}" ADD COLUMN "${column.name}" ${column.type}${column.dflt_value === null ? "" : ` DEFAULT ${column.dflt_value}`};`});
+  }
+  durableStore = new DurableCloudStore({accountId:getCloudflareAccountId(),databaseId:getCloudflareD1DatabaseId(),apiToken:getCloudflareApiToken(),tableKeys,schema:()=>schema});
+  durableStoreKey = key;
+  return durableStore;
+}
+
+async function backupDurableSnapshot(snapshot: CloudSnapshot, prefix: string): Promise<string> {
+  if (!isCloudflareR2Enabled()) throw new CloudPersistenceError("Chưa cấu hình R2 để sao lưu dữ liệu.");
+  const compressed = gzipSync(JSON.stringify(snapshot));
+  const digest = crypto.createHash("sha256").update(compressed).digest("hex");
+  const key = `db/backups/${prefix}/${snapshot.updatedAt.replace(/[:.]/g,"-")}-${digest.slice(0,12)}.json.gz`;
+  const saved = await putCloudflareR2Object(key,compressed,"application/gzip");
+  if (!saved.ok) throw new CloudPersistenceError("Chưa lưu được bản sao dữ liệu lên R2.");
+  const verify = await getCloudflareR2Object(key);
+  if (!verify.ok || !verify.arrayBuffer || crypto.createHash("sha256").update(Buffer.from(verify.arrayBuffer)).digest("hex") !== digest) throw new CloudPersistenceError("Bản sao R2 chưa vượt qua kiểm tra toàn vẹn.");
+  return key;
+}
+
+async function prepareDurableStore(store: DurableCloudStore): Promise<void> {
+  if (await store.isReady()) return;
+  const local = durableSnapshot();
+  const existing = await store.read();
+  let legacy: CloudSnapshot | undefined;
+  if (isCloudflareR2Enabled()) {
+    const object = await getCloudflareR2Object("db/ha-mi-db-state.json");
+    if (object.ok && object.arrayBuffer) {
+      const parsed = JSON.parse(Buffer.from(object.arrayBuffer).toString("utf8")) as CloudSnapshot;
+      if (!parsed.tables || !Array.isArray(parsed.tables.order_requests)) throw new CloudPersistenceError("Bản lưu cũ không hợp lệ; đã dừng chuyển đổi.");
+      legacy = parsed;
+    } else if (object.error !== "HTTP 404") throw new CloudPersistenceError("Chưa đọc được bản lưu R2 hiện tại; đã dừng chuyển đổi.");
+  }
+  if (!legacy) {
+    const oldState = await store.query([{sql:"SELECT name FROM sqlite_master WHERE type='table' AND name='hami_cloud_state';"}]);
+    if (oldState[0].results?.length) {
+      const old = await store.query([{sql:"SELECT payload_json FROM hami_cloud_state WHERE id='main';"}]);
+      if (old[0].results?.[0]?.payload_json) legacy = JSON.parse(String(old[0].results[0].payload_json)) as CloudSnapshot;
+    }
+  }
+  const tables: CloudSnapshot["tables"] = {};
+  for (const table of CLOUD_TABLES) {
+    const info = getSqliteDb().prepare(`PRAGMA table_info("${table}")`).all() as {name:string;pk:number}[];
+    const keys = info.filter((column) => column.pk).sort((a,b) => a.pk-b.pk).map((column) => column.name);
+    const map = new Map<string, CloudSnapshot["tables"][string][number]>();
+    const sources = [existing.tables[table] || [], legacy?.tables[table] || []];
+    if (!sources.some((rows) => rows.length) && !legacy?.tables[table]) sources.unshift(local.tables[table] || []);
+    for (const rows of sources) for (const row of rows) {
+      const rowKey = JSON.stringify(keys.map((column) => row[column]));
+      const previous = map.get(rowKey);
+      if (previous && table === "order_requests" && (Number(previous.row_version || 1) > Number(row.row_version || 1) ||
+        (Number(previous.row_version || 1) === Number(row.row_version || 1) && String(previous.updated_at) > String(row.updated_at)))) continue;
+      map.set(rowKey,row);
+    }
+    tables[table] = [...map.values()];
+  }
+  const merged = {version:2,updatedAt:new Date().toISOString(),tables};
+  const backupKey = await backupDurableSnapshot(merged,"before-migration");
+  await store.recordBackup(backupKey,null);
+  restoreDurableSnapshot(merged);
+  const db = getSqliteDb();
+  for (const row of merged.tables.order_requests) updateCustomerFromOrder(row);
+  // Old snapshots omitted the outbox. Backfill an explicit pending delivery for those orders.
+  db.exec(`INSERT OR IGNORE INTO order_notification_outbox(id,order_request_id,reference_code,status,retry_count,next_attempt_at,created_at,updated_at,sent_at)
+    SELECT 'outbox-'||o.id,o.id,o.reference_code,
+    CASE WHEN EXISTS(SELECT 1 FROM notification_logs n WHERE n.order_reference_code=o.reference_code AND n.status='SENT') THEN 'SENT' ELSE 'PENDING' END,
+    0,o.created_at,o.created_at,o.updated_at,
+    (SELECT MAX(created_at) FROM notification_logs n WHERE n.order_reference_code=o.reference_code AND n.status='SENT') FROM order_requests o;`);
+  const migrated = durableSnapshot();
+  await store.commit(existing,migrated,true);
+  const verified = await store.read();
+  for (const table of CLOUD_TABLES) if (verified.tables[table].length < migrated.tables[table].length) throw new CloudPersistenceError(`Chưa đối soát đủ dữ liệu bảng ${table}.`);
+}
+
+export async function runDurableMutation<T>(operation: () => Promise<T> | T): Promise<T> {
+  if (isDatabaseMutation()) return await operation();
+  return withDatabaseLock(async () => {
+    if (!isCloudflareD1Enabled()) {
+      if (process.env.VERCEL && !process.env.HAMI_DB_PATH) throw new CloudPersistenceError("Chưa cấu hình D1 để lưu dữ liệu giao dịch.");
+      return await operation();
+    }
+    const store = getDurableStore();
+    await store.acquire();
+    let before: CloudSnapshot | undefined;
+    try {
+      await prepareDurableStore(store);
+      before = await store.read();
+      restoreDurableSnapshot(before);
+      const result = await operation();
+      const after = durableSnapshot();
+      await store.commit(before,after);
+      lastCloudSyncAtMs = Date.now();
+      // D1 has acknowledged the transaction; backup failure must not cause a duplicate order retry.
       try {
-        const settings = JSON.parse(String(row.value)) as Record<string, unknown>;
-        delete settings.resendApiKey;
-        delete settings.emailWebhookUrl;
-        delete settings.zaloWebhookUrl;
-        return { ...row, value: JSON.stringify(settings) };
-      } catch {
-        return { ...row, value: "{}" };
+        if (JSON.stringify(before.tables)!==JSON.stringify(after.tables)) {
+          const key = await backupDurableSnapshot(after,"commits");
+          await store.recordBackup(key,null);
+        }
+      } catch (error) {
+        console.error("D1 committed; R2 backup pending",error instanceof Error ? error.message : "Unknown error");
+        try { await store.recordBackup(null,error instanceof Error ? error.message : "Backup pending"); } catch {}
       }
-    });
-    const response = await fetch(`https://api.github.com/gists/${process.env.HAMI_GIST_ID!}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${process.env.HAMI_GITHUB_TOKEN!}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "User-Agent": "ha-mi-website-cloud-sync",
-      },
-      body: JSON.stringify({ files: { "ha-mi-db-state.json": { content: JSON.stringify(snapshot) } } }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) return false;
-    lastCloudSyncAtMs = Date.now();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function pullFromGistIntoLocalSqlite(): Promise<boolean> {
-  if (!isGistSyncEnabled()) return false;
-  const gistId = process.env.HAMI_GIST_ID!;
-  const token = process.env.HAMI_GITHUB_TOKEN!;
-  try {
-    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "ha-mi-website-cloud-sync",
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return false;
-    const data = (await res.json()) as {
-      files?: Record<
-        string,
-        { content?: string; raw_url?: string; truncated?: boolean }
-      >;
-    };
-    const fileObj = data.files?.["ha-mi-db-state.json"];
-    if (!fileObj) return false;
-
-    let rawJson = fileObj.content || "";
-    if (fileObj.truncated && fileObj.raw_url) {
-      const rawRes = await fetch(fileObj.raw_url, { cache: "no-store" });
-      if (rawRes.ok) {
-        rawJson = await rawRes.text();
-      }
+      return result;
+    } catch (error) {
+      if (before) restoreDurableSnapshot(before);
+      lastCloudSyncAtMs = 0;
+      throw error;
+    } finally {
+      try { await store.release(); } catch { console.error("D1 lease release pending; lease expires automatically"); }
     }
-    if (!rawJson) return false;
-
-    const parsed = JSON.parse(rawJson) as {
-      version?: number;
-      tables?: Record<string, Record<string, unknown>[]>;
-    };
-    if (!parsed.tables) return false;
-
-    applyCloudTablesToLocalSqlite(parsed.tables);
-    return true;
-  } catch {
-    return false;
-  }
+  },true);
 }
 
 export async function syncDbFromCloud(force = false): Promise<void> {
-  const now = Date.now();
-  if (!force && now - lastCloudSyncAtMs < 15000) {
+  if (process.env.npm_lifecycle_event === "build") return;
+  if (isDatabaseMutation()) return;
+  if (!isCloudflareD1Enabled()) {
+    if (process.env.VERCEL && !process.env.HAMI_DB_PATH) throw new CloudPersistenceError("Chưa cấu hình D1 để đọc dữ liệu giao dịch.");
     return;
   }
-
-  if (now >= cloudflareBackoffUntilMs) {
-    // 1. Primary Engine: Cloudflare R2 Object Storage
-    if (isCloudflareR2Enabled()) {
-      const pulledR2 = await pullFromCloudflareR2IntoLocalSqlite();
-      if (pulledR2) {
-        lastCloudSyncAtMs = Date.now();
-        return;
-      }
+  await withDatabaseLock(async () => {
+    if (!force && Date.now()-lastCloudSyncAtMs<15_000) return;
+    const store = getDurableStore();
+    if (!await store.isReady()) {
+      await store.acquire();
+      try { await prepareDurableStore(store); } finally { await store.release(); }
     }
-
-    // 2. Secondary Engine: Cloudflare D1 SQL if configured and authorized
-    if (isCloudflareD1Enabled() && !d1AuthFailed) {
-      try {
-        const queryRes = await executeCloudflareD1Query<{
-          payload_json: string;
-        }>(`SELECT payload_json FROM hami_cloud_state WHERE id = 'main' LIMIT 1;`);
-
-        if (!queryRes.ok && queryRes.error?.includes("10000")) {
-          d1AuthFailed = true;
-        } else if (
-          queryRes.ok &&
-          queryRes.results.length > 0 &&
-          queryRes.results[0].payload_json
-        ) {
-          d1SchemaInitialized = true;
-          const parsed = JSON.parse(queryRes.results[0].payload_json) as {
-            tables?: Record<string, Record<string, unknown>[]>;
-          };
-          if (parsed.tables) {
-            applyCloudTablesToLocalSqlite(parsed.tables);
-          }
-          lastCloudSyncAtMs = Date.now();
-          return;
-        }
-      } catch {
-        // Fall through
-      }
-    }
-  }
-
-  // 3. Fallback Engine: GitHub Gist
-  if (isGistSyncEnabled()) {
-    await pullFromGistIntoLocalSqlite();
+    restoreDurableSnapshot(await store.read());
     lastCloudSyncAtMs = Date.now();
-  }
+  });
+}
+
+export function getDurableStorageReport() {
+  const snapshot = durableSnapshot();
+  const db = getSqliteDb();
+  const counts = Object.fromEntries(CLOUD_TABLES.map((table) => [table,snapshot.tables[table].length]));
+  const scalar = (sql:string) => Number((db.prepare(sql).get() as {count:number}).count);
+  return {
+    provider:getCloudDatabaseStatus().provider,checkedAt:new Date().toISOString(),counts,
+    integrity:{
+      ordersWithoutItems:scalar("SELECT COUNT(*) AS count FROM order_requests o WHERE NOT EXISTS(SELECT 1 FROM order_items i WHERE i.order_request_id=o.id)"),
+      ordersWithoutCustomer:scalar("SELECT COUNT(*) AS count FROM order_requests o WHERE NOT EXISTS(SELECT 1 FROM customers c WHERE c.phone=o.buyer_phone)"),
+      ordersWithoutHistory:scalar("SELECT COUNT(*) AS count FROM order_requests o WHERE NOT EXISTS(SELECT 1 FROM order_status_history h WHERE h.order_request_id=o.id)"),
+      orphanPayments:scalar("SELECT COUNT(*) AS count FROM payment_entries p WHERE NOT EXISTS(SELECT 1 FROM order_requests o WHERE o.id=p.order_request_id)"),
+      pendingNotifications:scalar("SELECT COUNT(*) AS count FROM order_notification_outbox WHERE status IN ('PENDING','FAILED','PROCESSING')"),
+    },
+  };
+}
+
+export async function getCloudBackupHealth() {
+  return isCloudflareD1Enabled() ? getDurableStore().health() : null;
 }
 
 

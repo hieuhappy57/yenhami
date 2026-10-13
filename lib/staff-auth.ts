@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getStaffBySessionToken } from "@/db/staff-repository";
+import { syncDbFromCloud } from "@/db";
 import type { AuthenticatedStaff } from "@/lib/staff-access";
 export { guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-access";
 export type { AuthenticatedStaff, StaffCapability } from "@/lib/staff-access";
@@ -30,6 +31,7 @@ export async function getAuthenticatedStaff(request?: Request): Promise<Authenti
   }
 
   if (!token) return null;
+  await syncDbFromCloud(true);
   const staff = getStaffBySessionToken(token);
   return staff ? { id: staff.id, username: staff.username, displayName: staff.displayName, role: staff.role, roles: staff.roles } : null;
 }

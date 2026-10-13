@@ -5,7 +5,7 @@ import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, staffCan } from "@/lib/staff-auth";
 import { staffCanChangeOrderStatus } from "@/lib/staff-access";
 import { privateJsonHeaders, readBoundedJson } from "@/lib/staff-access";
-import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox } from "@/db/order-outbox";
+import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox, hasDueOrderNotifications } from "@/db/order-outbox";
 
 const ORDER_STATUSES: OrderStatus[] = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "DELIVERING", "COMPLETED", "CANCELLED"];
 const SOURCES: OrderSource[] = ["WEBSITE", "ZALO", "MESSENGER", "PHONE", "STORE", "OTHER"];
@@ -18,6 +18,10 @@ export async function GET(request: Request) {
   if (!staff) return fail("Yêu cầu đăng nhập nhân viên.", 401);
   if (!staffCan(staff, "orders.read")) return fail("Bạn không có quyền xem đơn hàng.", 403);
   await syncDbFromCloud(true);
+  if (hasDueOrderNotifications() && staffCan(staff,"orders.write")) {
+    try { await withAuthoritativeMutation(() => flushOrderNotificationOutbox({limit:1})); }
+    catch (error) { console.error("Notification retry pending",error instanceof Error ? error.message : "Unknown error"); }
+  }
   const orders = listAllOrderRequestsForStaff();
   const kitchenOnly = staff.roles.every((role) => role === "KITCHEN");
   return respond({ ok: true, staff, orders: kitchenOnly ? orders.map((o) => ({
@@ -116,7 +120,10 @@ export async function POST(request: Request) {
       if (created.ok) await syncDbToCloud();
       return created;
     });
-    if (result.ok && !result.deduplicated) await flushOrderNotificationOutbox({ limit: 1 });
+    if (result.ok && !result.deduplicated) {
+      try { await withAuthoritativeMutation(() => flushOrderNotificationOutbox({ limit: 1 })); }
+      catch (error) { console.error("Order saved; notification retry pending",error instanceof Error ? error.message : "Unknown error"); }
+    }
     return respond(result, result.ok ? 200 : 400);
   } catch (caught) {
     const status = typeof caught === "object" && caught && "status" in caught ? Number(caught.status) : 500;

@@ -26,6 +26,7 @@ import {
 } from "@/db";
 import type { ProductCategory, ProductStatus } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
+import { isSafePublicMediaContentType } from "@/lib/media-storage-policy";
 import { getAuthenticatedStaff, guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
 
 const PRODUCT_STATUSES: ProductStatus[] = ["AVAILABLE", "OUT_OF_STOCK", "PENDING_DATA_APPROVAL"];
@@ -374,6 +375,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, url: dataUrl, storedInR2: false });
       }
       const contentType = match[1] || "image/jpeg";
+      if (!isSafePublicMediaContentType(contentType)) return NextResponse.json({ok:false,errorMessage:"Chỉ hỗ trợ ảnh PNG, JPEG, WebP, GIF hoặc AVIF."},{status:422,headers:privateJsonHeaders()});
       const base64Data = match[2];
       const buffer = Buffer.from(base64Data, "base64");
       const ext = contentType.includes("png")

@@ -1,4 +1,4 @@
-import path from "node:path";
+import { runDurableMutation } from "@/db";
 
 export class PersistenceUnavailableError extends Error {
   readonly status = 503;
@@ -15,13 +15,7 @@ export function assertAuthoritativeStorage(): void {
   }
 }
 
-let tail: Promise<void> = Promise.resolve();
 export async function withAuthoritativeMutation<T>(operation: () => Promise<T> | T): Promise<T> {
   assertAuthoritativeStorage();
-  const previous = tail;
-  let release!: () => void;
-  tail = new Promise<void>((resolve) => { release = resolve; });
-  await previous;
-  try { return await operation(); }
-  finally { release(); }
+  return runDurableMutation(operation);
 }
