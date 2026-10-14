@@ -46,9 +46,7 @@ export function OrganizationAndLocalBusinessJsonLd() {
           areaServed: ["VN-DN", "VN"],
           availableLanguage: ["Vietnamese"],
         },
-        sameAs: BRAND_CONFIG.contact.zaloUrl
-          ? [BRAND_CONFIG.contact.zaloUrl]
-          : [],
+        sameAs: [BRAND_CONFIG.contact.facebookUrl, BRAND_CONFIG.contact.zaloUrl].filter(Boolean),
       },
       {
         "@type": ["LocalBusiness", "HealthFoodStore", "FoodEstablishment"],

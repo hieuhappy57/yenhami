@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Phone, MapPin, Clock, ShieldCheck, Mail } from "lucide-react";
+import { FacebookIcon } from "./FacebookIcon";
 import { BRAND_CONFIG } from "@/config/brand";
 
 export function SiteFooter() {
@@ -96,6 +97,16 @@ export function SiteFooter() {
               </span>
             </p>
           </div>
+
+          <a
+            href={BRAND_CONFIG.contact.facebookUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#1B4332] hover:underline"
+          >
+            <FacebookIcon />
+            Facebook Yến Sào Hà Mi
+          </a>
 
           <div className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-[#E5D5B5] px-3.5 py-1.5 text-xs font-semibold text-[#1B4332]">
             <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />

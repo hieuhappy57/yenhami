@@ -2,6 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, MapPin, MessageCircle, PhoneCall } from "lucide-react";
+import { FacebookIcon } from "@/components/FacebookIcon";
 import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr, syncDbFromCloud } from "@/db";
 import { BRAND_CONFIG } from "@/config/brand";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
@@ -43,6 +44,19 @@ export default async function LienHePage() {
           <p className="text-xs sm:text-base text-[#2B433A] max-w-2xl mx-auto leading-relaxed">
             Mỗi thố yến 200ml (35g yến tươi thật) được chưng thủ công tươi nóng ngay khi nhận đơn và giao ấm nóng tận giường bệnh, khách sạn hoặc tư gia tại Đà Nẵng.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <a href={BRAND_CONFIG.contact.facebookUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#1B4332] hover:underline">
+            <FacebookIcon />
+            Facebook Yến Sào Hà Mi
+          </a>
+          {BRAND_CONFIG.contact.messengerUrl && <a href={BRAND_CONFIG.contact.messengerUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#1B4332] hover:underline">
+            <MessageCircle className="h-5 w-5 text-[#0084FF]" aria-hidden="true" />
+            Nhắn tin Messenger
+          </a>}
         </div>
 
         {/* 5 Pastel Contact Cards */}

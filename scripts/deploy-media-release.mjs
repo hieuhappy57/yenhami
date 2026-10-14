@@ -18,5 +18,5 @@ for(const file of new Set([...tracked,...added])) {
   const target=path.join(stage,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(file,target);
 }
 fs.writeFileSync("/private/tmp/hami-media-release-stage",stage);
-const child=spawn(process.execPath,[cli,"deploy","--prod","--skip-domain","--yes","--scope","team_ec2wTunWFYQN5gSjJY45DGkB"],{cwd:stage,stdio:"inherit"});
+const child=spawn(process.execPath,[cli,"deploy","--prod","--skip-domain","--yes","--scope","hieuhappys-projects"],{cwd:stage,stdio:"inherit"});
 child.on("exit",code=>{process.exitCode=code || 0;});

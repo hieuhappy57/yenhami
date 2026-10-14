@@ -4,6 +4,7 @@ export interface ContactChannelConfig {
   emailDisplay: string;
   zaloUrl: string | null;
   messengerUrl: string | null;
+  facebookUrl: string;
   addressDisplay: string;
   serviceHoursDisplay: string;
   legalEntityDisplay: string;
@@ -38,7 +39,8 @@ export const BRAND_CONFIG = {
     hotlineTel: process.env.NEXT_PUBLIC_HAMI_HOTLINE_TEL || "0935052959",
     emailDisplay: process.env.NEXT_PUBLIC_HAMI_EMAIL || "cskh@yenhami.com",
     zaloUrl: process.env.NEXT_PUBLIC_HAMI_ZALO_URL || "https://zalo.me/0935052959",
-    messengerUrl: process.env.NEXT_PUBLIC_HAMI_MESSENGER_URL || null,
+    messengerUrl: process.env.NEXT_PUBLIC_HAMI_MESSENGER_URL || "https://m.me/yenhamidanang",
+    facebookUrl: "https://www.facebook.com/yenhamidanang/",
     addressDisplay:
       process.env.NEXT_PUBLIC_HAMI_ADDRESS ||
       "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
