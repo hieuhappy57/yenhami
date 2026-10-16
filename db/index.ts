@@ -3249,6 +3249,19 @@ export async function putCloudflareR2Object(
   return { ok: true };
 }
 
+export async function listEditorImages() {
+  if(!isCloudflareR2Enabled()) throw new CloudPersistenceError("Kho ảnh R2 chưa được cấu hình.");
+  const url=new URL(`https://api.cloudflare.com/client/v4/accounts/${getCloudflareAccountId()}/r2/buckets/${encodeURIComponent(getCloudflareR2BucketName())}/objects`);
+  url.searchParams.set("prefix","uploads/editor/");
+  url.searchParams.set("per_page","1000");
+  const response=await fetch(url,{headers:{Authorization:`Bearer ${getCloudflareApiToken()}`},cache:"no-store",signal:AbortSignal.timeout(5000)});
+  const body=await response.json() as {success?:boolean;result?:{key?:string;size?:number;last_modified?:string}[];result_info?:{is_truncated?:boolean}};
+  if(!response.ok || body.success!==true || !Array.isArray(body.result)) throw new CloudPersistenceError("Không tải được danh sách ảnh R2.");
+  return {images:body.result.filter(object=>typeof object.key==="string" && /^uploads\/editor\/[^/]+\.(?:png|jpe?g|webp|gif|avif)$/i.test(object.key)).map(object=>({
+    url:`/api/media/${object.key}`,name:object.key!.slice("uploads/editor/".length).replace(/^[a-f0-9]{64}-/,""),bytes:object.size || 0,uploadedAt:object.last_modified || "",
+  })).sort((a,b)=>b.uploadedAt.localeCompare(a.uploadedAt)),truncated:!!body.result_info?.is_truncated};
+}
+
 export async function getCloudflareR2Object(objectKey: string): Promise<{
   ok: boolean;
   arrayBuffer?: ArrayBuffer;

@@ -42,7 +42,7 @@ test("partial product saves merge fresh database fields and return canonical dat
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"hami-cms-speed-")),previous=process.env.HAMI_DB_PATH;
   process.env.HAMI_DB_PATH=path.join(temp,"isolated.sqlite");database.resetDbConnectionForTest();
   try {
-    let deferred=false,commercial=true;
+    let deferred=false,commercial=true,uploads=0;
     const module={exports:{} as any};
     const source=ts.transpileModule(fs.readFileSync("app/api/admin/cms/route.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
     runInNewContext(source,{exports:module.exports,module,Buffer,console,process,
@@ -50,7 +50,7 @@ test("partial product saves merge fresh database fields and return canonical dat
         if(id==="next/server") return {NextResponse:{json:Response.json},after(){}};
         if(id==="next/cache") return {revalidatePath(){}};
         if(id==="@/db") return database;
-        if(id==="@/lib/media-upload") return media;
+        if(id==="@/lib/media-upload") return {...media,storeVerifiedImage:async()=>{uploads++;return {ok:true,storedInR2:true,url:"/api/media/uploads/editor/qa.webp"};}};
         if(id==="@/lib/product-lines") return productLines;
         if(id==="@/lib/site-settings-validation") return siteValidation;
         if(id==="@/lib/authoritative-write") return {withAuthoritativeMutation:async(fn:any,options:any)=>{deferred=!!options?.deferBackup;return database.runDurableMutation(fn);}};
@@ -64,6 +64,12 @@ test("partial product saves merge fresh database fields and return canonical dat
     assert.equal(result.product.shortDescription,"Updated copy");
     for(const key of ["priceVnd","status","ingredients","supportedOptions","cautionNote"] as const) assert.deepEqual(result.product[key],before[key],key);
     const post=async(body:unknown)=>module.exports.POST(new Request("https://isolated.test/api/admin/cms",{method:"POST",body:JSON.stringify(body)}));
+    assert.equal((await post({action:"upload_media_r2",siteImageField:"addressDisplay"})).status,422);
+    assert.equal(uploads,0,"reject invalid binding before writing an R2 object");
+    const uploaded=await (await post({action:"upload_media_r2",siteImageField:"heroDesktopImage",dataUrl:"fake fixture"})).json();
+    assert.equal(uploaded.ok,true);assert.equal(uploaded.siteSettings.heroDesktopImage,uploaded.url);
+    database.resetDbConnectionForTest();
+    assert.equal(database.getSiteContentSettings().heroDesktopImage,uploaded.url,"verified banner upload must bind durably without a second save click");
     const settings={heroTitle:"Yến Sào Hà Mi",heroLead:"Chưng theo ca theo yêu cầu",heroCta:"Chọn món",noticeBanner:"Khung giờ giao 08:00",heroDesktopImage:"/api/media/uploads/editor/desktop.webp",heroMobileImage:"https://example.test/mobile.webp",aboutLead:"Updated brand story"};
     const savedSite=await (await post({action:"save_site_settings",settings})).json();
     assert.equal(savedSite.ok,true);

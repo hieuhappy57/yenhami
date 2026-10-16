@@ -1,0 +1,29 @@
+# Banner image binding and recovery
+
+Production still referenced the bundled desktop/mobile defaults after the
+owner reported an uploaded-image mismatch. The previous verification only
+saved unchanged settings; it did not test a newly uploaded banner.
+
+## Fix
+
+- A verified R2 banner upload now binds only the selected site-image field
+  in an authoritative D1 transaction before returning success. Text drafts
+  and other image slots are not overwritten.
+- The client requires the canonical image binding acknowledgement; uploading
+  an object alone cannot produce a banner-success message.
+- Editor-image library is restricted to authenticated content staff, lists
+  only public image objects under `uploads/editor/`, and never returns
+  database backups or storage credentials. Choosing a prior upload updates
+  only the selected banner field.
+- Show existing image previews when settings load; previews use contain so
+  a crop is not mistaken for a different image.
+- Block choosing uploads while configuration fields are disabled.
+
+## Tests
+
+The CMS isolated test now verifies invalid slots are rejected before R2 writes
+and a successful banner upload remains attached after reopening the database.
+The client test rejects R2-only success without D1 field acknowledgement.
+
+R2 object listing follows the official API:
+https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/list/

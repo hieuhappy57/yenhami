@@ -13,6 +13,7 @@ import {
   getNotificationSettings,
   getOrderRequestByReference,
   getSiteContentSettings,
+  listEditorImages,
   isCloudflareR2Enabled,
   putCloudflareR2Object,
   getCloudflareR2Object,
@@ -62,6 +63,10 @@ export async function GET(request: Request) {
   }
 
   const sensitive = staffCan(staff, "settings.sensitive");
+  if(new URL(request.url).searchParams.get("editorImages")==="1") {
+    try {return NextResponse.json({ok:true,...await listEditorImages()},{headers:privateJsonHeaders()});}
+    catch {return NextResponse.json({ok:false,errorMessage:"Chưa tải được thư viện ảnh. Vui lòng thử lại."},{status:503,headers:privateJsonHeaders()});}
+  }
   await syncDbFromCloud(true);
   return NextResponse.json({
     ok: true,
@@ -102,8 +107,18 @@ export async function POST(request: Request) {
     if (action === "delete_product" && !canWriteCommercial) return NextResponse.json({ ok: false, errorMessage: "Không có quyền xóa sản phẩm." }, { status: 403, headers: privateJsonHeaders() });
 
     if(action==="upload_media_r2") {
+      const siteImageField=body.siteImageField;
+      if(siteImageField!==undefined && !["heroDesktopImage","heroMobileImage","giftingImage"].includes(String(siteImageField))) return NextResponse.json({ok:false,errorMessage:"Vị trí ảnh không hợp lệ."},{status:422,headers:privateJsonHeaders()});
       const uploaded=await storeVerifiedImage({dataUrl:String(body.dataUrl || ""),fileName:String(body.fileName || "image")},
         {enabled:isCloudflareR2Enabled(),put:putCloudflareR2Object,get:getCloudflareR2Object});
+      if(siteImageField!==undefined) {
+        const siteSettings=await withAuthoritativeMutation(async()=>{
+          const settings=updateSiteContentSettings({[String(siteImageField)]:uploaded.url});
+          await syncDbToCloud();return settings;
+        },{deferBackup:after});
+        revalidatePath("/","layout");
+        return NextResponse.json({...uploaded,siteSettings},{headers:privateJsonHeaders()});
+      }
       return NextResponse.json(uploaded,{headers:privateJsonHeaders()});
     }
 
