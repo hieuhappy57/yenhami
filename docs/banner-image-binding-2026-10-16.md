@@ -40,3 +40,19 @@ Uploaded designed banners now display intact with contain fitting, no
 duplicate heading, overlay or seal. They replace the default slideshow so
 the page cannot rotate back to an old bundled image. Until a separate
 mobile banner is uploaded, mobile uses the same complete uploaded artwork.
+
+## Live Verification
+
+- 116 tests passed; TypeScript and production builds passed.
+- Image-binding / library release: `33ce0cd`, deployment
+  `dpl_EA3tGPwVA1uo6wnbaspf9LPfY6Hp`. Unauthenticated library request returned
+  401, authenticated admin recovered the sole original upload successfully.
+- Display release: `2813e32`, deployment
+  `dpl_BQQTMCMDXgoxbXE76KW74ZE5L2z1`, promoted after HTML verification.
+- Official UI at 1440x900 and 390x844 uses the exact recovered object URL;
+  natural image size is 2032x774, object-fit is contain, no duplicate hero
+  heading or slider buttons, and no horizontal overflow.
+- Desktop/mobile screenshots saved under
+  `output/owner-banner-restored-{desktop,mobile}-2026-10-16.jpg`.
+- Did not modify the image bytes, other site text, product prices or orders.
+  Retained concurrent address/map updates already present in the repository.
