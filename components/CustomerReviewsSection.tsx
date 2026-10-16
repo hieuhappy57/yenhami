@@ -26,8 +26,8 @@ const REVIEWS_DATA: ReviewItem[] = [
     role: "Mẹ bầu tháng thứ 6",
     category: "mom",
     rating: 5,
-    date: "Đánh giá 3 ngày trước",
-    productName: "Thố Yến Tươi Chưng Táo Đỏ Hạt Sen (200ml)",
+    date: "3 ngày trước",
+    productName: "Thố Yến Táo Đỏ Hạt Sen (200ml)",
     avatarBg: "bg-[#155132] text-[#F9E498]",
     avatarText: "MT",
     highlight: "Yến thơm dịu không tanh, giao nóng hổi",
@@ -38,11 +38,11 @@ const REVIEWS_DATA: ReviewItem[] = [
     id: "rev-2",
     author: "Anh Quốc Huy",
     district: "Sơn Trà, Đà Nẵng",
-    role: "Mua bồi bổ mẹ sau phẫu thuật",
+    role: "Bồi bổ mẹ sau xuất viện",
     category: "recovery",
     rating: 5,
-    date: "Đánh giá 1 tuần trước",
-    productName: "Thố Yến Chưng Thảo Mộc Bồi Bổ (200ml)",
+    date: "1 tuần trước",
+    productName: "Thố Yến Thảo Mộc Bồi Bổ (200ml)",
     avatarBg: "bg-[#7C4D2B] text-white",
     avatarText: "QH",
     highlight: "Sợi mềm dễ nuốt, mẹ ăn ngon miệng",
@@ -56,8 +56,8 @@ const REVIEWS_DATA: ReviewItem[] = [
     role: "Khách hàng 62 tuổi",
     category: "elder",
     rating: 5,
-    date: "Đánh giá 2 tuần trước",
-    productName: "Yến Tươi Chưng Đông Trùng Hạ Thảo (Vị ăn kiêng)",
+    date: "2 tuần trước",
+    productName: "Yến Chưng Đông Trùng (Ăn kiêng)",
     avatarBg: "bg-[#1B4332] text-[#E8DEC8]",
     avatarText: "TM",
     highlight: "Ngọt thanh vừa vặn, ngủ sâu giấc hơn",
@@ -71,8 +71,8 @@ const REVIEWS_DATA: ReviewItem[] = [
     role: "Quản lý doanh nghiệp",
     category: "gift",
     rating: 5,
-    date: "Đánh giá 2 tuần trước",
-    productName: "Set Quà Yến Thượng Hạng Tri Ân Đối Tác",
+    date: "2 tuần trước",
+    productName: "Set Quà Yến Thượng Hạng Tri Ân",
     avatarBg: "bg-[#8A6632] text-[#FFFCF4]",
     avatarText: "HL",
     highlight: "Bao bì sang trọng, đối tác rất ưng ý",
@@ -82,11 +82,11 @@ const REVIEWS_DATA: ReviewItem[] = [
 ];
 
 const CATEGORY_TABS = [
-  { key: "all", label: "Tất cả đánh giá" },
+  { key: "all", label: "Tất cả" },
   { key: "mom", label: "Mẹ bầu & Sau sinh" },
   { key: "recovery", label: "Bồi bổ phục hồi" },
   { key: "elder", label: "Người lớn tuổi" },
-  { key: "gift", label: "Quà tặng thượng hạng" },
+  { key: "gift", label: "Quà tặng đối tác" },
 ] as const;
 
 export function CustomerReviewsSection() {
@@ -100,50 +100,50 @@ export function CustomerReviewsSection() {
   return (
     <section
       aria-labelledby="customer-reviews-heading"
-      className="py-12 md:py-20 px-4 lg:px-8 max-w-[1440px] mx-auto"
+      className="py-8 sm:py-12 md:py-14 px-4 sm:px-6 lg:px-8 max-w-[1280px] mx-auto"
     >
       {/* Section Header */}
-      <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#E2FCF3] px-4 py-1.5 text-xs sm:text-sm font-bold text-[#155132] mb-3">
+      <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#E2FCF3] border border-[#155132]/15 px-3.5 py-1 text-xs font-bold text-[#155132] mb-2.5">
           <Heart className="w-3.5 h-3.5 fill-[#155132] text-[#155132]" />
-          <span>Khách Hàng Nói Gì Về Yến Sào Hà Mi</span>
+          <span>Cảm Nhận Thực Tế Từ Khách Hàng</span>
         </div>
         <h2
           id="customer-reviews-heading"
-          className="font-serif-display text-2xl sm:text-3xl lg:text-[40px] font-bold text-[#1D2327] tracking-tight leading-tight"
+          className="font-serif-display text-2xl sm:text-3xl lg:text-[34px] font-bold text-[#155132] tracking-tight leading-tight"
         >
-          Đánh Giá & Cảm Nhận Thực Tế
+          Khách Hàng Nói Gì Về Yến Sào Hà Mi
         </h2>
-        <p className="mt-2.5 text-xs sm:text-base text-[#50575E] leading-relaxed">
-          Sự hài lòng và tín nhiệm của các gia đình tại Đà Nẵng là động lực để bếp Hà Mi luôn giữ trọn vị yến tươi nguyên chất chưng nóng mỗi ngày.
+        <p className="mt-2 text-xs sm:text-sm text-[#50575E] leading-relaxed">
+          Sự tín nhiệm của các gia đình tại Đà Nẵng là động lực để bếp Hà Mi luôn giữ trọn vị yến tươi nguyên chất chưng nóng mỗi ngày.
         </p>
 
         {/* Trust Badges Bar */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-6 pt-5 border-t border-[#E8DEC8]/80 text-xs sm:text-sm text-[#2B433A]">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pt-3 border-t border-[#E8DEC8]/70 text-xs sm:text-[13px] text-[#2B433A]">
           <div className="flex items-center gap-1.5 font-semibold">
             <div className="flex text-[#D4AF37]">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" />
+                <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
               ))}
             </div>
             <span className="font-bold text-[#155132]">4.9 / 5.0</span>
-            <span className="text-[#6C757D] font-normal">(Hơn 3.500+ thố yến trao tay)</span>
+            <span className="text-[#6C757D] font-normal text-xs">(3.500+ thố yến trao tay)</span>
           </div>
           <span className="hidden sm:inline text-[#D4AF37]">•</span>
           <div className="flex items-center gap-1.5 font-medium text-[#155132]">
-            <ShieldCheck className="w-4 h-4 text-[#155132]" />
-            <span>100% Yến tươi thật chưng nóng</span>
+            <ShieldCheck className="w-4 h-4 text-[#155132] shrink-0" />
+            <span>100% Yến tươi thật</span>
           </div>
           <span className="hidden sm:inline text-[#D4AF37]">•</span>
           <div className="flex items-center gap-1.5 font-medium text-[#155132]">
-            <Award className="w-4 h-4 text-[#155132]" />
-            <span>Thố sứ bảo toàn dưỡng chất</span>
+            <Award className="w-4 h-4 text-[#155132] shrink-0" />
+            <span>Thố sứ giữ ấm dưỡng chất</span>
           </div>
         </div>
       </div>
 
       {/* Category Filter Tabs */}
-      <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-3 mb-8 scrollbar-none">
+      <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-2 mb-6 sm:mb-8 scrollbar-none">
         {CATEGORY_TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -151,10 +151,10 @@ export function CustomerReviewsSection() {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs sm:text-[13px] font-semibold transition-all ${
                 isActive
                   ? "bg-[#155132] text-white shadow-xs"
-                  : "bg-[#F8F5EC] text-[#50575E] hover:bg-[#EAE4D3] hover:text-[#1D2327]"
+                  : "bg-[#FFFDF9] text-[#50575E] border border-[#E8DEC8] hover:bg-[#FAF5E8] hover:text-[#155132]"
               }`}
             >
               {tab.label}
@@ -163,62 +163,75 @@ export function CustomerReviewsSection() {
         })}
       </div>
 
-      {/* Reviews Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Reviews Cards: Swipeable rail on mobile, neat grid on tablet & desktop */}
+      <div
+        className={
+          filteredReviews.length === 1
+            ? "max-w-md mx-auto"
+            : "flex gap-3.5 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 lg:gap-5"
+        }
+      >
         {filteredReviews.map((item) => (
           <article
             key={item.id}
-            className="flex flex-col justify-between rounded-3xl bg-[#FAF4EB]/80 border border-[#E8DEC8]/90 p-5 sm:p-6 shadow-[0_4px_16px_rgba(27,67,50,0.04)] hover:shadow-[0_8px_24px_rgba(27,67,50,0.08)] hover:bg-[#FAF4EB] transition-all relative group"
+            className={`flex flex-col justify-between rounded-2xl bg-gradient-to-b from-[#FFFDF9] to-[#FAF6EE] border border-[#E8DEC8]/90 p-4 sm:p-5 shadow-[0_2px_12px_rgba(21,81,50,0.04)] hover:shadow-[0_8px_20px_rgba(21,81,50,0.08)] hover:border-[#D4AF37]/80 transition-all duration-200 relative group ${
+              filteredReviews.length > 1
+                ? "w-[84vw] max-w-[320px] shrink-0 snap-start sm:w-auto sm:max-w-none"
+                : "w-full"
+            }`}
           >
-            {/* Top Row: Stars + Quote Icon */}
+            {/* Top Row: Stars + Verified Badge + Quote */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-0.5 text-[#D4AF37]">
-                  {[...Array(item.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-[#D4AF37] text-[#D4AF37]" />
-                  ))}
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="flex text-[#D4AF37]">
+                    {[...Array(item.rating)].map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-[#155132] bg-[#E2FCF3] px-1.5 py-0.5 rounded-sm">
+                    Đã dùng
+                  </span>
                 </div>
-                <Quote className="w-6 h-6 text-[#D4AF37]/40 group-hover:text-[#D4AF37]/80 transition-colors" />
+                <Quote className="w-5 h-5 text-[#D4AF37]/35 group-hover:text-[#D4AF37]/75 transition-colors shrink-0" />
               </div>
 
               {/* Highlight Punchline */}
-              <h3 className="font-serif-display text-base font-bold text-[#155132] mb-2 leading-snug">
+              <h3 className="font-serif-display text-sm sm:text-[15px] font-bold text-[#155132] mb-1.5 leading-snug">
                 &ldquo;{item.highlight}&rdquo;
               </h3>
 
               {/* Review Text */}
-              <p className="text-xs sm:text-sm text-[#2B433A]/90 leading-relaxed italic mb-4">
+              <p className="text-xs sm:text-[13px] text-[#2B433A]/90 leading-relaxed italic mb-3.5 line-clamp-4 min-h-[4.5rem]">
                 &ldquo;{item.review}&rdquo;
               </p>
             </div>
 
             {/* Bottom Row: Product Used + Author Info */}
-            <div className="pt-4 border-t border-[#E8DEC8]/80">
-              <div className="mb-3">
-                <span className="inline-block rounded-lg bg-[#E2FCF3] px-2.5 py-1 text-[11px] font-semibold text-[#155132]">
+            <div className="pt-3 border-t border-[#E8DEC8]/70">
+              <div className="mb-2.5">
+                <span className="inline-block rounded-md bg-[#FAF4EB] border border-[#E8DEC8]/80 px-2 py-0.5 text-[11px] font-semibold text-[#7A5410] truncate max-w-full">
                   🍲 {item.productName}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${item.avatarBg}`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${item.avatarBg}`}
                 >
                   {item.avatarText}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <h4 className="text-xs sm:text-sm font-bold text-[#1D2327] truncate">
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs sm:text-[13px] font-bold text-[#1D2327] truncate">
                       {item.author}
                     </h4>
-                    <span title="Khách hàng đã mua hàng" className="inline-flex items-center">
-                      <CheckCircle2
-                        className="w-3.5 h-3.5 text-[#155132] shrink-0"
-                        aria-label="Khách hàng đã mua hàng"
-                      />
-                    </span>
+                    <CheckCircle2
+                      className="w-3.5 h-3.5 text-[#155132] shrink-0"
+                      aria-label="Khách hàng đã mua hàng"
+                    />
                   </div>
-                  <p className="text-[11px] text-[#7C4D2B] font-medium truncate">
+                  <p className="text-[11px] text-[#7A5410] font-medium truncate">
                     {item.role} • {item.district}
                   </p>
                 </div>

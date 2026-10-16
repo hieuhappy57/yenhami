@@ -47,7 +47,7 @@ export const BRAND_CONFIG = {
       process.env.NEXT_PUBLIC_HAMI_MAPS_URL ||
       "https://www.google.com/maps/place/Y%E1%BA%BFn+S%C3%A0o+H%C3%A0+Mi+-+Y%E1%BA%BFn+t%C6%B0%C6%A1i+ch%C6%B0ng+n%C3%B3ng+%C4%90%C3%A0+N%E1%BA%B5ng/@16.0132072,108.2258626,17z/data=!3m1!4b1!4m6!3m5!1s0x31421b2ef191fa53:0x729e4b14ef420552!8m2!3d16.0132072!4d108.2258626!16s%2Fg%2F11p1_y12f_?hl=vi",
     googleMapsEmbedUrl:
-      "https://maps.google.com/maps?q=loc:16.0132072,108.2258626+(Y%E1%BA%BFn+S%C3%A0o+H%C3%A0+Mi+-+Y%E1%BA%BFn+T%C6%B0%C6%A1i+Ch%C6%B0ng+N%C3%B3ng)&hl=vi&z=17&output=embed",
+      "https://maps.google.com/maps?q=365+%C4%90%C6%B0%E1%BB%9Dng+29+th%C3%A1ng+3,+H%C3%B2a+Xu%C3%A2n,+%C4%90%C3%A0+N%E1%BA%B5ng&hl=vi&z=16&output=embed",
     addressDisplay:
       process.env.NEXT_PUBLIC_HAMI_ADDRESS ||
       "365 Đường 29 tháng 3, Hòa Xuân, Tp. Đà Nẵng",
