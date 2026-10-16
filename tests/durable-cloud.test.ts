@@ -7,7 +7,9 @@ const config = {
   accountId:"isolated-test-account",databaseId:"isolated-test-database",apiToken:"not-a-real-token",
   tableKeys:{orders:["id"],items:["id"]},
   schema:()=>[{sql:"CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,phone TEXT NOT NULL,version INTEGER NOT NULL);"},
-    {sql:"CREATE TABLE IF NOT EXISTS items(id TEXT PRIMARY KEY,order_id TEXT NOT NULL,quantity INTEGER NOT NULL CHECK(quantity>0));"}],
+    {sql:"CREATE TABLE IF NOT EXISTS items(id TEXT PRIMARY KEY,order_id TEXT NOT NULL,quantity INTEGER NOT NULL CHECK(quantity>0));"},
+    {sql:'--column:orders:phone\nALTER TABLE "orders" ADD COLUMN "phone" TEXT;'},
+    {sql:'--column:items:quantity\nALTER TABLE "items" ADD COLUMN "quantity" INTEGER;'}],
 };
 const snapshot = (tables:CloudSnapshot["tables"]):CloudSnapshot => ({version:2,updatedAt:new Date().toISOString(),tables});
 
@@ -16,9 +18,11 @@ test("D1 durable transaction and recovery",async(t)=>{
   const originalFetch = globalThis.fetch;
   let partialFailure = false;
   let timeoutAfterCommit = false;
+  const queries:string[][]=[];
   globalThis.fetch = (async(_url,init)=>{
     const body = JSON.parse(String(init?.body));
     const statements:CloudStatement[] = body.batch || [body];
+    queries.push(statements.map(s=>s.sql));
     if (partialFailure) return Response.json({success:true,result:[{success:false,error:"SQL failure"}]});
     db.exec("BEGIN IMMEDIATE;");
     try {
@@ -47,6 +51,36 @@ test("D1 durable transaction and recovery",async(t)=>{
     await first.commit(snapshot({orders:[],items:[]}),snapshot({orders:[{id:"order-1",phone:"0905000001",version:1}],items:[{id:"item-1",order_id:"order-1",quantity:2}]}),true);
     await first.release();
 
+    await t.test("cold schema checks are batched in a single round trip",()=>{
+      const pragmas=queries.filter(batch=>batch.some(sql=>sql.startsWith("PRAGMA table_info")));
+      assert.equal(pragmas.length,1);
+      assert.equal(pragmas[0].length,2);
+    });
+
+    await t.test("backup job is committed atomically, leased exclusively, and retained on failure",async()=>{
+      await first.acquire();
+      const before=await first.read();
+      const after=snapshot({...before.tables,orders:[{...before.tables.orders[0],version:2}]});
+      await first.commit(before,after,false,"compressed-private-snapshot");
+      await first.release();
+      assert.equal(db.prepare("SELECT COUNT(*) AS n FROM hami_backup_jobs").get()!.n,1);
+      const job=await first.claimBackupJob();
+      assert.ok(job);
+      assert.equal(job.payload,"compressed-private-snapshot");
+      const restarted=new DurableCloudStore(config);
+      assert.equal(await restarted.claimBackupJob(),null);
+      await first.retryBackupJob(job,"R2 timeout");
+      assert.equal(await first.claimBackupJob(),null);
+      assert.equal(db.prepare("SELECT attempts FROM hami_backup_jobs").get()!.attempts,1);
+      db.exec("UPDATE hami_backup_jobs SET next_attempt_at=0;");
+      const retry=await restarted.claimBackupJob();
+      assert.ok(retry);
+      await first.finishBackupJob(job);
+      assert.equal(db.prepare("SELECT COUNT(*) AS n FROM hami_backup_jobs").get()!.n,1);
+      await restarted.finishBackupJob(retry);
+      assert.equal(db.prepare("SELECT COUNT(*) AS n FROM hami_backup_jobs").get()!.n,0);
+    });
+
     await t.test("cold start restores complete order and item data",async()=>{
       const restarted = new DurableCloudStore(config);
       assert.equal(await restarted.isReady(),true);
@@ -66,8 +100,9 @@ test("D1 durable transaction and recovery",async(t)=>{
       await first.acquire();
       const before=await first.read();
       const after=snapshot({orders:[...before.tables.orders,{id:"order-invalid",phone:"0905000002",version:1}],items:[...before.tables.items,{id:"item-invalid",order_id:"order-invalid",quantity:-1}]});
-      await assert.rejects(first.commit(before,after),CloudPersistenceError);
+      await assert.rejects(first.commit(before,after,false,"must-not-survive-rollback"),CloudPersistenceError);
       assert.equal((await first.read()).tables.orders.length,1);
+      assert.equal(db.prepare("SELECT COUNT(*) AS n FROM hami_backup_jobs").get()!.n,0);
       await first.release();
     });
     await t.test("expired writer cannot overwrite a newer writer",async()=>{

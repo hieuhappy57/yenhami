@@ -15,7 +15,7 @@ export function assertAuthoritativeStorage(): void {
   }
 }
 
-export async function withAuthoritativeMutation<T>(operation: () => Promise<T> | T): Promise<T> {
+export async function withAuthoritativeMutation<T>(operation: () => Promise<T> | T, options?:{deferBackup:(task:()=>Promise<void>)=>void}): Promise<T> {
   assertAuthoritativeStorage();
-  return runDurableMutation(operation);
+  return runDurableMutation(operation,options);
 }

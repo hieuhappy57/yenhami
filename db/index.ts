@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { gzipSync } from "node:zlib";
+import { gzipSync, gunzipSync } from "node:zlib";
 import { resolveProductImage } from "../lib/product-images";
 import { resolveProductCopy } from "../lib/product-copy";
 import { authenticateStaff, listStaff } from "./staff-repository";
@@ -3457,7 +3457,27 @@ async function prepareDurableStore(store: DurableCloudStore): Promise<void> {
   for (const table of CLOUD_TABLES) if (verified.tables[table].length < migrated.tables[table].length) throw new CloudPersistenceError(`Chưa đối soát đủ dữ liệu bảng ${table}.`);
 }
 
-export async function runDurableMutation<T>(operation: () => Promise<T> | T): Promise<T> {
+export async function flushDurableBackupJobs(limit=2): Promise<void> {
+  if (!isCloudflareD1Enabled()) return;
+  const store=getDurableStore();
+  for (let index=0;index<Math.min(limit,5);index++) {
+    const job=await store.claimBackupJob();
+    if (!job) return;
+    try {
+      const snapshot=JSON.parse(gunzipSync(Buffer.from(job.payload,"base64")).toString("utf8")) as CloudSnapshot;
+      const key=await backupDurableSnapshot(snapshot,"commits");
+      await store.recordBackup(key,null);
+      await store.finishBackupJob(job);
+    } catch(error) {
+      const message=error instanceof Error ? error.message : "Backup pending";
+      await store.retryBackupJob(job,message);
+      await store.recordBackup(null,message);
+      console.error("Queued R2 backup pending",message);
+    }
+  }
+}
+
+export async function runDurableMutation<T>(operation: () => Promise<T> | T, options?:{deferBackup:(task:()=>Promise<void>)=>void}): Promise<T> {
   if (isDatabaseMutation()) return await operation();
   return withDatabaseLock(async () => {
     if (!isCloudflareD1Enabled()) {
@@ -3465,19 +3485,27 @@ export async function runDurableMutation<T>(operation: () => Promise<T> | T): Pr
       return await operation();
     }
     const store = getDurableStore();
-    await store.acquire();
+    const ready=await store.acquire();
     let before: CloudSnapshot | undefined;
     try {
-      await prepareDurableStore(store);
+      if (!ready) await prepareDurableStore(store);
       before = await store.read();
       restoreDurableSnapshot(before);
       const result = await operation();
       const after = durableSnapshot();
-      await store.commit(before,after);
+      const changed=JSON.stringify(before.tables)!==JSON.stringify(after.tables);
+      const payload=options && changed ? gzipSync(JSON.stringify(after)).toString("base64") : undefined;
+      // Oversized snapshots retain the existing synchronous backup path (D1 value limit).
+      const queuedPayload=payload && Buffer.byteLength(payload)<1_500_000 ? payload : undefined;
+      await store.commit(before,after,false,queuedPayload,Boolean(options));
       lastCloudSyncAtMs = Date.now();
+      if (queuedPayload) {
+        try { options!.deferBackup(()=>flushDurableBackupJobs()); }
+        catch { console.error("Backup scheduling unavailable; durable job retained for retry"); }
+      }
       // D1 has acknowledged the transaction; backup failure must not cause a duplicate order retry.
       try {
-        if (JSON.stringify(before.tables)!==JSON.stringify(after.tables)) {
+        if (changed && !queuedPayload) {
           const key = await backupDurableSnapshot(after,"commits");
           await store.recordBackup(key,null);
         }

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { flushDurableBackupJobs } from "@/db";
 import { confirmOrderWithPaymentByStaff, finalizeDeliveryFeeByStaff, getOrderRequestByReference, listAllOrderRequestsForStaff, recordPaymentEntryByStaff, submitOrderRequest, syncDbFromCloud, syncDbToCloud, updateOrderStatusByStaff } from "@/db";
 import type { OrderSource, OrderStatus, PaymentMethod } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
@@ -10,18 +11,23 @@ import { ensureOrderNotificationOutbox, flushOrderNotificationOutbox, hasDueOrde
 const ORDER_STATUSES: OrderStatus[] = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "DELIVERING", "COMPLETED", "CANCELLED"];
 const SOURCES: OrderSource[] = ["WEBSITE", "ZALO", "MESSENGER", "PHONE", "STORE", "OTHER"];
 const METHODS: PaymentMethod[] = ["CASH", "BANK_TRANSFER", "OTHER"];
-const respond = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: privateJsonHeaders() });
+const respond = (body: unknown, status = 200, durationMs?:number) => NextResponse.json(body, { status,
+  headers: {...privateJsonHeaders(),...(durationMs===undefined ? {} : {"Server-Timing":`total;dur=${durationMs.toFixed(1)}`})} });
 const fail = (message: string, status: number, code?: string) => respond({ ok: false, errorCode: code, errorMessage: message }, status);
 
 export async function GET(request: Request) {
+  const started=performance.now();
   const staff = await getAuthenticatedStaff(request);
   if (!staff) return fail("Yêu cầu đăng nhập nhân viên.", 401);
   if (!staffCan(staff, "orders.read")) return fail("Bạn không có quyền xem đơn hàng.", 403);
-  await syncDbFromCloud(true);
-  if (hasDueOrderNotifications() && staffCan(staff,"orders.write")) {
-    try { await withAuthoritativeMutation(() => flushOrderNotificationOutbox({limit:1})); }
-    catch (error) { console.error("Notification retry pending",error instanceof Error ? error.message : "Unknown error"); }
-  }
+  // Authentication already loaded authoritative D1 data for this request.
+  const retryNotifications=hasDueOrderNotifications() && staffCan(staff,"orders.write");
+  after(async()=>{
+    try {
+      await flushDurableBackupJobs();
+      if (retryNotifications) await withAuthoritativeMutation(() => flushOrderNotificationOutbox({limit:1}));
+    } catch (error) { console.error("Background order maintenance pending",error instanceof Error ? error.message : "Unknown error"); }
+  });
   const orders = listAllOrderRequestsForStaff();
   const kitchenOnly = staff.roles.every((role) => role === "KITCHEN");
   return respond({ ok: true, staff, orders: kitchenOnly ? orders.map((o) => ({
@@ -39,10 +45,11 @@ export async function GET(request: Request) {
       volumeMlSnapshot: item.volumeMlSnapshot, ingredientsSnapshot: item.ingredientsSnapshot,
       selectedOptionSnapshot: item.selectedOptionSnapshot, quantity: item.quantity,
     })),
-  })) : orders });
+  })) : orders },200,performance.now()-started);
 }
 
 export async function PATCH(request: Request) {
+  const started=performance.now();
   const staff = await getAuthenticatedStaff(request);
   if (!staff) return fail("Yêu cầu đăng nhập nhân viên.", 401);
   if (!guardMutationOrigin(request)) return fail("Nguồn yêu cầu không hợp lệ.", 403, "INVALID_ORIGIN");
@@ -95,8 +102,8 @@ export async function PATCH(request: Request) {
         return updated;
       }
       return { ok: false, errorCode: "INVALID_ACTION", errorMessage: "Thao tác không hợp lệ." };
-    });
-    return respond(result, result.ok ? 200 : "forbidden" in result ? 403 : result.errorCode === "VERSION_CONFLICT" ? 409 : 400);
+    },{deferBackup:after});
+    return respond(result, result.ok ? 200 : "forbidden" in result ? 403 : result.errorCode === "VERSION_CONFLICT" ? 409 : 400,performance.now()-started);
   } catch (caught) {
     const status = typeof caught === "object" && caught && "status" in caught ? Number(caught.status) : 500;
     return fail(caught instanceof Error ? caught.message : "Không thể cập nhật đơn.", status);
