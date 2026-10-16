@@ -104,3 +104,11 @@ Restore dedicated 1440x810 desktop and 750x750 mobile hero artwork for slide
 2; keep the gift-section image independent and keep its configured title /
 badge. Add regression assertions for both sources with a square gift image
 present in the settings. No uploads or stored settings are rewritten.
+
+Released correction `8891689` as `dpl_J3txM4Rm9EaWk2mexrDQGku2FXaA`
+after 116 tests, TypeScript and build passed. Verified official slide 2
+at desktop 1110x714 and mobile 390x844: the desktop source loads at
+1440x810 and the mobile source at 750x750. Mobile has no horizontal
+overflow; all three selectors remain. No orders, product data or stored
+site settings changed. Proof: `output/gift-hero-slide-fixed-2026-10-16.jpg`
+and `output/gift-hero-slide-fixed-mobile-2026-10-16.jpg`.
