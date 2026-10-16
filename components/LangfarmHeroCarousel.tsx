@@ -146,13 +146,13 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
           <ChevronRight className="w-5 h-5" aria-hidden="true" />
         </button>}
 
-        {/* Bottom Overlay: Left Serif Title + Right Gold Pill CTA */}
-        {!isUploadedSlide && <div className="absolute inset-x-0 bottom-0 z-10 max-w-[1280px] mx-auto px-4 sm:px-8 pb-8 sm:pb-11 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div className="max-w-2xl">
-            <p className="hidden sm:block font-serif-display text-sm sm:text-xl md:text-2xl text-white/95 drop-shadow-sm">
+        {/* Keep the CTA under the copy, clear of the fixed contact rail. */}
+        {!isUploadedSlide && <div className="absolute inset-x-0 bottom-0 z-10 max-w-[1280px] mx-auto pl-6 sm:pl-10 lg:pl-16 pr-20 sm:pr-28 pb-16 sm:pb-20 flex flex-col items-start gap-4">
+          <div className="max-w-2xl min-w-0">
+            <p className="hidden sm:block text-xs sm:text-sm md:text-base text-white/90 drop-shadow-sm">
               {currentSlide.kicker}
             </p>
-            <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-md [text-wrap:balance] break-words line-clamp-3">
+            <h2 className="mt-2 font-serif-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight drop-shadow-md [text-wrap:balance] break-words line-clamp-3">
                 <span className="hidden sm:inline">{currentSlide.title}</span>
                 <span className="sm:hidden">{currentSlide.mobileTitle}</span>
             </h2>
@@ -190,8 +190,9 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
                 key={s.id}
                 type="button"
                 aria-label={`Chuyển đến slide ${idx + 1}`}
+                aria-current={isActive ? "true" : undefined}
                 onClick={() => setActiveIndex(idx)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 cursor-pointer focus:outline-hidden"
+                className="hero-slide-selector min-w-[44px] min-h-[44px] flex items-center justify-center p-2 cursor-pointer rounded-full"
               >
                 <span
                   className={`h-2.5 rounded-full transition-all duration-300 ${

@@ -72,6 +72,12 @@ test("uploaded banner preserves its artwork while manual controls and autoplay k
   let next=walk(component.LangfarmHeroCarousel(props));
   assert.equal(active,1);assert.equal(next.find(node=>node.type==="source").props.srcSet,"/gift.webp");
   assert.ok(next.some(node=>node.type==="h2"),"text overlay remains available on the other slides");
+  const cta=next.find(node=>node.props["data-testid"]==="hero-cta-choose-dish");
+  const overlay=next.find(node=>node.props.className?.includes("pb-16"));
+  assert.match(overlay.props.className,/flex-col items-start/);
+  assert.match(overlay.props.className,/pr-20/);
+  assert.ok(walk(overlay).some(node=>node.props["data-testid"]===cta.props["data-testid"]),"CTA stays in the safe left-hand column");
+  assert.equal(next.filter(node=>node.props["aria-current"]==="true").length,1);
   assert.equal(next.find(node=>node.props.className?.includes("h-[380px]")).props.className,nodes.find(node=>node.props.className?.includes("h-[380px]")).props.className,"slide changes must not shift page height");
   tick();assert.equal(active,2);tick();assert.equal(active,0);
   next=walk(component.LangfarmHeroCarousel(props));

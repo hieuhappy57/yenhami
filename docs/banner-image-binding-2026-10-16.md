@@ -76,3 +76,14 @@ height remains 580px; mobile height remains 380px with all three selectors
 and no horizontal overflow. No stored settings, images or orders changed.
 Proof: `output/hero-carousel-restored-2026-10-16.jpg` and
 `output/hero-carousel-restored-mobile-2026-10-16.jpg`.
+
+## Narrow Desktop Slide Layout
+
+For the reported third-slide screenshot: move the CTA below the copy in a
+left-aligned column, reserve clearance from the fixed contact rail, reduce
+kicker/headline sizing and leave dedicated room above the pagination dots.
+Replace the global green rectangular selector focus outline with a rounded
+white keyboard-only indicator, and expose the current slide via aria-current.
+Switch the header to its existing compact navigation below 1280px, where
+full desktop navigation previously wrapped into multiple lines.
+Keep all three slides, autoplay and the owner's uploaded first image.

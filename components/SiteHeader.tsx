@@ -91,7 +91,7 @@ export function SiteHeader({site}: {site?: SiteContentSettings}) {
             aria-label={
               mobileMenuOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"
             }
-            className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-full text-[#155132] bg-[#FAF4E8] border border-[#BD9342]/30 hover:bg-[#F3E8D0] transition-colors cursor-pointer shrink-0"
+            className="xl:hidden inline-flex items-center justify-center w-10 h-10 rounded-full text-[#155132] bg-[#FAF4E8] border border-[#BD9342]/30 hover:bg-[#F3E8D0] transition-colors cursor-pointer shrink-0"
           >
             {mobileMenuOpen ? (
               <X className="w-5 h-5" aria-hidden="true" />
@@ -147,7 +147,7 @@ export function SiteHeader({site}: {site?: SiteContentSettings}) {
           {/* Center Navigation Links (Desktop) */}
           <nav
             aria-label="Điều hướng chính"
-            className="hidden lg:flex items-center gap-7 xl:gap-9"
+            className="hidden xl:flex items-center gap-7 xl:gap-9"
           >
             {NAV_LINKS.map((item) => {
               const active =
@@ -243,7 +243,7 @@ export function SiteHeader({site}: {site?: SiteContentSettings}) {
       {mobileMenuOpen && (
         <div
           id="mobile-nav-drawer"
-          className="lg:hidden bg-white border-b border-[#BD9342]/30 px-4 py-3 shadow-lg"
+          className="xl:hidden bg-white border-b border-[#BD9342]/30 px-4 py-3 shadow-lg"
         >
           <div className="flex flex-col divide-y divide-gray-100">
             {MOBILE_NAV_LINKS.map((link) => {
