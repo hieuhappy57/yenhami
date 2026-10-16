@@ -16,10 +16,7 @@ export function GoogleMapEmbed({
   const address = addressDisplay || BRAND_CONFIG.contact.addressDisplay;
   const hours = serviceHoursDisplay || BRAND_CONFIG.contact.serviceHoursDisplay;
   const mapsUrl = BRAND_CONFIG.contact.googleMapsUrl;
-  const embedUrl =
-    addressDisplay && addressDisplay !== BRAND_CONFIG.contact.addressDisplay
-      ? `https://maps.google.com/maps?q=${encodeURIComponent(addressDisplay)}&hl=vi&z=16&output=embed`
-      : BRAND_CONFIG.contact.googleMapsEmbedUrl;
+  const embedUrl = BRAND_CONFIG.contact.googleMapsEmbedUrl;
 
   return (
     <section className={`max-w-[1280px] mx-auto px-4 md:px-8 ${className}`}>
@@ -65,9 +62,9 @@ export function GoogleMapEmbed({
               width="100%"
               height="100%"
               style={{ border: 0 }}
-              allowFullScreen={false}
+              allowFullScreen
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              referrerPolicy="strict-origin-when-cross-origin"
               className="w-full h-full"
             />
           ) : (
