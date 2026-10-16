@@ -46,7 +46,7 @@ export function OrganizationAndLocalBusinessJsonLd() {
           areaServed: ["VN-DN", "VN"],
           availableLanguage: ["Vietnamese"],
         },
-        sameAs: [BRAND_CONFIG.contact.facebookUrl, BRAND_CONFIG.contact.zaloUrl].filter(Boolean),
+        sameAs: [BRAND_CONFIG.contact.facebookUrl, BRAND_CONFIG.contact.zaloUrl, BRAND_CONFIG.contact?.googleMapsUrl].filter(Boolean),
       },
       {
         "@type": ["LocalBusiness", "HealthFoodStore", "FoodEstablishment"],
@@ -54,6 +54,7 @@ export function OrganizationAndLocalBusinessJsonLd() {
         name: BRAND_CONFIG.brandName,
         image: absoluteUrl(SEO_CONFIG.defaultOgImage),
         url: SEO_CONFIG.siteUrl,
+        hasMap: BRAND_CONFIG.contact.googleMapsUrl || undefined,
         telephone: BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959",
         email: BRAND_CONFIG.contact.emailDisplay || "cskh@yenhami.com",
         priceRange: "295000VND - 5500000VND",

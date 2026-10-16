@@ -2,11 +2,12 @@ import React from "react";
 import { loadSiteContent } from "@/lib/site-content";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, MapPin, MessageCircle, PhoneCall } from "lucide-react";
+import { Clock, ExternalLink, MapPin, MessageCircle, Navigation, PhoneCall } from "lucide-react";
 import { FacebookIcon } from "@/components/FacebookIcon";
 import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr } from "@/db";
 import { BRAND_CONFIG } from "@/config/brand";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
+import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
 import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
@@ -113,15 +114,25 @@ export default async function LienHePage() {
             <p className="text-xs text-[#4A4A4A]">Chưng tươi mới mỗi ngày cả cuối tuần</p>
           </div>
 
-          <div className="rounded-3xl bg-[#F5E2F9] p-5 space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1B4332]">
-              Địa Chỉ Hà Mi
-            </span>
+          <a
+            href={BRAND_CONFIG.contact.googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-3xl bg-[#F5E2F9] p-5 space-y-1.5 transition hover:-translate-y-0.5 block group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1B4332]">
+                Địa Chỉ Hà Mi
+              </span>
+              <ExternalLink className="w-3.5 h-3.5 text-[#7C4D2B] opacity-70 group-hover:opacity-100" />
+            </div>
             <p className="font-serif-display text-base font-bold text-[#1B1B1B] leading-snug">
               {site.addressDisplay}
             </p>
-            <p className="text-xs text-[#4A4A4A]">Chuẩn ISO 22000:2018 & FDA Hoa Kỳ</p>
-          </div>
+            <p className="text-xs text-[#7C4D2B] font-medium group-hover:underline">
+              Bấm xem trên Google Maps ↗
+            </p>
+          </a>
         </div>
       </section>
 
@@ -235,6 +246,12 @@ export default async function LienHePage() {
           </div>
         </div>
       </section>
+
+      {/* 3. GOOGLE MAPS EMBED & STORE LOCATION */}
+      <GoogleMapEmbed
+        addressDisplay={site.addressDisplay}
+        serviceHoursDisplay={site.serviceHoursDisplay}
+      />
     </div>
   );
 }

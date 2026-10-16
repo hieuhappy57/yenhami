@@ -10,11 +10,13 @@ export const IS_PREVIEW_DEPLOYMENT = isPreviewDeployment(process.env.VERCEL_ENV)
 
 export const GEO_CONFIG = {
   region: "VN-DN",
-  placename: "Đà Nẵng, Việt Nam",
-  latitude: 16.0544,
-  longitude: 108.2022,
-  positionString: "16.0544;108.2022",
-  icbmString: "16.0544, 108.2022",
+  placename: "365 Đường 29 tháng 3, Hòa Xuân, Cẩm Lệ, TP. Đà Nẵng",
+  latitude: 16.0132072,
+  longitude: 108.2258626,
+  positionString: "16.0132072;108.2258626",
+  icbmString: "16.0132072, 108.2258626",
+  googleMapsUrl: BRAND_CONFIG?.contact?.googleMapsUrl,
+  googleMapsEmbedUrl: BRAND_CONFIG?.contact?.googleMapsEmbedUrl,
   serviceRadiusMeters: 25000,
   servedDistricts: [
     "Quận Hải Châu",

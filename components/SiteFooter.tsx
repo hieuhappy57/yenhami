@@ -68,7 +68,19 @@ export function SiteFooter({site}: {site?: SiteContentSettings}) {
           <div className="space-y-2 text-xs sm:text-sm text-[#2B433A]/90 pt-1">
             <p className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-[#7C4D2B] shrink-0 mt-0.5" />
-              <span>{contact.addressDisplay}</span>
+              <span>
+                {contact.addressDisplay}
+                {BRAND_CONFIG.contact.googleMapsUrl && (
+                  <a
+                    href={BRAND_CONFIG.contact.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-[#11462B] font-semibold hover:underline text-xs ml-1.5"
+                  >
+                    (Xem Google Maps ↗)
+                  </a>
+                )}
+              </span>
             </p>
             <p className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-[#7C4D2B] shrink-0" />
