@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Star, Quote, CheckCircle2, Heart, Award, ShieldCheck } from "lucide-react";
+import { Star, Quote, CheckCircle2, Heart } from "lucide-react";
 
 interface ReviewItem {
   id: string;
@@ -117,29 +117,6 @@ export function CustomerReviewsSection() {
         <p className="mt-2 text-xs sm:text-sm text-[#50575E] leading-relaxed">
           Sự tín nhiệm của các gia đình tại Đà Nẵng là động lực để bếp Hà Mi luôn giữ trọn vị yến tươi nguyên chất chưng nóng mỗi ngày.
         </p>
-
-        {/* Trust Badges Bar */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pt-3 border-t border-[#E8DEC8]/70 text-xs sm:text-[13px] text-[#2B433A]">
-          <div className="flex items-center gap-1.5 font-semibold">
-            <div className="flex text-[#D4AF37]">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
-              ))}
-            </div>
-            <span className="font-bold text-[#155132]">4.9 / 5.0</span>
-            <span className="text-[#6C757D] font-normal text-xs">(3.500+ thố yến trao tay)</span>
-          </div>
-          <span className="hidden sm:inline text-[#D4AF37]">•</span>
-          <div className="flex items-center gap-1.5 font-medium text-[#155132]">
-            <ShieldCheck className="w-4 h-4 text-[#155132] shrink-0" />
-            <span>100% Yến tươi thật</span>
-          </div>
-          <span className="hidden sm:inline text-[#D4AF37]">•</span>
-          <div className="flex items-center gap-1.5 font-medium text-[#155132]">
-            <Award className="w-4 h-4 text-[#155132] shrink-0" />
-            <span>Thố sứ giữ ấm dưỡng chất</span>
-          </div>
-        </div>
       </div>
 
       {/* Category Filter Tabs */}
