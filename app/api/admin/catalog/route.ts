@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import {
   syncDbFromCloud,
   syncDbToCloud,
@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
         const updated = updateProductStatusByStaff({ productId, status, priceVnd });
         await syncDbToCloud();
         return updated;
-      });
+      },{deferBackup:after});
       return NextResponse.json(res, { headers: privateJsonHeaders() });
     }
 
@@ -70,7 +70,7 @@ export async function PATCH(request: Request) {
         const updated = updateDeliverySlotByStaff({ slotId, maxCapacityBowls, reservedBowls, isActive });
         await syncDbToCloud();
         return updated;
-      });
+      },{deferBackup:after});
       return NextResponse.json(res, { headers: privateJsonHeaders() });
     }
 

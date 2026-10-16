@@ -126,10 +126,12 @@ export async function POST(request: Request) {
       const created = submitOrderRequest({ idempotencyKey: String(body.idempotencyKey || ""), source, sourceDetail: String(body.sourceDetail || "") || undefined, orderPurpose: body.orderPurpose === "GIFT" || body.isGift === true ? "GIFT" : "SELF", buyerName: String(body.buyerName || ""), buyerPhone: String(body.buyerPhone || ""), buyerNote: String(body.buyerNote || "") || undefined, recipientName: String(body.recipientName || "") || undefined, recipientPhone: String(body.recipientPhone || "") || undefined, giftSenderName: String(body.giftSenderName || "") || undefined, giftMessage: String(body.giftMessage || "") || undefined, hidePriceOnReceipt: body.hidePriceOnReceipt === true, zoneId: String(body.zoneId || "") || undefined, addressDetail: String(body.addressDetail || ""), requestedDate: String(body.requestedDate || ""), slotId: String(body.slotId || ""), items: Array.isArray(body.items) ? body.items as { productId: string; variantId?: string; quantity: number }[] : [] });
       if (created.ok) await syncDbToCloud();
       return created;
-    });
+    },{deferBackup:after});
     if (result.ok && !result.deduplicated) {
-      try { await withAuthoritativeMutation(() => flushOrderNotificationOutbox({ limit: 1 })); }
-      catch (error) { console.error("Order saved; notification retry pending",error instanceof Error ? error.message : "Unknown error"); }
+      after(async()=>{
+        try { await withAuthoritativeMutation(() => flushOrderNotificationOutbox({ limit: 1 })); }
+        catch (error) { console.error("Order saved; notification retry pending",error instanceof Error ? error.message : "Unknown error"); }
+      });
     }
     return respond(result, result.ok ? 200 : 400);
   } catch (caught) {

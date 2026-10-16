@@ -3,6 +3,12 @@
   const pendingUploads = new Set();
   let catalogLoading;
 
+  function applyProduct(product) {
+    catalog.set(product.id,product);
+    appState.products[product.id]={id:product.id,name:product.name,category:product.category,price:product.priceVnd,
+      image:product.imageUrl,description:product.shortDescription,volumeMl:product.volumeMl,ingredients:product.ingredients};
+  }
+
   async function loadMediaCatalog() {
     if(catalogLoading) return catalogLoading;
     catalogLoading=(async()=>{
@@ -81,8 +87,8 @@
     if(button) button.disabled=true;
     try {
       if(pendingUploads.has('editProductImage')) throw new Error('Vui lòng chờ tải ảnh xong.');
-      await loadMediaCatalog();
       const id=document.getElementById('editProductId').value;
+      if(!catalog.has(id)) await loadMediaCatalog();
       const current=catalog.get(id);
       const imageUrl=document.getElementById('editProductImage').value.trim();
       if(imageUrl.startsWith('data:')) throw new Error('Dùng nút tải ảnh để lưu ảnh trước.');
@@ -90,14 +96,16 @@
         shortDescription:document.getElementById('editProductDesc').value.trim()};
       if(appState.currentRole!=='MARKETING') {
         const category=document.getElementById('editProductCategory').value;
-        Object.assign(product,{...(current || {}),...product,priceVnd:Number(document.getElementById('editProductPrice').value),
-          category:['nguyen-ban','ngot-diu','nhieu-tang'].includes(category) ? category : (current?.category || 'nguyen-ban'),
-          volumeMl:current?.volumeMl || 200,status:current?.status || 'AVAILABLE'});
+        Object.assign(product,{priceVnd:Number(document.getElementById('editProductPrice').value),
+          ...(['nguyen-ban','ngot-diu','nhieu-tang'].includes(category) ? {category} : {}),
+          ...(!current ? {volumeMl:200,status:'AVAILABLE',category:'nguyen-ban'} : {})});
       }
       const response=await fetch('/api/admin/cms',{method:'POST',credentials:'same-origin',headers:getAdminAuthHeaders(),body:JSON.stringify({action:'upsert_product',product})});
       const result=await response.json();
       if(!response.ok || !result.ok) throw new Error(result.errorMessage || 'Chưa lưu được sản phẩm.');
-      await loadMediaCatalog();closeDialog('editProductModal');showToast('Đã lưu sản phẩm.','success');
+      if(result.product?.id) {applyProduct(result.product);renderProductsTable();}
+      else await loadMediaCatalog();
+      closeDialog('editProductModal');showToast('Đã lưu sản phẩm.','success');
     } catch(error) {showToast(error.message || 'Không lưu được sản phẩm.','error');}
     finally {if(button) button.disabled=false;}
   };

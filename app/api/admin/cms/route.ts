@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
   deleteJobPostingByStaff,
@@ -6,6 +6,7 @@ import {
   deleteProductByStaff,
   getAllJobPostings,
   getAllPosts,
+  getAllProducts,
   getSqliteDb,
   getCloudDatabaseStatus,
   getNotificationLogs,
@@ -57,8 +58,6 @@ export async function GET(request: Request) {
   if (!staffCan(staff, "content.write")) {
     return NextResponse.json({ ok: false, errorMessage: "Không có quyền quản lý nội dung." }, { status: 403, headers: privateJsonHeaders() });
   }
-
-  await syncDbFromCloud(true);
 
   const sensitive = staffCan(staff, "settings.sensitive");
   return NextResponse.json({
@@ -115,7 +114,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "upsert_product") {
-      const p = productPayload;
+      const existing=getAllProducts().find(product=>product.id===String(productPayload.id || ""));
+      const p:Record<string,unknown> = canWriteCommercial ? {...existing,...productPayload} : productPayload;
       const ingredients = Array.isArray(p.ingredients)
         ? p.ingredients
         : String(p.ingredientsText || "")
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         );
         if (!result.changes) return NextResponse.json({ ok: false, errorMessage: "Không tìm thấy sản phẩm." }, { status: 404, headers: privateJsonHeaders() });
         await syncDbToCloud();
-        return NextResponse.json({ ok: true, id }, { headers: privateJsonHeaders() });
+        return NextResponse.json({ ok: true, id, product:getAllProducts().find(product=>product.id===id) }, { headers: privateJsonHeaders() });
       }
 
       const commercialPrice = p.priceVnd === null || p.priceVnd === "" || p.priceVnd === undefined ? null : Number(p.priceVnd);
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
         supportedOptions,
       });
       await syncDbToCloud();
-      return NextResponse.json(res);
+      return NextResponse.json({...res,product:getAllProducts().find(product=>product.id===res.productId)},{headers:privateJsonHeaders()});
     }
 
     if (action === "delete_product") {
@@ -376,7 +376,7 @@ export async function POST(request: Request) {
       { ok: false, errorMessage: "Hành động CMS không hợp lệ." },
       { status: 400 }
     );
-    });
+    },{deferBackup:after});
   } catch (err) {
     const status = err instanceof MediaUploadError ? err.status : typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;
     return NextResponse.json(

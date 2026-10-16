@@ -83,7 +83,8 @@ openOrderDetail = function (orderId) {
 
 function refreshOrderViews(orderId) {
   persistAppState();
-  renderOrdersTable();updateDashboard();renderKitchenTable();renderCustomersTable();
+  const renderActiveOrdersView = {orders:renderOrdersTable,dashboard:updateDashboard,kitchen:renderKitchenTable,customers:renderCustomersTable}[appState.activeTab];
+  if (renderActiveOrdersView) renderActiveOrdersView();
   if (document.getElementById('orderDetailModal')?.open) openOrderDetail(orderId);
 }
 

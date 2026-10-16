@@ -2190,7 +2190,7 @@ export function upsertProductFullByStaff(params: {
     params.shortDescription?.trim() || cleanName,
     params.usageGuide?.trim() || "Dùng trực tiếp, ngon hơn khi dùng ấm hoặc để mát.",
     params.storageGuide?.trim() || "Bảo quản nơi thoáng mát hoặc ngăn mát tủ lạnh.",
-    params.cautionNote?.trim() || "100% yến thật tự nhiên, không chất bảo quản.",
+    params.cautionNote===undefined ? "100% yến thật tự nhiên, không chất bảo quản." : params.cautionNote.trim(),
     params.imageUrl?.trim() || "/brand/dishes/thanh-nguyen-dish.jpg",
     0,
     params.priceVnd,

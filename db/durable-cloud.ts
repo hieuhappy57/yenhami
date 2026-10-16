@@ -47,6 +47,7 @@ export function changedRowStatements(before: CloudSnapshot, after: CloudSnapshot
 
 export class DurableCloudStore {
   private schemaReady = false;
+  private dataReady = false;
   private owner: string | null = null;
   private revision = 0;
   private readonly config: {
@@ -124,7 +125,7 @@ export class DurableCloudStore {
     do {
       const [result] = await this.query([{ sql: `UPDATE hami_persistence_meta SET lock_owner=?, lock_until=?
         WHERE id='main' AND (lock_owner IS NULL OR lock_until < ?) RETURNING revision,ready;`, params: [owner, Date.now() + 120_000, Date.now()] }]);
-      if (result.results?.length) { this.owner = owner; this.revision = Number(result.results[0].revision); return Number(result.results[0].ready)===1; }
+      if (result.results?.length) { this.owner = owner; this.revision = Number(result.results[0].revision); this.dataReady=Number(result.results[0].ready)===1; return this.dataReady; }
       await new Promise((resolve) => setTimeout(resolve, 150));
     } while (Date.now() < deadline);
     throw new CloudPersistenceError("Hệ thống đang xử lý yêu cầu khác. Vui lòng thử lại với cùng yêu cầu.");
@@ -150,8 +151,10 @@ export class DurableCloudStore {
 
   async isReady(): Promise<boolean> {
     await this.ensureSchema();
+    if (this.dataReady) return true;
     const [result] = await this.query([{ sql: "SELECT ready, revision FROM hami_persistence_meta WHERE id='main';" }]);
-    return Number(result.results?.[0]?.ready) === 1;
+    this.dataReady=Number(result.results?.[0]?.ready) === 1;
+    return this.dataReady;
   }
 
   async read(): Promise<CloudSnapshot> {

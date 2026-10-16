@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createStaff, listStaff, updateStaff } from "@/db/staff-repository";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const created = await withAuthoritativeMutation(() => createStaff({
       username: String(value.username || ""), email: value.email == null ? null : String(value.email),
       displayName: String(value.displayName || ""), password: typeof value.password === "string" ? value.password : "", roles: value.roles,
-    }));
+    }),{deferBackup:after});
     return json({ ok: true, staff: created }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không thể tạo nhân viên.";
@@ -59,7 +59,7 @@ export async function PATCH(request: Request) {
       password: typeof value.password === "string" && value.password ? value.password : undefined,
       roles: value.roles,
       isActive: typeof value.isActive === "boolean" ? value.isActive : undefined,
-    }));
+    }),{deferBackup:after});
     return json({ ok: true, staff: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không thể cập nhật nhân viên.";

@@ -84,6 +84,9 @@ test("D1 durable transaction and recovery",async(t)=>{
     await t.test("cold start restores complete order and item data",async()=>{
       const restarted = new DurableCloudStore(config);
       assert.equal(await restarted.isReady(),true);
+      const before=queries.length;
+      assert.equal(await restarted.isReady(),true);
+      assert.equal(queries.length,before,"cache readiness only; do not repeat metadata reads");
       const restored = await restarted.read();
       assert.equal(restored.tables.orders[0].phone,"0905000001");
       assert.equal(restored.tables.items[0].quantity,2);

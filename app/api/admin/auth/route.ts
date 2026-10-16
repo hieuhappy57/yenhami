@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { authenticateStaff, bootstrapOwnerFromEnvironment, clearLoginFailures, consumeLoginAttempt, createStaffSession, recordLoginFailure, revokeStaffSession } from "@/db/staff-repository";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { getAuthenticatedStaff, guardMutationOrigin, privateJsonHeaders, STAFF_COOKIE_NAME } from "@/lib/staff-auth";
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     });
     response.cookies.set(STAFF_COOKIE_NAME, session.token, { httpOnly: true, secure: process.env.NODE_ENV === "production" || process.env.VERCEL === "1", sameSite: "lax", path: "/", expires: new Date(session.expiresAt) });
     return response;
-    });
+    },{deferBackup:after});
   } catch (error) {
     const status = error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : typeof error === "object" && error && "status" in error && error.status === 503 ? 503 : 400;
     return json({ ok: false, errorMessage: status === 503 ? "Kho xác thực dùng chung chưa sẵn sàng." : "Yêu cầu đăng nhập không hợp lệ." }, status);
@@ -65,7 +65,7 @@ export async function DELETE(request: Request) {
   if (!guardMutationOrigin(request)) return json({ ok: false, errorMessage: "Nguồn yêu cầu không hợp lệ." }, 403);
   const value = (await cookies()).get(STAFF_COOKIE_NAME)?.value;
   if (value) {
-    try { await withAuthoritativeMutation(() => revokeStaffSession(value)); }
+    try { await withAuthoritativeMutation(() => revokeStaffSession(value),{deferBackup:after}); }
     catch (error) {
       if (typeof error === "object" && error && "status" in error && error.status === 503) return json({ ok: false, errorMessage: "Kho xác thực dùng chung chưa sẵn sàng." }, 503);
       throw error;
