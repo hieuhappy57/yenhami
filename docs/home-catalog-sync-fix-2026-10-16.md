@@ -28,3 +28,18 @@ This prevents newly edited 70ml jars from being hidden by an obsolete filter.
   the order-history snapshot assertion follows that saved name.
 - Jar regression test checks 70/100/120ml filters, current count and visibility.
 - No production products or prices changed during testing.
+
+## Release verification
+
+- 110 tests passed; TypeScript and production build passed.
+- Commits: `3d87cc0`, `cee4bfa`.
+- Tested staged production deployment and promoted the same build:
+  `dpl_9CmiZNWZf6gPvarUMXevDgB2JJiB`.
+- Official homepage returned HTTP 200, `age: 0`, and
+  `cache-control: private, no-cache, no-store, max-age=0, must-revalidate`.
+  All 21 current catalog names were found in its HTML.
+- Chrome shows 6 fresh bowls, including Thượng Yến Nguyên Vị 320000 VND,
+  and all 10 jars with generated 70ml/100ml tabs. No browser console errors.
+- The existing Chrome admin session expired on reload; no production CMS
+  write was performed. The owner's already-saved D1 changes were used for
+  live verification, while mutation tests ran against isolated SQLite.
