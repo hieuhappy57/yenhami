@@ -17,7 +17,7 @@ function validDate(value: string | undefined): Date | undefined {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  await syncDbFromCloud();
+  await syncDbFromCloud(true);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

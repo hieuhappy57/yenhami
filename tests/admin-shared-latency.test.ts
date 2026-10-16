@@ -7,6 +7,8 @@ import ts from "typescript";
 import {runInNewContext} from "node:vm";
 import * as database from "../db/index";
 import * as media from "../lib/media-upload";
+import * as productLines from "../lib/product-lines";
+import { hasForbiddenCommercialProductFields } from "../lib/staff-access";
 
 test("order mutations repaint only the visible admin view",()=>{
   const source=fs.readFileSync("public/admin-order-mutations.js","utf8");
@@ -38,7 +40,7 @@ test("partial product saves merge fresh database fields and return canonical dat
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),"hami-cms-speed-")),previous=process.env.HAMI_DB_PATH;
   process.env.HAMI_DB_PATH=path.join(temp,"isolated.sqlite");database.resetDbConnectionForTest();
   try {
-    let deferred=false;
+    let deferred=false,commercial=true;
     const module={exports:{} as any};
     const source=ts.transpileModule(fs.readFileSync("app/api/admin/cms/route.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
     runInNewContext(source,{exports:module.exports,module,Buffer,console,process,
@@ -47,8 +49,9 @@ test("partial product saves merge fresh database fields and return canonical dat
         if(id==="next/cache") return {revalidatePath(){}};
         if(id==="@/db") return database;
         if(id==="@/lib/media-upload") return media;
+        if(id==="@/lib/product-lines") return productLines;
         if(id==="@/lib/authoritative-write") return {withAuthoritativeMutation:async(fn:any,options:any)=>{deferred=!!options?.deferBackup;return database.runDurableMutation(fn);}};
-        if(id==="@/lib/staff-auth") return {getAuthenticatedStaff:async()=>({roles:["OWNER"]}),staffCan:()=>true,guardMutationOrigin:()=>true,privateJsonHeaders:()=>({"Cache-Control":"no-store"})};
+        if(id==="@/lib/staff-auth") return {getAuthenticatedStaff:async()=>({roles:[commercial ? "OWNER" : "MARKETING"]}),staffCan:(_staff:any,cap:string)=>cap==="catalog.commercial.write" ? commercial : true,guardMutationOrigin:()=>true,hasForbiddenCommercialProductFields,privateJsonHeaders:()=>({"Cache-Control":"no-store"})};
         throw new Error(`Unexpected module ${id}`);
       }});
     const before=database.getAllProducts().find(p=>p.id==="prod-dua-mat-thanh-diu")!;
@@ -57,6 +60,26 @@ test("partial product saves merge fresh database fields and return canonical dat
     assert.equal(result.ok,true);assert.equal(deferred,true);
     assert.equal(result.product.shortDescription,"Updated copy");
     for(const key of ["priceVnd","status","ingredients","supportedOptions","cautionNote"] as const) assert.deepEqual(result.product[key],before[key],key);
+    const post=async(body:unknown)=>module.exports.POST(new Request("https://isolated.test/api/admin/cms",{method:"POST",body:JSON.stringify(body)}));
+    for(const productLine of Object.keys(productLines.PRODUCT_LINES)) {
+      const response=await post({action:"upsert_product",product:{id:`custom-${productLine}`,name:`QA ${productLine}`,category:"nguyen-ban",productLine,volumeMl:productLine==="jar" ? 75 : 200,priceVnd:100000}});
+      const body=await response.json();assert.equal(body.ok,true);
+      assert.equal(productLines.getProductLine(body.product),productLine);
+    }
+    const invalid=await post({action:"upsert_product",product:{id:before.id,productLine:"invalid"}});
+    assert.equal(invalid.status,422);
+    const order=database.submitOrderRequest({idempotencyKey:"isolated-delete-history",orderPurpose:"SELF",buyerName:"QA",buyerPhone:"0900000001",addressDetail:"Isolated QA",zoneId:"zone-cam-le-lien-chieu",requestedDate:"2026-11-01",slotId:"slot-morning",now:new Date("2026-10-16T01:00:00Z"),items:[{productId:before.id,quantity:1}]});
+    assert.equal(order.ok,true);
+    commercial=false;
+    assert.equal((await post({action:"delete_product",productId:before.id})).status,403);
+    assert.ok(database.getProductBySlug(before.slug));
+    commercial=true;
+    assert.equal((await post({action:"delete_product",productId:before.id})).status,200);
+    assert.equal(database.getProductBySlug(before.slug),null);
+    assert.equal(database.getOrderRequestByReference({referenceCode:order.order!.referenceCode,isStaff:true})!.items[0].productNameSnapshot,before.name);
+    assert.equal(database.calculateServerQuote({items:[{productId:before.id,quantity:1}]}).ok,false);
+    database.resetDbConnectionForTest();
+    assert.equal(database.getProductBySlug(before.slug),null,"deleted products must not be reseeded on restart");
   } finally {
     database.resetDbConnectionForTest();
     if(previous===undefined) delete process.env.HAMI_DB_PATH;else process.env.HAMI_DB_PATH=previous;

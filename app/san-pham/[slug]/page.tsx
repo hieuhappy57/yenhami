@@ -1,4 +1,4 @@
-import React from "react";
+import React, { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductBySlug, syncDbFromCloud } from "@/db";
@@ -8,15 +8,15 @@ import { ProductJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
+const loadProduct=cache(async(slug:string)=>{await syncDbFromCloud(true);return getProductBySlug(slug);});
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  await syncDbFromCloud();
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await loadProduct(slug);
 
   if (!product) {
     return buildPageMetadata({
@@ -51,9 +51,8 @@ export default async function ProductDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  await syncDbFromCloud();
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await loadProduct(slug);
   if (!product) {
     notFound();
   }

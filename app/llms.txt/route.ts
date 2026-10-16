@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getProductLine } from "@/lib/product-lines";
 import { BRAND_CONFIG } from "@/config/brand";
 import { GEO_CONFIG, SEO_CONFIG, absoluteUrl } from "@/config/seo";
 import {
@@ -13,8 +14,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   await syncDbFromCloud();
   const products = getAllProducts();
-  const freshBowls = products.filter((p) => !p.id.startsWith("cat-"));
-  const catalogItems = products.filter((p) => p.id.startsWith("cat-"));
+  const freshBowls = products.filter((p) => getProductLine(p)==="fresh-bowl");
+  const catalogItems = products.filter((p) => getProductLine(p)!=="fresh-bowl");
   const posts = getAllPosts(true);
   const zones = getServiceZones();
 

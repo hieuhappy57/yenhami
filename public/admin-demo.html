@@ -3070,8 +3070,16 @@
             <input type="text" id="editProductName" class="form-control" required />
           </div>
           <div class="form-group">
-            <label for="editProductCategory">Phân loại / Dòng sản phẩm</label>
-            <input type="text" id="editProductCategory" class="form-control" />
+            <label for="editProductLine">Hạng mục sản phẩm</label>
+            <select id="editProductLine" class="form-control"><option value="fresh-bowl">Yến tươi chưng nóng</option><option value="gift-set">Set quà tặng</option><option value="jar">Yến hũ chưng sẵn</option><option value="refined-nest">Yến tinh chế</option></select>
+          </div>
+          <div class="form-group">
+            <label for="editProductCategory">Nhóm khẩu vị</label>
+            <select id="editProductCategory" class="form-control"><option value="nguyen-ban">Nguyên bản</option><option value="ngot-diu">Ngọt dịu</option><option value="nhieu-tang">Phối vị</option></select>
+          </div>
+          <div class="form-group">
+            <label for="editProductVolume">Quy cách (ml/g)</label>
+            <input type="number" id="editProductVolume" class="form-control" min="1" step="1" value="200" required />
           </div>
           <div class="form-group">
             <label for="editProductPrice">Giá niêm yết (VNĐ) *</label>
@@ -3092,6 +3100,7 @@
         <div class="modal-footer">
           <button type="button" class="btn" onclick="closeDialog('editProductModal')">Huỷ</button>
           <button type="submit" class="btn btn-primary">Lưu sản phẩm</button>
+          <button type="button" id="deleteProductButton" class="btn btn-danger" hidden>Xóa sản phẩm</button>
         </div>
       </form>
     </div>
@@ -5436,7 +5445,7 @@
           <td><img src="${esc(p.image)}" class="product-thumb" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'" /></td>
           <td>
             <strong>${esc(p.name)}</strong>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${esc(p.category || 'Món yến Hà Mi')}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${esc(p.productLineLabel || p.category || 'Món yến Hà Mi')}</div>
           </td>
           <td><strong style="color: var(--primary);">${formatVND(p.price)}</strong></td>
           <td style="max-width: 320px; font-size: 13px; color: var(--text-muted);">${esc(p.description)}</td>

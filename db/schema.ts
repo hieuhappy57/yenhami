@@ -5,6 +5,8 @@ export const productsTable = sqliteTable("products", {
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   category: text("category").notNull(),
+  productLine: text("product_line").notNull().default(""),
+  deletedAt: text("deleted_at"),
   volumeMl: integer("volume_ml").notNull(),
   ingredientsJson: text("ingredients_json").notNull(),
   tasteProfile: text("taste_profile").notNull(),
@@ -176,6 +178,7 @@ export interface ProductRecord {
   slug: string;
   name: string;
   category: ProductCategory;
+  productLine?: import("../lib/product-lines").ProductLine;
   categoryLabel: string;
   volumeMl: number;
   ingredients: string[];

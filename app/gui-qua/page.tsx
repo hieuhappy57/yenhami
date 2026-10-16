@@ -1,4 +1,5 @@
 import React from "react";
+import { getProductLine } from "@/lib/product-lines";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Gift, Heart, Sparkles } from "lucide-react";
@@ -42,9 +43,9 @@ const GIFT_PRIVILEGES = [
 ];
 
 export default async function GuiQuaPage() {
-  await syncDbFromCloud();
+  await syncDbFromCloud(true);
   const products = getAllProducts();
-  const freshBowlProducts = products.filter((p) => !p.id.startsWith("cat-"));
+  const freshBowlProducts = products.filter((p) => getProductLine(p)==="fresh-bowl");
 
   return (
     <div className="bg-[#FDFBF7] pb-12 space-y-8">

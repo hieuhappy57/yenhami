@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { resolveProductImage } from "../lib/product-images";
 import { resolveProductCopy } from "../lib/product-copy";
+import { getProductLine } from "../lib/product-lines";
 import { authenticateStaff, listStaff } from "./staff-repository";
 import { CloudPersistenceError, DurableCloudStore, type CloudSnapshot, type CloudStatement } from "./durable-cloud";
 import { isDatabaseMutation, withDatabaseLock } from "../lib/database-lock";
@@ -394,6 +395,9 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   `);
 
   // Ensure start_minutes_of_day column exists if DB was created before this migration
+  const productCols=db.prepare("PRAGMA table_info(products)").all() as {name:string}[];
+  if (!productCols.some(column=>column.name==="product_line")) db.exec("ALTER TABLE products ADD COLUMN product_line TEXT NOT NULL DEFAULT ''");
+  if (!productCols.some(column=>column.name==="deleted_at")) db.exec("ALTER TABLE products ADD COLUMN deleted_at TEXT");
   const slotCols = db.prepare("PRAGMA table_info(delivery_slots)").all() as { name: string }[];
   if (!slotCols.some((c) => c.name === "start_minutes_of_day")) {
     db.exec("ALTER TABLE delivery_slots ADD COLUMN start_minutes_of_day INTEGER NOT NULL DEFAULT 540;");
@@ -627,7 +631,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
 export function getAllProducts(): ProductRecord[] {
   const db = getSqliteDb();
   const rows = db
-    .prepare("SELECT * FROM products ORDER BY sort_order ASC")
+    .prepare("SELECT * FROM products WHERE deleted_at IS NULL ORDER BY sort_order ASC")
     .all() as Record<string, unknown>[];
   const variants = db
     .prepare("SELECT * FROM product_variants")
@@ -651,6 +655,7 @@ export function getAllProducts(): ProductRecord[] {
       slug: String(r.slug),
       name: String(r.name),
       category: cat,
+      productLine:getProductLine({id:prodId,productLine:String(r.product_line || "")}),
       categoryLabel: CATEGORY_LABELS[cat] || "Yến Tươi Chưng Nóng",
       volumeMl: Number(r.volume_ml),
       ingredients: JSON.parse(String(r.ingredients_json)) as string[],
@@ -2216,9 +2221,8 @@ export function upsertProductFullByStaff(params: {
 
 export function deleteProductByStaff(productId: string) {
   const db = getSqliteDb();
-  db.prepare("DELETE FROM product_variants WHERE product_id = ?").run(productId);
-  db.prepare("DELETE FROM products WHERE id = ?").run(productId);
-  return { ok: true };
+  const result=db.prepare("UPDATE products SET deleted_at=? WHERE id=? AND deleted_at IS NULL").run(new Date().toISOString(),productId);
+  return { ok: result.changes>0 };
 }
 
 // ============================================================================

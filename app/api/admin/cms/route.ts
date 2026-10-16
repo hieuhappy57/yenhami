@@ -29,6 +29,7 @@ import {
 import type { ProductCategory, ProductStatus } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { MediaUploadError, storeVerifiedImage } from "@/lib/media-upload";
+import { PRODUCT_LINES, getProductLine } from "@/lib/product-lines";
 import { getAuthenticatedStaff, guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
 
 const PRODUCT_STATUSES: ProductStatus[] = ["AVAILABLE", "OUT_OF_STOCK", "PENDING_DATA_APPROVAL"];
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
       return NextResponse.json(uploaded,{headers:privateJsonHeaders()});
     }
 
-    return await withAuthoritativeMutation(async () => {
+    const response=await withAuthoritativeMutation(async () => {
     await syncDbFromCloud(true);
 
     if (action === "save_site_settings") {
@@ -115,6 +116,11 @@ export async function POST(request: Request) {
 
     if (action === "upsert_product") {
       const existing=getAllProducts().find(product=>product.id===String(productPayload.id || ""));
+      if(productPayload.id && getSqliteDb().prepare("SELECT id FROM products WHERE id=? AND deleted_at IS NOT NULL").get(String(productPayload.id))) {
+        return NextResponse.json({ok:false,errorMessage:"Sản phẩm đã bị xóa. Vui lòng tải lại danh mục."},{status:409,headers:privateJsonHeaders()});
+      }
+      const productLine=String(productPayload.productLine || (existing ? getProductLine(existing) : "fresh-bowl"));
+      if(!Object.hasOwn(PRODUCT_LINES,productLine)) return NextResponse.json({ok:false,errorMessage:"Hạng mục sản phẩm không hợp lệ."},{status:422,headers:privateJsonHeaders()});
       const p:Record<string,unknown> = canWriteCommercial ? {...existing,...productPayload} : productPayload;
       const ingredients = Array.isArray(p.ingredients)
         ? p.ingredients
@@ -137,6 +143,7 @@ export async function POST(request: Request) {
           optionalText("slug"), optionalText("name"), optionalText("category"), Number.isSafeInteger(p.volumeMl) && Number(p.volumeMl) > 0 ? Number(p.volumeMl) : null, optionalText("imageUrl"), Array.isArray(p.ingredients) || typeof p.ingredientsText === "string" ? JSON.stringify(ingredients) : null, optionalText("tasteProfile"), optionalText("shortDescription"), optionalText("usageGuide"), optionalText("storageGuide"), optionalText("cautionNote"), id,
         );
         if (!result.changes) return NextResponse.json({ ok: false, errorMessage: "Không tìm thấy sản phẩm." }, { status: 404, headers: privateJsonHeaders() });
+        getSqliteDb().prepare("UPDATE products SET product_line=? WHERE id=?").run(productLine,id);
         await syncDbToCloud();
         return NextResponse.json({ ok: true, id, product:getAllProducts().find(product=>product.id===id) }, { headers: privateJsonHeaders() });
       }
@@ -166,6 +173,7 @@ export async function POST(request: Request) {
         cautionNote: String(p.cautionNote || ""),
         supportedOptions,
       });
+      getSqliteDb().prepare("UPDATE products SET product_line=? WHERE id=?").run(productLine,res.productId);
       await syncDbToCloud();
       return NextResponse.json({...res,product:getAllProducts().find(product=>product.id===res.productId)},{headers:privateJsonHeaders()});
     }
@@ -173,7 +181,7 @@ export async function POST(request: Request) {
     if (action === "delete_product") {
       const res = deleteProductByStaff(String(body.productId || ""));
       await syncDbToCloud();
-      return NextResponse.json(res);
+      return NextResponse.json(res.ok ? res : {...res,errorMessage:"Sản phẩm không còn trong danh mục."},{status:res.ok ? 200 : 404,headers:privateJsonHeaders()});
     }
 
     if (action === "upsert_post") {
@@ -377,6 +385,8 @@ export async function POST(request: Request) {
       { status: 400 }
     );
     },{deferBackup:after});
+    if(response.ok && ["upsert_product","delete_product"].includes(action)) revalidatePath("/","layout");
+    return response;
   } catch (err) {
     const status = err instanceof MediaUploadError ? err.status : typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;
     return NextResponse.json(

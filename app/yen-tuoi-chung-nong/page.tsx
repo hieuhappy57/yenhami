@@ -1,4 +1,5 @@
 import React from "react";
+import { getProductLine } from "@/lib/product-lines";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MapPin, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
@@ -45,9 +46,9 @@ const QUICK_CATEGORIES = [
 ];
 
 export default async function MenuPage() {
-  await syncDbFromCloud();
+  await syncDbFromCloud(true);
   const products = getAllProducts();
-  const freshBowlProducts = products.filter((p) => !p.id.startsWith("cat-"));
+  const freshBowlProducts = products.filter((p) => getProductLine(p)==="fresh-bowl");
   const zones = getServiceZones();
   const slots = getDeliverySlots();
 

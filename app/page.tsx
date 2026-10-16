@@ -1,4 +1,5 @@
 import React from "react";
+import { getProductLine } from "@/lib/product-lines";
 import Link from "next/link";
 import { ArrowRight, CookingPot, Leaf, Truck } from "lucide-react";
 import {
@@ -60,9 +61,9 @@ const FAQ_ITEMS = [
 ];
 
 export default async function HomePage() {
-  await syncDbFromCloud();
+  await syncDbFromCloud(true);
   const allProducts = getAllProducts();
-  const freshBowlProducts = allProducts.filter((p) => !p.id.startsWith("cat-"));
+  const freshBowlProducts = allProducts.filter((p) => getProductLine(p)==="fresh-bowl");
   const latestPosts = getAllPosts(true).slice(0, 4);
 
   return (

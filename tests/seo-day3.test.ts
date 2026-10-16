@@ -5,6 +5,7 @@ import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
 import { isPreviewDeployment } from "../lib/deployment-policy";
+import * as productLines from "../lib/product-lines";
 
 function load(file: string, env = "production", overrides: Record<string, unknown> = {}) {
   const source = fs.readFileSync(path.join(process.cwd(), file), "utf8");
@@ -19,6 +20,8 @@ function load(file: string, env = "production", overrides: Record<string, unknow
     process: { env: { VERCEL_ENV: env } },
     require: (name: string) => {
       if (name in overrides) return overrides[name];
+      if (name === "react") return {cache:(fn:unknown)=>fn};
+      if (name === "@/lib/product-lines") return productLines;
       if (name === "./brand" || name === "@/config/brand") return { BRAND_CONFIG: brand };
       if (name === "@/lib/deployment-policy") return { isPreviewDeployment };
       if (name === "@/config/seo") return load("config/seo.ts", env);

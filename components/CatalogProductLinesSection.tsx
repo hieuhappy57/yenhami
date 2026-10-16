@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Plus } from "lucide-react";
 import type { ProductRecord } from "@/db/schema";
 import { useCart } from "./CartProvider";
+import { getProductLine } from "@/lib/product-lines";
 
 export function CatalogProductLinesSection({
   products,
@@ -16,12 +17,12 @@ export function CatalogProductLinesSection({
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   const giftSetProducts = useMemo(
-    () => products.filter((p) => p.id.startsWith("cat-set-qua-")),
+    () => products.filter((p) => getProductLine(p)==="gift-set"),
     [products]
   );
 
   const allJars = useMemo(
-    () => products.filter((p) => p.id.startsWith("cat-yen-hu-")),
+    () => products.filter((p) => getProductLine(p)==="jar"),
     [products]
   );
 
@@ -29,8 +30,7 @@ export function CatalogProductLinesSection({
     () =>
       products.filter(
         (p) =>
-          p.id.startsWith("cat-yen-tinh-che-") ||
-          p.id.startsWith("cat-yen-rut-long-")
+          getProductLine(p)==="refined-nest"
       ),
     [products]
   );
