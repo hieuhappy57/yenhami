@@ -9,6 +9,7 @@ import * as database from "../db/index";
 import * as media from "../lib/media-upload";
 import * as productLines from "../lib/product-lines";
 import { hasForbiddenCommercialProductFields } from "../lib/staff-access";
+import * as siteValidation from "../lib/site-settings-validation";
 
 test("order mutations repaint only the visible admin view",()=>{
   const source=fs.readFileSync("public/admin-order-mutations.js","utf8");
@@ -32,7 +33,8 @@ test("all admin write groups use durable deferred backups without disabling auth
   for(const route of ["cms","storage"]) {
     const source=fs.readFileSync(`app/api/admin/${route}/route.ts`,"utf8").split("export async function POST")[0];
     assert.match(source,/await getAuthenticatedStaff/);
-    assert.doesNotMatch(source,/await syncDbFromCloud/);
+    if(route==="cms") assert.match(source,/await syncDbFromCloud\(true\)/,"CMS editor must read authoritative settings, not a stale local snapshot");
+    else assert.doesNotMatch(source,/await syncDbFromCloud/);
   }
 });
 
@@ -50,6 +52,7 @@ test("partial product saves merge fresh database fields and return canonical dat
         if(id==="@/db") return database;
         if(id==="@/lib/media-upload") return media;
         if(id==="@/lib/product-lines") return productLines;
+        if(id==="@/lib/site-settings-validation") return siteValidation;
         if(id==="@/lib/authoritative-write") return {withAuthoritativeMutation:async(fn:any,options:any)=>{deferred=!!options?.deferBackup;return database.runDurableMutation(fn);}};
         if(id==="@/lib/staff-auth") return {getAuthenticatedStaff:async()=>({roles:[commercial ? "OWNER" : "MARKETING"]}),staffCan:(_staff:any,cap:string)=>cap==="catalog.commercial.write" ? commercial : true,guardMutationOrigin:()=>true,hasForbiddenCommercialProductFields,privateJsonHeaders:()=>({"Cache-Control":"no-store"})};
         throw new Error(`Unexpected module ${id}`);
@@ -61,6 +64,13 @@ test("partial product saves merge fresh database fields and return canonical dat
     assert.equal(result.product.shortDescription,"Updated copy");
     for(const key of ["priceVnd","status","ingredients","supportedOptions","cautionNote"] as const) assert.deepEqual(result.product[key],before[key],key);
     const post=async(body:unknown)=>module.exports.POST(new Request("https://isolated.test/api/admin/cms",{method:"POST",body:JSON.stringify(body)}));
+    const settings={heroTitle:"Yến Sào Hà Mi",heroLead:"Chưng theo ca theo yêu cầu",heroCta:"Chọn món",noticeBanner:"Khung giờ giao 08:00",heroDesktopImage:"/api/media/uploads/editor/desktop.webp",heroMobileImage:"https://example.test/mobile.webp",aboutLead:"Updated brand story"};
+    const savedSite=await (await post({action:"save_site_settings",settings})).json();
+    assert.equal(savedSite.ok,true);
+    for(const [key,value] of Object.entries(settings)) assert.equal(savedSite.siteSettings[key],value);
+    database.resetDbConnectionForTest();
+    for(const [key,value] of Object.entries(settings)) assert.equal((database.getSiteContentSettings() as any)[key],value,"saved copy must survive reopening, not be auto-replaced by defaults");
+    assert.equal((await post({action:"save_site_settings",settings:{heroDesktopImage:"javascript:alert(1)"}})).ok,false);
     const renamed=await (await post({action:"upsert_product",product:{id:before.id,name:"Updated catalog name",priceVnd:345000}})).json();
     assert.equal(renamed.product.name,"Updated catalog name");
     assert.equal(renamed.product.priceVnd,345000);

@@ -1,9 +1,10 @@
 import React from "react";
+import { loadSiteContent } from "@/lib/site-content";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, MapPin, MessageCircle, PhoneCall } from "lucide-react";
 import { FacebookIcon } from "@/components/FacebookIcon";
-import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr, syncDbFromCloud } from "@/db";
+import { getDeliverySlots, getServiceZones, getTomorrowHoChiMinhDateStr } from "@/db";
 import { BRAND_CONFIG } from "@/config/brand";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
 import { buildPageMetadata } from "@/config/seo";
@@ -18,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function LienHePage() {
-  await syncDbFromCloud();
+  const site = await loadSiteContent();
   const zones = getServiceZones();
   const tomorrow = getTomorrowHoChiMinhDateStr();
   const slots = getDeliverySlots({ requestedDate: tomorrow });
@@ -62,20 +63,20 @@ export default async function LienHePage() {
         {/* 5 Pastel Contact Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <a
-            href={`tel:${BRAND_CONFIG.contact.hotlineTel}`}
+            href={`tel:${site.hotlineTel}`}
             className="rounded-3xl bg-[#FFE9DD] p-5 space-y-1.5 transition hover:-translate-y-0.5"
           >
             <span className="text-xs font-bold uppercase tracking-wider text-[#7C4D2B]">
               Hotline Đặt Nóng 2H
             </span>
             <p className="font-serif-display text-xl font-bold text-[#1B1B1B]">
-              {BRAND_CONFIG.contact.hotlineDisplay}
+              {site.hotlineDisplay}
             </p>
             <p className="text-xs text-[#4A4A4A]">Gọi xác nhận lịch chưng ngay</p>
           </a>
 
           <a
-            href={BRAND_CONFIG.contact.zaloUrl}
+            href={site.zaloUrl}
             target="_blank"
             rel="noreferrer"
             className="rounded-3xl bg-[#E2FCF3] p-5 space-y-1.5 transition hover:-translate-y-0.5"
@@ -107,7 +108,7 @@ export default async function LienHePage() {
               Khung Giờ Phục Vụ
             </span>
             <p className="font-serif-display text-xl font-bold text-[#1B1B1B]">
-              08:00 – 21:00
+              {site.serviceHoursDisplay}
             </p>
             <p className="text-xs text-[#4A4A4A]">Chưng tươi mới mỗi ngày cả cuối tuần</p>
           </div>
@@ -117,7 +118,7 @@ export default async function LienHePage() {
               Địa Chỉ Hà Mi
             </span>
             <p className="font-serif-display text-base font-bold text-[#1B1B1B] leading-snug">
-              {BRAND_CONFIG.contact.addressDisplay}
+              {site.addressDisplay}
             </p>
             <p className="text-xs text-[#4A4A4A]">Chuẩn ISO 22000:2018 & FDA Hoa Kỳ</p>
           </div>
@@ -213,7 +214,7 @@ export default async function LienHePage() {
               <MessageCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#7C4D2B]" />
               <span>
                 Đặt từ 2 thố yến tươi chưng nóng được miễn phí giao hàng trong bán kính 5km tại Đà Nẵng. Liên hệ nhanh qua Hotline/Zalo{" "}
-                <strong>{BRAND_CONFIG.contact.hotlineDisplay}</strong> hoặc Email{" "}
+                <strong>{site.hotlineDisplay}</strong> hoặc Email{" "}
                 <a
                   href={`mailto:${BRAND_CONFIG.contact.emailDisplay}`}
                   className="font-bold text-[#1B4332] underline"

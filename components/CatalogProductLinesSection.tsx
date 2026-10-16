@@ -3,14 +3,16 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Plus } from "lucide-react";
-import type { ProductRecord } from "@/db/schema";
+import type { ProductRecord, SiteContentSettings } from "@/db/schema";
 import { useCart } from "./CartProvider";
 import { getProductLine } from "@/lib/product-lines";
 
 export function CatalogProductLinesSection({
   products,
+  site,
 }: {
   products: ProductRecord[];
+  site?: SiteContentSettings;
 }) {
   const { addItem } = useCart();
   const [jarVolumeTab, setJarVolumeTab] = useState<number | "all">("all");
@@ -77,7 +79,7 @@ export function CatalogProductLinesSection({
         {/* Langfarm-style Full-Bleed Category Banner */}
         <div className="relative w-full max-w-[1440px] mx-auto h-[220px] sm:h-[300px] md:h-[370px] overflow-hidden bg-[#155132]">
           <img
-            src="/brand/banners/cat-banner-set-qua-v3.webp"
+            src={site?.giftingImage || "/brand/banners/cat-banner-set-qua-v3.webp"}
             alt="Ảnh minh họa bộ quà yến Hà Mi trong hộp vàng kem"
             loading="lazy"
             className="absolute right-0 top-0 h-full w-auto max-w-none [mask-image:linear-gradient(to_right,transparent,black_18%)]"
@@ -87,9 +89,13 @@ export function CatalogProductLinesSection({
             className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent"
           />
           <div className="absolute inset-x-0 bottom-0 max-w-[1440px] mx-auto px-4 lg:px-8 pb-6 sm:pb-10 flex items-end justify-between gap-4">
-            <h2 className="font-serif-display text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-md">
-              Set Quà Biếu Sức Khỏe
-            </h2>
+            <div className="min-w-0 max-w-2xl">
+              {site?.giftingBadge && <p className="mb-2 text-xs sm:text-sm text-white/90">{site.giftingBadge}</p>}
+              <h2 className="font-serif-display text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-md break-words line-clamp-3">
+                {site?.giftingTitle || "Set Quà Biếu Sức Khỏe"}
+              </h2>
+              {site?.giftingDescription && <p className="mt-2 text-xs sm:text-sm text-white/90 line-clamp-2">{site.giftingDescription}</p>}
+            </div>
             <Link
               href="/gui-qua"
               className="shrink-0 inline-flex items-center justify-center min-h-[38px] sm:min-h-[44px] px-5 sm:px-7 py-2 rounded-full bg-gradient-to-r from-[#E6C56F] via-[#F9E498] to-[#C89B3C] text-[#4A3208] font-serif-display font-bold text-xs sm:text-base shadow-md border border-[#FFF5D6] hover:brightness-105 transition-all"

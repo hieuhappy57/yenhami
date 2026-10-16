@@ -2235,8 +2235,8 @@ const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
   heroLead:
     "Nóng Thơm Trọn Vị – Vẹn Nguyên Dưỡng Chất. 35g yến tươi thật nguyên tổ trong thố sứ 200ml, chưng tươi theo yêu cầu, giao ấm nóng tận tay trong 2 giờ nội thành Đà Nẵng. Món quà bồi bổ trọn vẹn cho người bệnh, mẹ bầu và ông bà cao tuổi.",
   heroCta: "Đặt Giao Nóng 2H - Từ 295.000đ",
-  heroDesktopImage: "/brand/hero-desktop-clean.jpg",
-  heroMobileImage: "/brand/hero-mobile-clean.jpg",
+  heroDesktopImage: "/brand/banners/hero-slide-1-tho-su-v2.webp",
+  heroMobileImage: "/brand/banners/hero-slide-1-tho-su-mobile-v3.webp",
   giftingBadge: "Món quà ấm lòng – Ngon miệng – Dễ hấp thu",
   giftingTitle: "Gửi Trao Tình Thân & Sự An Tâm Trọn Vẹn",
   giftingDescription:
@@ -2245,7 +2245,7 @@ const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
   hotlineDisplay: "0935 052 959",
   hotlineTel: "0935052959",
   zaloUrl: "https://zalo.me/0935052959",
-  addressDisplay: "Thôn Bà Rén, Xã Xuân Phú, TP. Đà Nẵng",
+  addressDisplay: "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
   serviceHoursDisplay: "08:00 – 21:00 hàng ngày",
   noticeBanner:
     "✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨",
@@ -2265,21 +2265,6 @@ export function getSiteContentSettings(): SiteContentSettings {
   try {
     const parsed = JSON.parse(row.value) as Partial<SiteContentSettings>;
     const merged: SiteContentSettings = { ...DEFAULT_SITE_SETTINGS, ...parsed };
-    // Auto-upgrade legacy copy if stored in DB or Cloud Gist
-    if (
-      merged.heroTitle === "Yến Sào Hà Mi" ||
-      merged.heroLead.includes("theo ca")
-    ) {
-      merged.heroBadge = DEFAULT_SITE_SETTINGS.heroBadge;
-      merged.heroTitle = DEFAULT_SITE_SETTINGS.heroTitle;
-      merged.heroLead = DEFAULT_SITE_SETTINGS.heroLead;
-    }
-    if (merged.heroCta === "Chọn món") {
-      merged.heroCta = DEFAULT_SITE_SETTINGS.heroCta;
-    }
-    if (merged.noticeBanner.includes("Khung giờ giao 08:00")) {
-      merged.noticeBanner = DEFAULT_SITE_SETTINGS.noticeBanner;
-    }
     return merged;
   } catch {
     return { ...DEFAULT_SITE_SETTINGS };

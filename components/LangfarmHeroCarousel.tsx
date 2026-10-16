@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { SiteContentSettings } from "@/db/schema";
 
 interface HeroSlide {
   id: string;
@@ -14,6 +15,7 @@ interface HeroSlide {
   ctaLabel: string;
   ctaHref: string;
   isAnchor?: boolean;
+  description?: string;
 }
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -52,8 +54,15 @@ const HERO_SLIDES: HeroSlide[] = [
   },
 ];
 
-export function LangfarmHeroCarousel() {
+export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const slides = HERO_SLIDES.map((slide,index) => !site ? slide : index===0 ? {
+    ...slide,kicker:site.heroBadge,title:site.heroTitle,mobileTitle:site.heroTitle,
+    description:site.heroLead,ctaLabel:site.heroCta,
+    desktopImage:site.heroDesktopImage || slide.desktopImage,
+    mobileImage:site.heroMobileImage || slide.mobileImage,
+  } : index===1 ? {...slide,kicker:site.giftingBadge,title:site.giftingTitle,mobileTitle:site.giftingTitle,
+    desktopImage:site.giftingImage || slide.desktopImage,mobileImage:site.giftingImage || slide.mobileImage} : slide);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -62,7 +71,7 @@ export function LangfarmHeroCarousel() {
     return () => clearInterval(timer);
   }, []);
 
-  const currentSlide = HERO_SLIDES[activeIndex];
+  const currentSlide = slides[activeIndex];
 
   const handlePrev = () => {
     setActiveIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
@@ -91,8 +100,8 @@ export function LangfarmHeroCarousel() {
             fetchPriority="high"
             decoding="sync"
             sizes="100vw"
-            width={1640}
-            height={680}
+            width={1080}
+            height={1080}
             className="w-full h-full object-cover object-center transition-all duration-500"
           />
         </picture>
@@ -138,10 +147,11 @@ export function LangfarmHeroCarousel() {
             <p className="hidden sm:block font-serif-display text-sm sm:text-xl md:text-2xl text-white/95 drop-shadow-sm">
               {currentSlide.kicker}
             </p>
-            <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-md [text-wrap:balance]">
+            <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-md [text-wrap:balance] break-words line-clamp-3">
                 <span className="hidden sm:inline">{currentSlide.title}</span>
                 <span className="sm:hidden">{currentSlide.mobileTitle}</span>
             </h2>
+            {currentSlide.description && <p className="mt-2 text-xs sm:text-sm text-white/90 leading-relaxed line-clamp-2">{currentSlide.description}</p>}
           </div>
 
           <div className="shrink-0">

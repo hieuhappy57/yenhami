@@ -1,4 +1,5 @@
 import React from "react";
+import { loadSiteContent } from "@/lib/site-content";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -22,7 +23,8 @@ export const metadata: Metadata = buildPageMetadata({
   image: "/brand/catalog/nha-may-so-che.jpg",
 });
 
-export default function VeHaMiPage() {
+export default async function VeHaMiPage() {
+  const site = await loadSiteContent();
   return (
     <div className="bg-[#FDFBF7] pb-14 space-y-12">
       <BreadcrumbJsonLd
@@ -54,10 +56,10 @@ export default function VeHaMiPage() {
               Món quà của sự an tâm • Chạm đến sự bình yên
             </span>
             <h1 className="font-serif-display text-2xl sm:text-4xl md:text-[42px] font-bold text-white leading-tight">
-              Yến Sào Hà Mi — Chất Từng Sợi Yến
+              {site.aboutHeadline}
             </h1>
             <p className="text-xs sm:text-base text-white/90 leading-relaxed max-w-2xl">
-              Hà Mi toàn tâm toàn ý giữ trọn dưỡng chất tự nhiên trong từng sợi yến Việt nguyên tổ để mang đến cho mẹ bầu, người đang hồi phục sau bệnh và ông bà cao tuổi sự bồi bổ thuần khiết, ấm áp nhất.
+              {site.aboutLead}
             </p>
           </div>
         </div>
@@ -190,7 +192,7 @@ export default function VeHaMiPage() {
               <MapPin className="w-5 h-5 text-[#7C4D2B] shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-[#1B4332]">Địa chỉ chính:</strong>
-                <span>{BRAND_CONFIG.contact.addressDisplay}</span>
+                <span>{site.addressDisplay}</span>
                 <strong className="block text-[#1B4332] mt-2">Xưởng sản xuất:</strong>
                 <span>{BRAND_CONFIG.workshopAddressDisplay}</span>
               </div>

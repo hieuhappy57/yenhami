@@ -60,6 +60,7 @@ describe("Preview indexing policy", () => {
       const dependencies: Record<string, unknown> = {
         "next/font/google": { Be_Vietnam_Pro: noop, Playfair_Display: noop, Plus_Jakarta_Sans: noop },
         "./globals.css": {},
+        "@/lib/site-content": {},
         "@/config/seo": { GEO_META_TAGS: {}, IS_PREVIEW_DEPLOYMENT: preview,
           SEO_CONFIG: { siteUrl: "https://yenhami.com" }, absoluteUrl: (p: string) => `https://yenhami.com${p}` },
       };

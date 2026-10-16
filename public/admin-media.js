@@ -1,6 +1,64 @@
 (function () {
   const catalog = new Map();
   const pendingUploads = new Set();
+  const siteFields={heroBadge:'siteHeroBadge',heroTitle:'siteHeroTitle',heroLead:'siteHeroLead',heroCta:'siteHeroCta',
+    heroDesktopImage:'siteHeroDesktopImage',heroMobileImage:'siteHeroMobileImage',giftingBadge:'siteGiftingBadge',
+    giftingTitle:'siteGiftingTitle',giftingDescription:'siteGiftingDesc',giftingImage:'siteGiftingImage',
+    hotlineDisplay:'siteHotlineDisplay',hotlineTel:'siteHotlineTel',zaloUrl:'siteZaloUrl',addressDisplay:'siteAddressDisplay',
+    serviceHoursDisplay:'siteServiceHours',noticeBanner:'siteNoticeBanner',aboutHeadline:'siteAboutHeadline',aboutLead:'siteAboutLead'};
+  let siteLoading,siteReady=false,siteDirty=false;
+  const originalSiteForm=typeof loadSiteSettingsForm==='function' ? loadSiteSettingsForm : null;
+  const siteForm=document.getElementById('siteHeroTitle')?.closest?.('form');
+  function setSiteBusy(busy) {
+    if(siteForm) {
+      for(const button of siteForm.querySelectorAll('[type="submit"]')) button.disabled=busy;
+      for(const field of siteForm.querySelectorAll('input,textarea,select')) field.disabled=busy || !siteReady;
+    }
+  }
+  async function loadServerSiteSettings() {
+    if(siteLoading) return siteLoading;
+    if(siteDirty) return;
+    setSiteBusy(true);
+    siteLoading=(async()=>{
+      const response=await fetch('/api/admin/cms',{cache:'no-store',credentials:'same-origin',headers:getAdminAuthHeaders()});
+      const result=await response.json();
+      if(!response.ok || !result.ok || !result.siteSettings) throw new Error(result.errorMessage || 'Không tải được cấu hình giao diện.');
+      if(!siteDirty) {appState.site=result.siteSettings;if(originalSiteForm) originalSiteForm();}
+      siteReady=true;
+    })();
+    try {await siteLoading;} finally {siteLoading=null;setSiteBusy(false);}
+  }
+  if(originalSiteForm) loadSiteSettingsForm=function() {
+    if(!siteDirty) originalSiteForm();
+    return loadServerSiteSettings().catch(error=>{if(appState.activeTab==='site') showToast(error.message,'error');});
+  };
+  if(siteForm) {
+    siteForm.addEventListener('input',()=>{siteDirty=true;});
+    siteForm.addEventListener('change',()=>{siteDirty=true;});
+  }
+  handleSaveSiteSettings=async function(event) {
+    event.preventDefault();
+    if(!siteReady) {
+      siteDirty=false;
+      try {await loadServerSiteSettings();showToast('Đã tải cấu hình từ máy chủ. Anh kiểm tra nội dung trước khi lưu.','info');}
+      catch(error) {showToast(error.message || 'Không tải được cấu hình.','error');}
+      return;
+    }
+    if(['siteHeroDesktopImage','siteHeroMobileImage','siteGiftingImage'].some(id=>pendingUploads.has(id))) {showToast('Vui lòng chờ tải ảnh xong.','error');return;}
+    const settings={};
+    for(const [key,id] of Object.entries(siteFields)) settings[key]=document.getElementById(id).value.trim();
+    setSiteBusy(true);
+    try {
+      const response=await fetch('/api/admin/cms',{method:'POST',credentials:'same-origin',headers:getAdminAuthHeaders(),body:JSON.stringify({action:'save_site_settings',settings})});
+      const result=await response.json();
+      if(!response.ok || !result.ok || !result.siteSettings) throw new Error(result.errorMessage || 'Chưa lưu được cấu hình giao diện.');
+      appState.site=result.siteSettings;siteDirty=false;
+      if(typeof persistAppState==='function') persistAppState();
+      if(originalSiteForm) originalSiteForm();
+      showToast('Đã lưu giao diện lên máy chủ. Tải lại trang web để xem thay đổi.','success');
+    } catch(error) {showToast(error.message || 'Chưa lưu được cấu hình.','error');}
+    finally {setSiteBusy(false);}
+  };
   let catalogLoading;
   const productLines={'fresh-bowl':'Yến tươi chưng nóng','gift-set':'Set quà tặng',jar:'Yến hũ chưng sẵn','refined-nest':'Yến tinh chế'};
 
@@ -154,7 +212,16 @@
   };
 
   for(const id of ['editProductImage','postCoverImageInput','siteHeroDesktopImage','siteHeroMobileImage','siteGiftingImage']) mountImageUpload(id);
+  for(const [id,description] of [['siteHeroDesktopImage','Đề xuất 1920 × 780 px (khoảng 2,46:1).'],
+    ['siteHeroMobileImage','Đề xuất 1080 × 1080 px (1:1).']]) {
+    const field=document.getElementById(id);
+    if(!field) continue;
+    const hint=document.createElement('p');hint.style.cssText='font-size:12px;color:#647067;margin-top:6px;line-height:1.5';
+    hint.textContent=description+' WebP/JPG/PNG, tối đa 3 MB. Giữ chủ thể ở giữa ảnh; phần dưới có chữ và nút đặt món.';
+    field.after(hint);
+  }
   if(window.lucide) window.lucide.createIcons();
   loadMediaCatalog().catch(()=>{});
+  if(siteForm) loadServerSiteSettings().catch(()=>{});
   window.uploadImageToR2=uploadImageToR2;
 })();

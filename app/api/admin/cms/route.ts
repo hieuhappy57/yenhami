@@ -30,6 +30,7 @@ import type { ProductCategory, ProductStatus } from "@/db/schema";
 import { withAuthoritativeMutation } from "@/lib/authoritative-write";
 import { MediaUploadError, storeVerifiedImage } from "@/lib/media-upload";
 import { PRODUCT_LINES, getProductLine } from "@/lib/product-lines";
+import { parseSiteSettings } from "@/lib/site-settings-validation";
 import { getAuthenticatedStaff, guardMutationOrigin, hasForbiddenCommercialProductFields, privateJsonHeaders, staffCan } from "@/lib/staff-auth";
 
 const PRODUCT_STATUSES: ProductStatus[] = ["AVAILABLE", "OUT_OF_STOCK", "PENDING_DATA_APPROVAL"];
@@ -61,6 +62,7 @@ export async function GET(request: Request) {
   }
 
   const sensitive = staffCan(staff, "settings.sensitive");
+  await syncDbFromCloud(true);
   return NextResponse.json({
     ok: true,
     siteSettings: getSiteContentSettings(),
@@ -109,9 +111,9 @@ export async function POST(request: Request) {
     await syncDbFromCloud(true);
 
     if (action === "save_site_settings") {
-      const updated = updateSiteContentSettings(body.settings || {});
+      const updated = updateSiteContentSettings(parseSiteSettings(body.settings));
       await syncDbToCloud();
-      return NextResponse.json({ ok: true, siteSettings: updated });
+      return NextResponse.json({ ok: true, siteSettings: updated },{headers:privateJsonHeaders()});
     }
 
     if (action === "upsert_product") {
@@ -385,7 +387,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
     },{deferBackup:after});
-    if(response.ok && ["upsert_product","delete_product"].includes(action)) revalidatePath("/","layout");
+    if(response.ok && ["upsert_product","delete_product","save_site_settings"].includes(action)) revalidatePath("/","layout");
     return response;
   } catch (err) {
     const status = err instanceof MediaUploadError ? err.status : typeof err === "object" && err && "status" in err && err.status === 503 ? 503 : err instanceof Error && err.message === "BODY_TOO_LARGE" ? 413 : 400;

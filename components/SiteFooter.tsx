@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 import { Phone, MapPin, Clock, ShieldCheck, Mail } from "lucide-react";
 import { FacebookIcon } from "./FacebookIcon";
 import { BRAND_CONFIG } from "@/config/brand";
+import type { SiteContentSettings } from "@/db/schema";
 
-export function SiteFooter() {
+export function SiteFooter({site}: {site?: SiteContentSettings}) {
+  const contact = site || BRAND_CONFIG.contact;
   const pathname = usePathname();
   if (pathname?.startsWith("/quan-tri") || pathname?.startsWith("/admin")) {
     return null;
@@ -66,21 +68,21 @@ export function SiteFooter() {
           <div className="space-y-2 text-xs sm:text-sm text-[#2B433A]/90 pt-1">
             <p className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-[#7C4D2B] shrink-0 mt-0.5" />
-              <span>{BRAND_CONFIG.contact.addressDisplay}</span>
+              <span>{contact.addressDisplay}</span>
             </p>
             <p className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-[#7C4D2B] shrink-0" />
-              <span>{BRAND_CONFIG.contact.serviceHoursDisplay}</span>
+              <span>{contact.serviceHoursDisplay}</span>
             </p>
             <p className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-[#7C4D2B] shrink-0" />
               <span>
                 Hotline / Zalo OA:{" "}
                 <a
-                  href={`tel:${BRAND_CONFIG.contact.hotlineTel}`}
+                  href={`tel:${contact.hotlineTel}`}
                   className="font-bold text-[#1B4332] hover:underline"
                 >
-                  {BRAND_CONFIG.contact.hotlineDisplay}
+                  {contact.hotlineDisplay}
                 </a>
               </span>
             </p>

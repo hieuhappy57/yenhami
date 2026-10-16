@@ -14,6 +14,7 @@ test("home is request-rendered and reads current product names and prices before
   vm.runInNewContext(source,{module,exports:module.exports,require:(id:string)=>{
     if(id==="react") return React;
     if(id==="@/lib/product-lines") return productLines;
+    if(id==="@/lib/site-content") return {loadSiteContent:async()=>{syncCalls++;return {heroDesktopImage:"/desktop.webp",heroMobileImage:"/mobile.webp"};}};
     if(id==="@/db") return {
       syncDbFromCloud:async(force:boolean)=>{assert.equal(force,true);syncCalls++;},
       getAllProducts:()=>{assert.equal(syncCalls,++readCalls);return products;},

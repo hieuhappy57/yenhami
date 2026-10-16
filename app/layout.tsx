@@ -9,6 +9,9 @@ import { MobileStickyCartBar } from "@/components/MobileStickyCartBar";
 import { OrganizationAndLocalBusinessJsonLd } from "@/components/SeoJsonLd";
 import { AnalyticsScripts } from "@/components/AnalyticsScripts";
 import { GEO_META_TAGS, IS_PREVIEW_DEPLOYMENT, SEO_CONFIG, absoluteUrl } from "@/config/seo";
+import { loadSiteContent } from "@/lib/site-content";
+
+export const dynamic = "force-dynamic";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
@@ -96,11 +99,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const site = await loadSiteContent();
   return (
     <html lang="vi" className={`${plusJakarta.variable} ${brandSerif.variable} ${beVietnamPro.variable}`}>
       <head />
@@ -108,11 +112,11 @@ export default function RootLayout({
         <OrganizationAndLocalBusinessJsonLd />
         <AnalyticsScripts />
         <CartProvider>
-          <SiteHeader />
+          <SiteHeader site={site} />
           <main className="flex-1">{children}</main>
-          <FloatingActionRail />
+          <FloatingActionRail site={site} />
           <MobileStickyCartBar />
-          <SiteFooter />
+          <SiteFooter site={site} />
         </CartProvider>
       </body>
     </html>

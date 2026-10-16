@@ -21,6 +21,7 @@ function load(file: string, env = "production", overrides: Record<string, unknow
     require: (name: string) => {
       if (name in overrides) return overrides[name];
       if (name === "react") return {cache:(fn:unknown)=>fn};
+      if (name === "@/lib/site-content") return {};
       if (name === "@/lib/product-lines") return productLines;
       if (name === "./brand" || name === "@/config/brand") return { BRAND_CONFIG: brand };
       if (name === "@/lib/deployment-policy") return { isPreviewDeployment };

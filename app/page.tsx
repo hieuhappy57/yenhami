@@ -1,11 +1,11 @@
 import React from "react";
+import { loadSiteContent } from "@/lib/site-content";
 import { getProductLine } from "@/lib/product-lines";
 import Link from "next/link";
 import { ArrowRight, CookingPot, Leaf, Truck } from "lucide-react";
 import {
   getAllPosts,
   getAllProducts,
-  syncDbFromCloud,
 } from "@/db";
 import { LangfarmHeroCarousel } from "@/components/LangfarmHeroCarousel";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
@@ -62,7 +62,7 @@ const FAQ_ITEMS = [
 ];
 
 export default async function HomePage() {
-  await syncDbFromCloud(true);
+  const site = await loadSiteContent();
   const allProducts = getAllProducts();
   const freshBowlProducts = allProducts.filter((p) => getProductLine(p)==="fresh-bowl");
   const latestPosts = getAllPosts(true).slice(0, 4);
@@ -73,20 +73,20 @@ export default async function HomePage() {
       <link
         rel="preload"
         as="image"
-        href="/brand/banners/hero-slide-1-tho-su-mobile-v3.webp"
+        href={site.heroMobileImage}
         media="(max-width: 767px)"
       />
       <link
         rel="preload"
         as="image"
-        href="/brand/banners/hero-slide-1-tho-su-v2.webp"
+        href={site.heroDesktopImage}
         media="(min-width: 768px)"
       />
 
       <FaqJsonLd items={FAQ_ITEMS} />
 
       {/* 1. LANGFARM-STYLE FULL-BLEED HERO CAROUSEL */}
-      <LangfarmHeroCarousel />
+      <LangfarmHeroCarousel site={site} />
 
       {/* 2. SẢN PHẨM NỔI BẬT (4 Ô Ngang Gọn Gàng & Sang Trọng trên cả Mobile & Desktop) */}
       <section
@@ -149,7 +149,7 @@ export default async function HomePage() {
       />
 
       {/* 4. CÁC DÒNG SẢN PHẨM ĐẶC SẢN HÀ MI (Banner + Lưới sản phẩm không viền) */}
-      <CatalogProductLinesSection products={allProducts} />
+      <CatalogProductLinesSection products={allProducts} site={site} />
 
       {/* 5. TỪ BẾP HÀ MI: ẢNH NỀN CHÌM TÔNG KEM SÁNG & THÔNG ĐIỆP NỔI BẬT ĐỒNG BỘ MÀU WEB */}
       <section

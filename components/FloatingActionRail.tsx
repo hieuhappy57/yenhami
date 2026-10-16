@@ -5,8 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { ShoppingBag, X, Info } from "lucide-react";
 import { BRAND_CONFIG } from "@/config/brand";
 import { useCart } from "./CartProvider";
+import type { SiteContentSettings } from "@/db/schema";
 
-export function FloatingActionRail() {
+export function FloatingActionRail({site}: {site?: SiteContentSettings}) {
+  const contact = site || BRAND_CONFIG.contact;
   const pathname = usePathname();
   const router = useRouter();
   const { totalBowls, isInputFocused, isModalOpen } = useCart();
@@ -34,8 +36,8 @@ export function FloatingActionRail() {
   };
 
   const handleZaloClick = () => {
-    if (BRAND_CONFIG.contact.zaloUrl) {
-      window.open(BRAND_CONFIG.contact.zaloUrl, "_blank", "noopener,noreferrer");
+    if (contact.zaloUrl) {
+      window.open(contact.zaloUrl, "_blank", "noopener,noreferrer");
     } else {
       setUnconfiguredChannel((prev) => (prev === "Zalo" ? null : "Zalo"));
     }
@@ -69,7 +71,7 @@ export function FloatingActionRail() {
       ? `Đặt hàng (${totalBowls} thố trong giỏ — Tới bước gửi yêu cầu)`
       : "Đặt hàng (Giỏ đang trống — Tới Menu chọn món)";
 
-  const zaloConfigured = Boolean(BRAND_CONFIG.contact.zaloUrl);
+  const zaloConfigured = Boolean(contact.zaloUrl);
   const messengerConfigured = Boolean(BRAND_CONFIG.contact.messengerUrl);
 
   return (
@@ -154,13 +156,13 @@ export function FloatingActionRail() {
           role="tooltip"
           className="pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity mr-2.5 whitespace-nowrap rounded bg-[#155132] px-3 py-1.5 text-xs font-semibold text-[#FFFCF4] shadow-md border border-[#BD9342]"
         >
-          Hotline Giao Nóng 2H: {BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}
+          Hotline Giao Nóng 2H: {contact.hotlineDisplay || "0935 052 959"}
         </span>
         <a
-          href={`tel:${BRAND_CONFIG.contact.hotlineTel || "0935052959"}`}
+          href={`tel:${contact.hotlineTel || "0935052959"}`}
           data-testid="rail-btn-hotline"
-          aria-label={`Gọi Hotline Giao Nóng 2H ${BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}`}
-          title={`Hotline Giao Nóng 2H: ${BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}`}
+          aria-label={`Gọi Hotline Giao Nóng 2H ${contact.hotlineDisplay || "0935 052 959"}`}
+          title={`Hotline Giao Nóng 2H: ${contact.hotlineDisplay || "0935 052 959"}`}
           className="relative flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 md:w-12 md:h-12 rounded-full bg-[#155132] text-[#FFFCF4] border-2 border-[#BD9342] shadow-lg hover:bg-[#0e3b23] transition-colors"
         >
           <svg

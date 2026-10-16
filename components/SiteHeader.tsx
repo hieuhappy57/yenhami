@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowRight, ChevronDown, Menu, PhoneCall, ShoppingBag, X } from "lucide-react";
 import { BRAND_CONFIG } from "@/config/brand";
 import { useCart } from "./CartProvider";
+import type { SiteContentSettings } from "@/db/schema";
 
 const NAV_LINKS = [
   {
@@ -36,7 +37,8 @@ const MOBILE_NAV_LINKS = [
   { href: "/dat-hang", label: "Đặt món (Từ 2 thố Free Ship)" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({site}: {site?: SiteContentSettings}) {
+  const contact = site || BRAND_CONFIG.contact;
   const pathname = usePathname();
   const { totalBowls, setIsModalOpen } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -65,7 +67,7 @@ export function SiteHeader() {
             aria-hidden="true"
           />
           <p className="text-[11px] sm:text-xs leading-[1.125rem] font-semibold tracking-wide text-[#FFFDF7] truncate">
-            YẾN TƯƠI CHƯNG NÓNG • GIAO NGAY 2H ĐÀ NẴNG (TỪ 295K)
+            {site?.noticeBanner ?? "YẾN TƯƠI CHƯNG NÓNG • GIAO NGAY 2H ĐÀ NẴNG"}
           </p>
           <a
             href="/#menu-chu-luc"
@@ -202,7 +204,7 @@ export function SiteHeader() {
           {/* Right Action Area: Luxury Hotline Pill + Circular Cart Button */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
             <a
-              href={`tel:${BRAND_CONFIG.contact.hotlineTel || "0935052959"}`}
+              href={`tel:${contact.hotlineTel || "0935052959"}`}
               className="hidden md:flex min-h-[46px] items-center gap-2.5 p-1 pr-4 bg-gradient-to-r from-[#FDF6E7] to-[#FAF0D7] hover:from-[#FAF0D7] hover:to-[#F5E4BC] border border-[#BD9342]/35 rounded-full shadow-2xs transition-all cursor-pointer"
             >
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#155132] border border-[#BD9342]/25 shadow-2xs">
@@ -213,7 +215,7 @@ export function SiteHeader() {
                   Giao nóng 2H
                 </span>
                 <span className="text-sm font-extrabold text-[#11462B]">
-                  {BRAND_CONFIG.contact.hotlineDisplay || "0935 052 959"}
+                  {contact.hotlineDisplay || "0935 052 959"}
                 </span>
               </span>
             </a>

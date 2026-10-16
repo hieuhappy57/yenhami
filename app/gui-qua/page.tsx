@@ -1,9 +1,10 @@
 import React from "react";
+import { loadSiteContent } from "@/lib/site-content";
 import { getProductLine } from "@/lib/product-lines";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Gift, Heart, Sparkles } from "lucide-react";
-import { getAllProducts, syncDbFromCloud } from "@/db";
+import { getAllProducts } from "@/db";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { BreadcrumbJsonLd } from "@/components/SeoJsonLd";
@@ -43,7 +44,7 @@ const GIFT_PRIVILEGES = [
 ];
 
 export default async function GuiQuaPage() {
-  await syncDbFromCloud(true);
+  const site = await loadSiteContent();
   const products = getAllProducts();
   const freshBowlProducts = products.filter((p) => getProductLine(p)==="fresh-bowl");
 
@@ -61,7 +62,7 @@ export default async function GuiQuaPage() {
         <div className="relative rounded-3xl overflow-hidden min-h-[360px] sm:min-h-[420px] flex flex-col justify-end p-6 sm:p-10 md:p-12 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/banners/hero-slide-2-set-qua-sen-vang-v3.webp"
+            src={site.giftingImage}
             alt="Set Quà Yến Sào Thượng Hạng Hoa Sen & Đàn Én Hà Mi"
             width={1280}
             height={520}
@@ -76,13 +77,13 @@ export default async function GuiQuaPage() {
           <div className="relative z-10 max-w-3xl space-y-3.5">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-xs border border-[#F3D78A]/45 px-3.5 py-1 text-xs font-semibold text-[#F3D78A]">
               <Gift className="w-3.5 h-3.5 text-[#F3D78A]" />
-              Món quà của sự an tâm • Chạm đến sự bình yên
+              {site.giftingBadge}
             </span>
             <h1 className="font-serif-display text-2xl sm:text-4xl md:text-[42px] font-bold text-white leading-tight">
-              Quà Tặng Yến Sào Đà Nẵng
+              {site.giftingTitle}
             </h1>
             <p className="text-xs sm:text-base text-white/90 leading-relaxed max-w-2xl">
-              Từ bộ hộp quà Hoa Sen & Đàn Én 6 hũ Yến Sào Thượng Hạng, hộp Yến Sào Tinh Chế xuất khẩu đến từng thố sứ chưng nóng giữ ấm — Hà Mi chuẩn bị riêng thiệp viết tay và hỗ trợ ẩn giá trên phiếu giao.
+              {site.giftingDescription}
             </p>
             <div className="pt-2 flex flex-wrap gap-3">
               <Link
@@ -125,7 +126,7 @@ export default async function GuiQuaPage() {
       </section>
 
       {/* 3. CATALOG GIFT SETS & PRODUCT LINES */}
-      <CatalogProductLinesSection products={products} />
+      <CatalogProductLinesSection products={products} site={site} />
 
       {/* 4. FRESH STEAMED BOWLS FOR GIFTING */}
       <ProductMenuSection
