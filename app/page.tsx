@@ -11,6 +11,7 @@ import { LangfarmHeroCarousel } from "@/components/LangfarmHeroCarousel";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
+import { CustomerReviewsSection } from "@/components/CustomerReviewsSection";
 import { FaqJsonLd } from "@/components/SeoJsonLd";
 
 // Product names, prices and visibility come from D1, never the build-time seed.
@@ -245,6 +246,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 5.5. ĐÁNH GIÁ & CẢM NHẬN KHÁCH HÀNG */}
+      <CustomerReviewsSection />
 
       {/* 6. TIN TỨC & CẨM NANG SỨC KHỎE (Borderless Langfarm Card Style) */}
       {latestPosts.length > 0 && (
