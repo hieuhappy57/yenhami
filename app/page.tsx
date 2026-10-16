@@ -10,6 +10,7 @@ import {
 import { LangfarmHeroCarousel } from "@/components/LangfarmHeroCarousel";
 import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
+import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
 import { FaqJsonLd } from "@/components/SeoJsonLd";
 
 // Product names, prices and visibility come from D1, never the build-time seed.
@@ -340,6 +341,13 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 8. BẢN ĐỒ VỊ TRÍ CỬA HÀNG & BẾP CHƯNG NÓNG HÀ MI */}
+      <GoogleMapEmbed
+        addressDisplay={site.addressDisplay}
+        serviceHoursDisplay={site.serviceHoursDisplay}
+        className="pb-12 md:pb-16"
+      />
     </div>
   );
 }
