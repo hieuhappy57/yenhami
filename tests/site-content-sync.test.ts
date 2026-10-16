@@ -70,7 +70,9 @@ test("uploaded banner preserves its artwork while manual controls and autoplay k
   assert.equal(nodes.find(node=>node.type==="a").props.href,"#menu-chu-luc");
   nodes.find(node=>node.props["aria-label"]==="Slide tiếp theo").props.onClick();
   let next=walk(component.LangfarmHeroCarousel(props));
-  assert.equal(active,1);assert.equal(next.find(node=>node.type==="source").props.srcSet,"/gift.webp");
+  assert.equal(active,1);
+  assert.equal(next.find(node=>node.type==="source").props.srcSet,"/brand/banners/hero-slide-2-set-qua-sen-vang-v3.webp","gift hero must use its landscape artwork, not the square product image");
+  assert.equal(next.find(node=>node.type==="picture").props.children[1].props.src,"/brand/banners/hero-slide-2-set-qua-sen-vang-mobile-v2.webp","mobile keeps its dedicated gift banner");
   assert.ok(next.some(node=>node.type==="h2"),"text overlay remains available on the other slides");
   const cta=next.find(node=>node.props["data-testid"]==="hero-cta-choose-dish");
   const overlay=next.find(node=>node.props.className?.includes("pb-16"));

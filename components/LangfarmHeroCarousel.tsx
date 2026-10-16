@@ -64,8 +64,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
     description:site.heroLead,ctaLabel:site.heroCta,
     desktopImage:uploadedDesktop || uploadedMobile || site.heroDesktopImage || slide.desktopImage,
     mobileImage:uploadedMobile || uploadedDesktop || site.heroMobileImage || slide.mobileImage,
-  } : index===1 ? {...slide,kicker:site.giftingBadge,title:site.giftingTitle,mobileTitle:site.giftingTitle,
-    desktopImage:site.giftingImage || slide.desktopImage,mobileImage:site.giftingImage || slide.mobileImage} : slide);
+  } : index===1 ? {...slide,kicker:site.giftingBadge,title:site.giftingTitle,mobileTitle:site.giftingTitle} : slide);
 
   useEffect(() => {
     if(slides.length<2) return;

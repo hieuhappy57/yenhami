@@ -95,3 +95,12 @@ mobile CTA stayed inside the 380px hero and no horizontal overflow occurred.
 All three selectors remain present, aria-current identifies slide 3, and
 pointer focus no longer produces the green rectangular outline. Screenshot:
 `output/hero-slide-layout-fixed-2026-10-16.jpg`.
+
+## Gift Slide Image Correction
+
+The owner's follow-up screenshot identifies slide 2. Site-settings wiring
+incorrectly used the 420x420 `giftingImage` product shot as both hero images.
+Restore dedicated 1440x810 desktop and 750x750 mobile hero artwork for slide
+2; keep the gift-section image independent and keep its configured title /
+badge. Add regression assertions for both sources with a square gift image
+present in the settings. No uploads or stored settings are rewritten.
