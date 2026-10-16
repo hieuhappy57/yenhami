@@ -27,3 +27,16 @@ The client test rejects R2-only success without D1 field acknowledgement.
 
 R2 object listing follows the official API:
 https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/list/
+
+## Recovered Original
+
+The authenticated image library found the owner's sole editor image:
+`untitled-design-3-.jpg`, 2032 x 774 pixels, object hash
+`e4877ccf2601d82f53fd13b1f636cc032cb42c40a3609a199a77bea6171298a0`.
+It is a complete designed banner with text and QR artwork. Restored this
+object to the desktop hero through the actual admin picker.
+
+Uploaded designed banners now display intact with contain fitting, no
+duplicate heading, overlay or seal. They replace the default slideshow so
+the page cannot rotate back to an old bundled image. Until a separate
+mobile banner is uploaded, mobile uses the same complete uploaded artwork.

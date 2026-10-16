@@ -63,6 +63,8 @@ const FAQ_ITEMS = [
 
 export default async function HomePage() {
   const site = await loadSiteContent();
+  const uploadedDesktop=site.heroDesktopImage?.startsWith("/api/media/uploads/editor/") ? site.heroDesktopImage : "";
+  const uploadedMobile=site.heroMobileImage?.startsWith("/api/media/uploads/editor/") ? site.heroMobileImage : "";
   const allProducts = getAllProducts();
   const freshBowlProducts = allProducts.filter((p) => getProductLine(p)==="fresh-bowl");
   const latestPosts = getAllPosts(true).slice(0, 4);
@@ -73,13 +75,13 @@ export default async function HomePage() {
       <link
         rel="preload"
         as="image"
-        href={site.heroMobileImage}
+        href={uploadedMobile || uploadedDesktop || site.heroMobileImage}
         media="(max-width: 767px)"
       />
       <link
         rel="preload"
         as="image"
-        href={site.heroDesktopImage}
+        href={uploadedDesktop || uploadedMobile || site.heroDesktopImage}
         media="(min-width: 768px)"
       />
 

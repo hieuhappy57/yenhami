@@ -51,6 +51,46 @@ test("settings accept only safe text fields and supported image/link URLs",()=>{
   assert.equal(parseSiteSettings({heroMobileImage:"/api/media/uploads/mobile.webp"}).heroMobileImage,"/api/media/uploads/mobile.webp");
 });
 
+test("uploaded designed banner stays visible, preserves all artwork and has no duplicate text",()=>{
+  const component=load("components/LangfarmHeroCarousel.tsx",{
+    react:{...React,useState:()=>[0,()=>{}],useEffect:(fn:()=>void)=>fn()},"next/link":"a",
+    "lucide-react":{ChevronLeft:"Prev",ChevronRight:"Next"},
+  });
+  const walk=(node:any):any[]=>!node || typeof node!=="object" ? [] : [node,...React.Children.toArray(node.props?.children).flatMap(walk)];
+  const uploaded="/api/media/uploads/editor/uploaded-banner.jpg";
+  const tree=component.LangfarmHeroCarousel({site:{heroDesktopImage:uploaded,heroMobileImage:"/old-mobile.webp",heroTitle:"Printed in image",heroBadge:"Duplicate badge",heroCta:"Order"}});
+  const nodes=walk(tree),images=nodes.filter(node=>node.type==="img");
+  assert.equal(images.length,1,"do not put a separate brand seal over a designed banner");
+  assert.equal(images[0].props.src,uploaded,"mobile uses uploaded artwork when no uploaded mobile version exists");
+  assert.match(images[0].props.className,/object-contain/);
+  assert.equal(nodes.filter(node=>node.type==="h2").length,0);
+  assert.equal(nodes.filter(node=>node.type==="button").length,0,"do not rotate back to default artwork after an owner uploads a banner");
+  assert.equal(nodes.find(node=>node.type==="a").props.href,"#menu-chu-luc");
+});
+
+test("editor image recovery returns only uploaded image metadata, not private objects",async()=>{
+  const source=fs.readFileSync("db/index.ts","utf8");
+  const fragment=source.slice(source.indexOf("export async function listEditorImages"),source.indexOf("export async function getCloudflareR2Object"));
+  const module={exports:{} as any};
+  const compiled=ts.transpileModule(fragment,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  vm.runInNewContext(compiled,{module,exports:module.exports,URL,AbortSignal,
+    isCloudflareR2Enabled:()=>true,getCloudflareAccountId:()=>"test-account",getCloudflareR2BucketName:()=>"test-bucket",getCloudflareApiToken:()=>"test-secret",
+    fetch:async(url:URL,options:any)=>{
+      assert.equal(url.searchParams.get("prefix"),"uploads/editor/");
+      assert.equal(options.headers.Authorization,"Bearer test-secret");
+      return {ok:true,json:async()=>({success:true,result:[
+        {key:"backups/database.json",last_modified:"2026-10-16"},
+        {key:"uploads/editor/internal.json",last_modified:"2026-10-16"},
+        {key:`uploads/editor/${"a".repeat(64)}-hero-desktop.webp`,size:100,last_modified:"2026-10-16"},
+        {key:"uploads/editor/hero-mobile.png",size:50,last_modified:"2026-10-15"},
+      ]})};
+    }});
+  const result=await module.exports.listEditorImages();
+  assert.equal(result.images.length,2);assert.equal(result.images[0].name,"hero-desktop.webp");
+  assert.equal(JSON.stringify(result).includes("test-secret"),false);
+  assert.ok(result.images.every((image:any)=>image.url.startsWith("/api/media/uploads/editor/")));
+});
+
 test("admin site save waits for server acknowledgement and preserves fields on failure",async()=>{
   const fieldIds=['siteHeroBadge','siteHeroTitle','siteHeroLead','siteHeroCta','siteHeroDesktopImage','siteHeroMobileImage','siteGiftingBadge','siteGiftingTitle','siteGiftingDesc','siteGiftingImage','siteHotlineDisplay','siteHotlineTel','siteZaloUrl','siteAddressDisplay','siteServiceHours','siteNoticeBanner','siteAboutHeadline','siteAboutLead'];
   const events:Record<string,()=>void>={};
