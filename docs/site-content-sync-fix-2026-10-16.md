@@ -41,3 +41,20 @@ settings, preservation of custom copy, rejecting unsafe links, hero image
 selection, and browser-handler acknowledgement / failure / unsaved-input
 behavior. Production verification must not replace the owner's copy or images
 with temporary test content.
+
+## Production Result
+
+- 114 tests, TypeScript and production build passed. Implementation commit
+  `fde148d`; tested deployment `dpl_27oSiL5QjBP1VgQo65XGEvTS3P5U` was promoted
+  to yenhami.com.
+- Saved the existing authoritative configuration using the actual admin form
+  without editing any values. Saw the server-acknowledged success message,
+  reloaded the admin page and compared all 18 displayed fields: unchanged.
+- Public hero uses the saved title, lead, CTA and image sources. Desktop
+  1440x900 viewport loads the 1440px desktop image; mobile 390x844 viewport
+  loads the 750px mobile image. No horizontal overflow observed.
+- Admin and storefront browser error logs were empty during verification.
+- Original image files, product prices and order data were not modified.
+- Screenshots: `output/site-settings-fixed-2026-10-16.jpg`,
+  `output/site-hero-desktop-2026-10-16.jpg`,
+  `output/site-hero-mobile-2026-10-16.jpg`.
