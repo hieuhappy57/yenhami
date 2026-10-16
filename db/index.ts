@@ -2245,7 +2245,7 @@ const DEFAULT_SITE_SETTINGS: SiteContentSettings = {
   hotlineDisplay: "0935 052 959",
   hotlineTel: "0935052959",
   zaloUrl: "https://zalo.me/0935052959",
-  addressDisplay: "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
+  addressDisplay: "365 Đường 29 tháng 3, Hòa Xuân, Tp. Đà Nẵng",
   serviceHoursDisplay: "08:00 – 21:00 hàng ngày",
   noticeBanner:
     "✨ YẾN TƯƠI HÀ MI - CHƯNG NÓNG - GIAO NGAY TRONG 2H — Món quà bồi bổ cho người bệnh – mẹ bầu – ông bà cao tuổi! ✨",
@@ -2264,6 +2264,9 @@ export function getSiteContentSettings(): SiteContentSettings {
   if (!row) return { ...DEFAULT_SITE_SETTINGS };
   try {
     const parsed = JSON.parse(row.value) as Partial<SiteContentSettings>;
+    if (parsed.addressDisplay && parsed.addressDisplay.includes("Hoàng Minh Giám")) {
+      parsed.addressDisplay = DEFAULT_SITE_SETTINGS.addressDisplay;
+    }
     const merged: SiteContentSettings = { ...DEFAULT_SITE_SETTINGS, ...parsed };
     return merged;
   } catch {

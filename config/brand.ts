@@ -43,7 +43,7 @@ export const BRAND_CONFIG = {
     facebookUrl: "https://www.facebook.com/yenhamidanang/",
     addressDisplay:
       process.env.NEXT_PUBLIC_HAMI_ADDRESS ||
-      "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
+      "365 Đường 29 tháng 3, Hòa Xuân, Tp. Đà Nẵng",
     serviceHoursDisplay:
       process.env.NEXT_PUBLIC_HAMI_HOURS || "08:00 – 21:00 hàng ngày",
     legalEntityDisplay:

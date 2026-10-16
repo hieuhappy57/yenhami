@@ -76,7 +76,7 @@ describe("Public article route", () => {
 
 describe("Rendered structured data", () => {
   const brand = { brandName: "Ha Mi", contact: {
-    addressDisplay: "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam",
+    addressDisplay: "365 Đường 29 tháng 3, Hòa Xuân, Tp. Đà Nẵng",
   } };
   const schemaModule = () => loadSource("components/SeoJsonLd.tsx", {
     react: { createElement: (_type: unknown, props: unknown) => props },

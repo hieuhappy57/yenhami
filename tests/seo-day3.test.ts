@@ -14,7 +14,7 @@ function load(file: string, env = "production", overrides: Record<string, unknow
   } });
   const module = { exports: {} as Record<string, any> };
   const brand = { brandName: "Yến Sào Hà Mi", shortName: "Hà Mi",
-    contact: { addressDisplay: "180 Hoàng Minh Giám, Hòa Xuân, Đà Nẵng, Việt Nam" } };
+    contact: { addressDisplay: "365 Đường 29 tháng 3, Hòa Xuân, Tp. Đà Nẵng" } };
   vm.runInNewContext(outputText, {
     module, exports: module.exports, URL,
     process: { env: { VERCEL_ENV: env } },
@@ -60,7 +60,7 @@ describe("Commercial metadata", () => {
         assert.equal(meta.robots.index, env === "production");
         assert.doesNotMatch(meta.description, /ISO|FDA|35g|295|2H|2 giờ/i);
         descriptions.add(meta.description);
-        if (slug === "lien-he") assert.match(meta.description, /180 Hoàng Minh Giám/);
+        if (slug === "lien-he") assert.match(meta.description, /365 Đường 29 tháng 3/);
       }
     }
     assert.equal(descriptions.size, 3);
