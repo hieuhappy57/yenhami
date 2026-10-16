@@ -87,3 +87,11 @@ white keyboard-only indicator, and expose the current slide via aria-current.
 Switch the header to its existing compact navigation below 1280px, where
 full desktop navigation previously wrapped into multiple lines.
 Keep all three slides, autoplay and the owner's uploaded first image.
+
+Released layout fix `e494482` as `dpl_EZVM6Qsh8ZvNtuw9YczBZ65oab5w` after
+116 tests, TypeScript, build and staged HTML checks passed. On official
+slide 3 at 1110x714 and 390x844, the CTA did not intersect contact controls;
+mobile CTA stayed inside the 380px hero and no horizontal overflow occurred.
+All three selectors remain present, aria-current identifies slide 3, and
+pointer focus no longer produces the green rectangular outline. Screenshot:
+`output/hero-slide-layout-fixed-2026-10-16.jpg`.
