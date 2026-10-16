@@ -56,3 +56,14 @@ mobile banner is uploaded, mobile uses the same complete uploaded artwork.
   `output/owner-banner-restored-{desktop,mobile}-2026-10-16.jpg`.
 - Did not modify the image bytes, other site text, product prices or orders.
   Retained concurrent address/map updates already present in the repository.
+
+## Carousel Correction
+
+The owner requires the hero slideshow to remain enabled. Superseding the
+single-banner decision above: retain all three slides, 5.5-second autoplay,
+previous/next arrows and slide selectors even after an uploaded banner is
+attached. Only the uploaded first slide suppresses duplicated text/seals and
+uses contain fitting; other slides retain their copy. Keep the responsive
+container height stable between slides to prevent page jumps. Regression
+coverage exercises autoplay wraparound, both arrows and direct selection
+with an uploaded banner present.

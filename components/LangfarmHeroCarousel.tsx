@@ -59,7 +59,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
   const uploadedDesktop=site?.heroDesktopImage?.startsWith("/api/media/uploads/editor/") ? site.heroDesktopImage : "";
   const uploadedMobile=site?.heroMobileImage?.startsWith("/api/media/uploads/editor/") ? site.heroMobileImage : "";
   const hasUploadedHero=Boolean(uploadedDesktop || uploadedMobile);
-  const slides = (hasUploadedHero ? HERO_SLIDES.slice(0,1) : HERO_SLIDES).map((slide,index) => !site ? slide : index===0 ? {
+  const slides = HERO_SLIDES.map((slide,index) => !site ? slide : index===0 ? {
     ...slide,kicker:site.heroBadge,title:site.heroTitle,mobileTitle:site.heroTitle,
     description:site.heroLead,ctaLabel:site.heroCta,
     desktopImage:uploadedDesktop || uploadedMobile || site.heroDesktopImage || slide.desktopImage,
@@ -76,6 +76,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
   }, [slides.length]);
 
   const currentSlide = slides[activeIndex % slides.length];
+  const isUploadedSlide=hasUploadedHero && currentSlide.id===HERO_SLIDES[0].id;
 
   const handlePrev = () => {
     setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
@@ -94,7 +95,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
       <h1 className="sr-only">
         Yến Sào Hà Mi - Yến Tươi Chưng Nóng Tại Đà Nẵng
       </h1>
-      <div className={hasUploadedHero ? `relative w-full ${uploadedMobile ? "aspect-square md:aspect-[1920/780]" : "aspect-[1920/780]"}` : "relative w-full h-[380px] sm:h-[440px] md:h-[500px] lg:h-[580px]"}>
+      <div className="relative w-full h-[380px] sm:h-[440px] md:h-[500px] lg:h-[580px]">
         {/* Slide Image */}
         <picture className="block w-full h-full">
           <source media="(min-width: 768px)" srcSet={currentSlide.desktopImage} />
@@ -106,18 +107,18 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
             sizes="100vw"
             width={1080}
             height={1080}
-            className={`w-full h-full ${hasUploadedHero ? "object-contain" : "object-cover"} object-center transition-all duration-500`}
+            className={`w-full h-full ${isUploadedSlide ? "object-contain" : "object-cover"} object-center transition-all duration-500`}
           />
         </picture>
 
         {/* Langfarm-style dark bottom vignette so white serif typography pops cleanly without any box covering the photo */}
-        {!hasUploadedHero && <div
+        {!isUploadedSlide && <div
           aria-hidden="true"
           className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
         />}
 
         {/* Top-Right Gold Brand Seal (Langfarm signature touch) */}
-        {!hasUploadedHero && <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-10 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#F7DF94] via-[#D9AE54] to-[#AA7C2C] p-1 shadow-lg flex items-center justify-center border border-white/60">
+        {!isUploadedSlide && <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-10 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#F7DF94] via-[#D9AE54] to-[#AA7C2C] p-1 shadow-lg flex items-center justify-center border border-white/60">
           <img
             src="/brand/ha-mi-logo-web.webp"
             alt="Huy hiệu Yến Sào Hà Mi"
@@ -146,7 +147,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
         </button>}
 
         {/* Bottom Overlay: Left Serif Title + Right Gold Pill CTA */}
-        {!hasUploadedHero && <div className="absolute inset-x-0 bottom-0 z-10 max-w-[1280px] mx-auto px-4 sm:px-8 pb-8 sm:pb-11 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        {!isUploadedSlide && <div className="absolute inset-x-0 bottom-0 z-10 max-w-[1280px] mx-auto px-4 sm:px-8 pb-8 sm:pb-11 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="max-w-2xl">
             <p className="hidden sm:block font-serif-display text-sm sm:text-xl md:text-2xl text-white/95 drop-shadow-sm">
               {currentSlide.kicker}
@@ -178,7 +179,7 @@ export function LangfarmHeroCarousel({site}: {site?: SiteContentSettings}) {
             )}
           </div>
         </div>}
-        {hasUploadedHero && <a href="#menu-chu-luc" aria-label={currentSlide.ctaLabel || "Chọn món"} className="absolute inset-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white" />}
+        {isUploadedSlide && <a href="#menu-chu-luc" aria-label={currentSlide.ctaLabel || "Chọn món"} className="absolute inset-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white" />}
 
         {/* Bottom-Center Pagination Dots (Langfarm style pill indicator with accessible touch target) */}
         {slides.length>1 && <div className="absolute bottom-1 sm:bottom-2 inset-x-0 z-10 flex items-center justify-center">

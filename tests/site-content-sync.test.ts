@@ -6,10 +6,10 @@ import ts from "typescript";
 import * as React from "react";
 import { parseSiteSettings } from "../lib/site-settings-validation";
 
-function load(file:string,dependencies:Record<string,unknown>) {
+function load(file:string,dependencies:Record<string,unknown>,globals:Record<string,unknown>={}) {
   const module={exports:{} as any};
   const source=ts.transpileModule(fs.readFileSync(file,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText;
-  vm.runInNewContext(source,{module,exports:module.exports,require:(id:string)=>{
+  vm.runInNewContext(source,{...globals,module,exports:module.exports,require:(id:string)=>{
     if(id in dependencies) return dependencies[id];
     throw new Error(`Unexpected module ${id}`);
   }});
@@ -51,21 +51,33 @@ test("settings accept only safe text fields and supported image/link URLs",()=>{
   assert.equal(parseSiteSettings({heroMobileImage:"/api/media/uploads/mobile.webp"}).heroMobileImage,"/api/media/uploads/mobile.webp");
 });
 
-test("uploaded designed banner stays visible, preserves all artwork and has no duplicate text",()=>{
+test("uploaded banner preserves its artwork while manual controls and autoplay keep all three slides",()=>{
+  let active=0,tick:()=>void=()=>{},effectCalled=false;
   const component=load("components/LangfarmHeroCarousel.tsx",{
-    react:{...React,useState:()=>[0,()=>{}],useEffect:(fn:()=>void)=>fn()},"next/link":"a",
+    react:{...React,useState:()=>[active,(next:any)=>{active=typeof next==="function" ? next(active) : next;}],useEffect:(fn:()=>void)=>{if(!effectCalled){effectCalled=true;fn();}}},"next/link":"a",
     "lucide-react":{ChevronLeft:"Prev",ChevronRight:"Next"},
-  });
+  },{setInterval:(fn:()=>void,ms:number)=>{assert.equal(ms,5500);tick=fn;return 1;},clearInterval(){}});
   const walk=(node:any):any[]=>!node || typeof node!=="object" ? [] : [node,...React.Children.toArray(node.props?.children).flatMap(walk)];
   const uploaded="/api/media/uploads/editor/uploaded-banner.jpg";
-  const tree=component.LangfarmHeroCarousel({site:{heroDesktopImage:uploaded,heroMobileImage:"/old-mobile.webp",heroTitle:"Printed in image",heroBadge:"Duplicate badge",heroCta:"Order"}});
+  const props={site:{heroDesktopImage:uploaded,heroMobileImage:"/old-mobile.webp",heroTitle:"Printed in image",heroBadge:"Duplicate badge",heroCta:"Order",giftingTitle:"Gift slide",giftingImage:"/gift.webp"}};
+  const tree=component.LangfarmHeroCarousel(props);
   const nodes=walk(tree),images=nodes.filter(node=>node.type==="img");
   assert.equal(images.length,1,"do not put a separate brand seal over a designed banner");
   assert.equal(images[0].props.src,uploaded,"mobile uses uploaded artwork when no uploaded mobile version exists");
   assert.match(images[0].props.className,/object-contain/);
   assert.equal(nodes.filter(node=>node.type==="h2").length,0);
-  assert.equal(nodes.filter(node=>node.type==="button").length,0,"do not rotate back to default artwork after an owner uploads a banner");
+  assert.equal(nodes.filter(node=>node.type==="button").length,5,"keep arrows and three slide selectors after upload");
   assert.equal(nodes.find(node=>node.type==="a").props.href,"#menu-chu-luc");
+  nodes.find(node=>node.props["aria-label"]==="Slide tiếp theo").props.onClick();
+  let next=walk(component.LangfarmHeroCarousel(props));
+  assert.equal(active,1);assert.equal(next.find(node=>node.type==="source").props.srcSet,"/gift.webp");
+  assert.ok(next.some(node=>node.type==="h2"),"text overlay remains available on the other slides");
+  assert.equal(next.find(node=>node.props.className?.includes("h-[380px]")).props.className,nodes.find(node=>node.props.className?.includes("h-[380px]")).props.className,"slide changes must not shift page height");
+  tick();assert.equal(active,2);tick();assert.equal(active,0);
+  next=walk(component.LangfarmHeroCarousel(props));
+  assert.equal(next.find(node=>node.type==="source").props.srcSet,uploaded);
+  next.find(node=>node.props["aria-label"]==="Slide trước").props.onClick();assert.equal(active,2);
+  next.find(node=>node.props["aria-label"]==="Chuyển đến slide 2").props.onClick();assert.equal(active,1);
 });
 
 test("editor image recovery returns only uploaded image metadata, not private objects",async()=>{
