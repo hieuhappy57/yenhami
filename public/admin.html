@@ -3819,13 +3819,22 @@
         if (typeof fetchServerOrders === 'function') fetchServerOrders(true);
       }
       if (tabId === 'customers') renderCustomersTable();
-      if (tabId === 'products') renderProductsTable();
+      if (tabId === 'products') {
+        renderProductsTable();
+        if (typeof fetchServerCmsData === 'function') fetchServerCmsData(true);
+      }
       if (tabId === 'posts') {
         renderPostsTable();
-        if (typeof fetchServerCmsPosts === 'function') fetchServerCmsPosts(true);
+        if (typeof fetchServerCmsData === 'function') fetchServerCmsData(true);
       }
-      if (tabId === 'jobs') renderJobsTable();
-      if (tabId === 'site') loadSiteSettingsForm();
+      if (tabId === 'jobs') {
+        renderJobsTable();
+        if (typeof fetchServerCmsData === 'function') fetchServerCmsData(true);
+      }
+      if (tabId === 'site') {
+        loadSiteSettingsForm();
+        if (typeof fetchServerCmsData === 'function') fetchServerCmsData(true);
+      }
       if (tabId === 'staff') renderStaffTable();
       if (tabId === 'notifications') {
         loadNotificationSettingsForm();
@@ -5468,13 +5477,14 @@
     }
 
     function openNewProductModal() {
-      const newId = 'P' + (Object.keys(appState.products).length + 1);
       document.getElementById('editProductTitle').innerText = 'Thêm món / Sản phẩm mới';
-      document.getElementById('editProductId').value = newId;
+      document.getElementById('editProductId').value = '';
       document.getElementById('editProductName').value = '';
-      document.getElementById('editProductCategory').value = 'Yến tươi chưng nóng 2H';
-      document.getElementById('editProductPrice').value = '185000';
-      document.getElementById('editProductImage').value = '/assets/brand/dishes/tu-quy-an-nhien-v2.webp';
+      if (document.getElementById('editProductLine')) document.getElementById('editProductLine').value = 'fresh-bowl';
+      if (document.getElementById('editProductCategory')) document.getElementById('editProductCategory').value = 'nguyen-ban';
+      if (document.getElementById('editProductVolume')) document.getElementById('editProductVolume').value = '200';
+      document.getElementById('editProductPrice').value = '295000';
+      document.getElementById('editProductImage').value = '/brand/dishes/thanh-nguyen-v2.webp';
       document.getElementById('editProductDesc').value = '';
       
       const isMarketing = appState.currentRole === 'MARKETING';
@@ -5487,6 +5497,8 @@
         priceInput.removeAttribute('disabled');
         priceNotice.style.display = 'none';
       }
+      const delBtn = document.getElementById('deleteProductButton');
+      if (delBtn) delBtn.hidden = true;
       document.getElementById('editProductModal').showModal();
     }
 
@@ -5497,7 +5509,15 @@
       document.getElementById('editProductTitle').innerText = `Chỉnh sửa: ${p.name}`;
       document.getElementById('editProductId').value = p.id;
       document.getElementById('editProductName').value = p.name;
-      document.getElementById('editProductCategory').value = p.category || '';
+      if (document.getElementById('editProductLine')) {
+        document.getElementById('editProductLine').value = p.productLine || 'fresh-bowl';
+      }
+      if (document.getElementById('editProductCategory')) {
+        document.getElementById('editProductCategory').value = p.categoryKey || p.category || 'nguyen-ban';
+      }
+      if (document.getElementById('editProductVolume')) {
+        document.getElementById('editProductVolume').value = p.volumeMl || 200;
+      }
       
       const priceInput = document.getElementById('editProductPrice');
       const priceNotice = document.getElementById('priceLockNotice');
@@ -5512,28 +5532,116 @@
 
       document.getElementById('editProductImage').value = p.image || '';
       document.getElementById('editProductDesc').value = p.description || '';
+
+      const delBtn = document.getElementById('deleteProductButton');
+      if (delBtn) {
+        if (isMarketing) {
+          delBtn.hidden = true;
+        } else {
+          delBtn.hidden = false;
+          delBtn.onclick = () => handleDeleteProduct(p.id);
+        }
+      }
       document.getElementById('editProductModal').showModal();
     }
 
-    function handleSaveProduct(event) {
+    async function handleSaveProduct(event) {
       event.preventDefault();
       const pId = document.getElementById('editProductId').value;
       const isMarketing = appState.currentRole === 'MARKETING';
-      
-      if (!appState.products[pId]) {
-        appState.products[pId] = { id: pId };
+      const name = document.getElementById('editProductName').value.trim();
+      const productLine = document.getElementById('editProductLine')?.value || 'fresh-bowl';
+      const category = document.getElementById('editProductCategory')?.value || 'nguyen-ban';
+      const volumeMl = parseInt(document.getElementById('editProductVolume')?.value, 10) || 200;
+      const price = parseInt(document.getElementById('editProductPrice')?.value, 10) || 0;
+      const image = document.getElementById('editProductImage')?.value.trim() || '';
+      const description = document.getElementById('editProductDesc')?.value.trim() || '';
+
+      if (!name) {
+        showToast('Vui lòng nhập tên sản phẩm', 'error');
+        return;
       }
-      
-      appState.products[pId].description = document.getElementById('editProductDesc').value.trim();
-      appState.products[pId].image = document.getElementById('editProductImage').value.trim();
-      if (!isMarketing) {
-        appState.products[pId].name = document.getElementById('editProductName').value.trim();
-        appState.products[pId].category = document.getElementById('editProductCategory').value.trim();
-        appState.products[pId].price = parseInt(document.getElementById('editProductPrice').value, 10) || 0;
+
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const payload = {
+          action: 'upsert_product',
+          product: {
+            id: pId || undefined,
+            name,
+            productLine,
+            category,
+            volumeMl,
+            priceVnd: isMarketing ? undefined : price,
+            imageUrl: image || '/brand/dishes/thanh-nguyen-v2.webp',
+            shortDescription: description,
+            status: 'AVAILABLE'
+          }
+        };
+
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw new Error(data.errorMessage || 'Máy chủ từ chối cập nhật sản phẩm.');
+        }
+
+        const returned = data.product || {};
+        const finalId = data.productId || returned.id || pId || ('prod-' + Date.now());
+        appState.products[finalId] = {
+          ...(appState.products[finalId] || {}),
+          id: finalId,
+          name: returned.name || name,
+          slug: returned.slug || appState.products[finalId]?.slug,
+          category: returned.categoryLabel || category,
+          categoryKey: returned.category || category,
+          productLine: returned.productLine || productLine,
+          productLineLabel: returned.productLine === 'fresh-bowl' ? 'Yến tươi chưng nóng (Thố sứ 200ml)'
+            : returned.productLine === 'gift-set' ? 'Set quà biếu sức khỏe'
+            : returned.productLine === 'jar' ? 'Yến hũ chưng sẵn'
+            : returned.productLine === 'refined-nest' ? 'Yến sào tinh chế'
+            : (returned.categoryLabel || 'Món yến Hà Mi'),
+          volumeMl: returned.volumeMl || volumeMl,
+          price: typeof returned.priceVnd === 'number' ? returned.priceVnd : price,
+          image: returned.imageUrl || image,
+          description: returned.shortDescription || description,
+          status: returned.status || 'AVAILABLE'
+        };
+
+        persistAppState();
+        closeDialog('editProductModal');
+        renderProductsTable();
+        showToast('✅ Đã lưu sản phẩm lên máy chủ thành công!', 'success');
+      } catch (err) {
+        showToast(`❌ Lỗi lưu sản phẩm: ${err.message || 'Lỗi kết nối máy chủ'}`, 'error');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
-      showToast('Đã lưu thông tin sản phẩm thành công', 'success');
-      closeDialog('editProductModal');
-      renderProductsTable();
+    }
+
+    async function handleDeleteProduct(productId) {
+      if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống?')) return;
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({ action: 'delete_product', productId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.errorMessage || 'Lỗi xóa sản phẩm');
+        delete appState.products[productId];
+        persistAppState();
+        closeDialog('editProductModal');
+        renderProductsTable();
+        showToast('✅ Đã xóa sản phẩm trên máy chủ thành công!', 'info');
+      } catch (err) {
+        showToast(`❌ Lỗi xóa: ${err.message}`, 'error');
+      }
     }
 
     /* --- 10. POSTS TAB --- */
@@ -5599,33 +5707,95 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    async function fetchServerCmsPosts(silent = false) {
+    async function fetchServerCmsData(silent = false) {
       try {
         const res = await fetch('/api/admin/cms', { headers: getAdminAuthHeaders() });
         const data = await res.json().catch(() => ({}));
-        if (data && data.ok && Array.isArray(data.posts) && data.posts.length > 0) {
-          appState.posts = data.posts.map(p => ({
-            id: p.id,
-            title: p.title,
-            slug: p.slug,
-            category: p.category || 'Tin tức Hà Mi',
-            coverImageUrl: p.coverImageUrl || '/brand/hero-editorial-clean.jpg',
-            excerpt: p.excerpt || '',
-            content: p.content || '',
-            status: p.isPublished ? 'published' : 'draft',
-            isPinned: Boolean(p.isPinned),
-            updatedAt: p.updatedAt ? p.updatedAt.slice(0, 10) : SIMULATED_TODAY
-          }));
-          persistAppState();
-          if (appState.activeTab === 'posts') {
-            renderPostsTable();
+        if (data && data.ok) {
+          // 1. Posts
+          if (Array.isArray(data.posts) && data.posts.length > 0) {
+            appState.posts = data.posts.map(p => ({
+              id: p.id,
+              title: p.title,
+              slug: p.slug,
+              category: p.category || 'Tin tức Hà Mi',
+              coverImageUrl: p.coverImageUrl || '/brand/hero-editorial-clean.jpg',
+              excerpt: p.excerpt || '',
+              content: p.content || '',
+              status: p.isPublished ? 'published' : 'draft',
+              isPinned: Boolean(p.isPinned),
+              updatedAt: p.updatedAt ? p.updatedAt.slice(0, 10) : SIMULATED_TODAY
+            }));
+            if (appState.activeTab === 'posts') renderPostsTable();
           }
-          if (!silent) showToast('✅ Đã đồng bộ bài viết từ máy chủ!', 'success');
+
+          // 2. Products
+          if (Array.isArray(data.products) && data.products.length > 0) {
+            const prods = {};
+            data.products.forEach(p => {
+              prods[p.id] = {
+                id: p.id,
+                name: p.name,
+                slug: p.slug,
+                category: p.categoryLabel || p.category || 'Yến tươi chưng nóng',
+                categoryKey: p.category || 'nguyen-ban',
+                productLine: p.productLine || 'fresh-bowl',
+                productLineLabel: p.productLine === 'fresh-bowl' ? 'Yến tươi chưng nóng (Thố sứ 200ml)'
+                  : p.productLine === 'gift-set' ? 'Set quà biếu sức khỏe'
+                  : p.productLine === 'jar' ? 'Yến hũ chưng sẵn'
+                  : p.productLine === 'refined-nest' ? 'Yến sào tinh chế'
+                  : (p.categoryLabel || 'Món yến Hà Mi'),
+                volumeMl: p.volumeMl || 200,
+                price: typeof p.priceVnd === 'number' ? p.priceVnd : (p.price || 0),
+                image: p.imageUrl || p.image || '/brand/dishes/thanh-nguyen-v2.webp',
+                description: p.shortDescription || p.description || '',
+                status: p.status || 'AVAILABLE',
+                ingredients: p.ingredients || [],
+                tasteProfile: p.tasteProfile || '',
+                usageGuide: p.usageGuide || '',
+                storageGuide: p.storageGuide || '',
+                cautionNote: p.cautionNote || ''
+              };
+            });
+            appState.products = prods;
+            if (appState.activeTab === 'products') renderProductsTable();
+          }
+
+          // 3. Jobs
+          if (Array.isArray(data.jobs) && data.jobs.length > 0) {
+            appState.jobs = data.jobs.map(j => ({
+              id: j.id,
+              title: j.title,
+              department: j.department || 'Kinh doanh & CSKH',
+              employmentType: j.employmentType || 'Toàn thời gian',
+              location: j.location || 'Đà Nẵng',
+              salaryRange: j.salaryRange || 'Thỏa thuận',
+              description: j.description || '',
+              requirements: j.requirements || '',
+              contactInfo: j.contactInfo || 'Hotline/Zalo: 0935 052 959',
+              isOpen: Boolean(j.isOpen),
+              updatedAt: j.updatedAt ? j.updatedAt.slice(0, 10) : SIMULATED_TODAY
+            }));
+            if (appState.activeTab === 'jobs') renderJobsTable();
+          }
+
+          // 4. Site Settings
+          if (data.siteSettings && typeof data.siteSettings === 'object') {
+            appState.site = {
+              ...appState.site,
+              ...data.siteSettings
+            };
+            if (appState.activeTab === 'site') loadSiteSettingsForm();
+          }
+
+          persistAppState();
+          if (!silent) showToast('✅ Đã đồng bộ dữ liệu CMS từ máy chủ!', 'success');
         }
       } catch (e) {
-        if (!silent) showToast('Lỗi kết nối khi tải bài viết từ máy chủ', 'error');
+        if (!silent) showToast('Lỗi kết nối khi tải dữ liệu từ máy chủ', 'error');
       }
     }
+    const fetchServerCmsPosts = fetchServerCmsData;
 
     async function togglePinPost(postId) {
       const post = appState.posts.find(p => p.id === postId);
@@ -5968,7 +6138,7 @@
       document.getElementById('editJobModal').showModal();
     }
 
-    function handleSaveJob(event) {
+    async function handleSaveJob(event) {
       event.preventDefault();
       const id = document.getElementById('editJobId').value;
       const title = document.getElementById('jobTitleInput').value.trim();
@@ -5981,24 +6151,37 @@
       const contactInfo = document.getElementById('jobContactInput').value.trim();
       const isOpen = document.getElementById('jobIsOpenInput').value === 'true';
 
-      if (id) {
-        const job = appState.jobs.find(j => j.id === id);
-        if (job) {
-          job.title = title;
-          job.department = department;
-          job.employmentType = employmentType;
-          job.location = location;
-          job.salaryRange = salaryRange;
-          job.description = description;
-          job.requirements = requirements;
-          job.contactInfo = contactInfo;
-          job.isOpen = isOpen;
-          job.updatedAt = SIMULATED_TODAY;
-        }
-        showToast('Đã lưu tin tuyển dụng thành công!', 'success');
-      } else {
-        const newJob = {
-          id: 'job-' + Date.now(),
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const payload = {
+          action: 'upsert_job',
+          job: {
+            id: id || undefined,
+            title,
+            department,
+            employmentType,
+            location,
+            salaryRange,
+            description,
+            requirements,
+            contactInfo,
+            isOpen
+          }
+        };
+
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.errorMessage || 'Lỗi lưu tin tuyển dụng trên máy chủ.');
+
+        const finalId = data.id || id || ('job-' + Date.now());
+        const jobObj = {
+          id: finalId,
           title,
           department,
           employmentType,
@@ -6010,28 +6193,75 @@
           isOpen,
           updatedAt: SIMULATED_TODAY
         };
-        appState.jobs.unshift(newJob);
-        showToast('Đã tạo tin tuyển dụng mới thành công!', 'success');
+
+        const existingIdx = appState.jobs.findIndex(j => j.id === finalId);
+        if (existingIdx >= 0) {
+          appState.jobs[existingIdx] = jobObj;
+        } else {
+          appState.jobs.unshift(jobObj);
+        }
+
+        persistAppState();
+        closeDialog('editJobModal');
+        renderJobsTable();
+        showToast(id ? '✅ Đã lưu tin tuyển dụng lên máy chủ thành công!' : '✅ Đã tạo tin tuyển dụng mới trên máy chủ thành công!', 'success');
+      } catch (err) {
+        showToast(`❌ Lỗi: ${err.message || 'Lỗi kết nối máy chủ'}`, 'error');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
-      closeDialog('editJobModal');
-      renderJobsTable();
     }
 
-    function toggleJobStatus(jobId) {
+    async function toggleJobStatus(jobId) {
       const job = appState.jobs.find(j => j.id === jobId);
-      if (job) {
-        job.isOpen = !job.isOpen;
+      if (!job) return;
+      const newStatus = !job.isOpen;
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({
+            action: 'upsert_job',
+            job: {
+              ...job,
+              isOpen: newStatus
+            }
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.errorMessage || 'Lỗi cập nhật trạng thái');
+
+        job.isOpen = newStatus;
         job.updatedAt = SIMULATED_TODAY;
-        showToast(`Đã cập nhật trạng thái tuyển dụng: ${job.isOpen ? 'Đang mở' : 'Đã đóng'}`, 'info');
+        persistAppState();
         renderJobsTable();
+        showToast(`✅ Đã cập nhật trạng thái tuyển dụng: ${job.isOpen ? 'Đang mở' : 'Đã đóng'}`, 'info');
+      } catch (err) {
+        showToast(`❌ Lỗi: ${err.message}`, 'error');
       }
     }
 
-    function deleteJob(jobId) {
-      if (window.confirm('Bạn có chắc chắn muốn xóa tin tuyển dụng này?')) {
+    async function deleteJob(jobId) {
+      if (!window.confirm('Bạn có chắc chắn muốn xóa tin tuyển dụng này khỏi máy chủ?')) return;
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({
+            action: 'delete_job',
+            jobId
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.errorMessage || 'Lỗi xóa tin tuyển dụng');
+
         appState.jobs = appState.jobs.filter(j => j.id !== jobId);
-        showToast('Đã xóa tin tuyển dụng thành công', 'info');
+        persistAppState();
         renderJobsTable();
+        showToast('✅ Đã xóa tin tuyển dụng trên máy chủ thành công!', 'info');
+      } catch (err) {
+        showToast(`❌ Lỗi: ${err.message}`, 'error');
       }
     }
 
@@ -6062,29 +6292,54 @@
       if (document.getElementById('siteAboutLead')) document.getElementById('siteAboutLead').value = s.aboutLead || '';
     }
 
-    function handleSaveSiteSettings(event) {
+    async function handleSaveSiteSettings(event) {
       event.preventDefault();
-      appState.site = {
-        heroBadge: document.getElementById('siteHeroBadge').value.trim(),
-        heroTitle: document.getElementById('siteHeroTitle').value.trim(),
-        heroLead: document.getElementById('siteHeroLead').value.trim(),
-        heroCta: document.getElementById('siteHeroCta').value.trim(),
-        heroDesktopImage: document.getElementById('siteHeroDesktopImage').value.trim(),
-        heroMobileImage: document.getElementById('siteHeroMobileImage').value.trim(),
-        giftingBadge: document.getElementById('siteGiftingBadge').value.trim(),
-        giftingTitle: document.getElementById('siteGiftingTitle').value.trim(),
-        giftingDescription: document.getElementById('siteGiftingDesc').value.trim(),
-        giftingImage: document.getElementById('siteGiftingImage').value.trim(),
-        hotlineDisplay: document.getElementById('siteHotlineDisplay').value.trim(),
-        hotlineTel: document.getElementById('siteHotlineTel').value.trim(),
-        zaloUrl: document.getElementById('siteZaloUrl').value.trim(),
-        addressDisplay: document.getElementById('siteAddressDisplay').value.trim(),
-        serviceHoursDisplay: document.getElementById('siteServiceHours').value.trim(),
-        noticeBanner: document.getElementById('siteNoticeBanner').value.trim(),
-        aboutHeadline: document.getElementById('siteAboutHeadline').value.trim(),
-        aboutLead: document.getElementById('siteAboutLead').value.trim()
+      const settings = {
+        heroBadge: document.getElementById('siteHeroBadge')?.value.trim() || '',
+        heroTitle: document.getElementById('siteHeroTitle')?.value.trim() || '',
+        heroLead: document.getElementById('siteHeroLead')?.value.trim() || '',
+        heroCta: document.getElementById('siteHeroCta')?.value.trim() || '',
+        heroDesktopImage: document.getElementById('siteHeroDesktopImage')?.value.trim() || '',
+        heroMobileImage: document.getElementById('siteHeroMobileImage')?.value.trim() || '',
+        giftingBadge: document.getElementById('siteGiftingBadge')?.value.trim() || '',
+        giftingTitle: document.getElementById('siteGiftingTitle')?.value.trim() || '',
+        giftingDescription: document.getElementById('siteGiftingDesc')?.value.trim() || '',
+        giftingImage: document.getElementById('siteGiftingImage')?.value.trim() || '',
+        hotlineDisplay: document.getElementById('siteHotlineDisplay')?.value.trim() || '',
+        hotlineTel: document.getElementById('siteHotlineTel')?.value.trim() || '',
+        zaloUrl: document.getElementById('siteZaloUrl')?.value.trim() || '',
+        addressDisplay: document.getElementById('siteAddressDisplay')?.value.trim() || '',
+        serviceHoursDisplay: document.getElementById('siteServiceHours')?.value.trim() || '',
+        noticeBanner: document.getElementById('siteNoticeBanner')?.value.trim() || '',
+        aboutHeadline: document.getElementById('siteAboutHeadline')?.value.trim() || '',
+        aboutLead: document.getElementById('siteAboutLead')?.value.trim() || ''
       };
-      showToast('Đã lưu tùy biến Giao diện & Trang chủ thành công!', 'success');
+
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/cms', {
+          method: 'POST',
+          headers: getAdminAuthHeaders(),
+          body: JSON.stringify({
+            action: 'save_site_settings',
+            settings
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.errorMessage || 'Lỗi lưu thông tin website trên máy chủ.');
+
+        appState.site = {
+          ...settings
+        };
+        persistAppState();
+        showToast('✅ Đã lưu tùy biến Giao diện & Trang chủ lên máy chủ thành công!', 'success');
+      } catch (err) {
+        showToast(`❌ Lỗi lưu thông tin: ${err.message}`, 'error');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
     }
 
     /* --- 13. STAFF TAB & AUTH (OWNER ONLY) --- */
@@ -6360,6 +6615,9 @@
             if (typeof fetchServerOrders === 'function') {
               fetchServerOrders(true);
             }
+            if (typeof fetchServerCmsData === 'function') {
+              fetchServerCmsData(true);
+            }
             return true;
           }
         }
@@ -6476,6 +6734,9 @@
         renderStaffTable();
         if (typeof fetchServerOrders === 'function') {
           fetchServerOrders(false);
+        }
+        if (typeof fetchServerCmsData === 'function') {
+          fetchServerCmsData(true);
         }
       } catch (err) {
         console.error('Login error:', err);

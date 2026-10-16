@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   syncDbFromCloud,
   syncDbToCloud,
@@ -51,6 +52,13 @@ export async function PATCH(request: Request) {
         await syncDbFromCloud(true);
         const updated = updateProductStatusByStaff({ productId, status, priceVnd });
         await syncDbToCloud();
+        try {
+          revalidatePath("/");
+          revalidatePath("/san-pham/[slug]", "page");
+          revalidatePath("/yen-tuoi-chung-nong");
+          revalidatePath("/dat-hang");
+          revalidatePath("/gio-hang");
+        } catch {}
         return updated;
       },{deferBackup:after});
       return NextResponse.json(res, { headers: privateJsonHeaders() });

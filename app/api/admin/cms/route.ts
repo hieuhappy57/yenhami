@@ -70,6 +70,7 @@ export async function GET(request: Request) {
   await syncDbFromCloud(true);
   return NextResponse.json({
     ok: true,
+    products: getAllProducts(),
     siteSettings: getSiteContentSettings(),
     posts: getAllPosts(false),
     jobs: getAllJobPostings(false),
@@ -128,6 +129,14 @@ export async function POST(request: Request) {
     if (action === "save_site_settings") {
       const updated = updateSiteContentSettings(parseSiteSettings(body.settings));
       await syncDbToCloud();
+      try {
+        revalidatePath("/");
+        revalidatePath("/lien-he");
+        revalidatePath("/tuyen-dung");
+        revalidatePath("/ve-ha-mi");
+        revalidatePath("/gui-qua");
+        revalidatePath("/", "layout");
+      } catch {}
       return NextResponse.json({ ok: true, siteSettings: updated },{headers:privateJsonHeaders()});
     }
 
@@ -162,6 +171,14 @@ export async function POST(request: Request) {
         if (!result.changes) return NextResponse.json({ ok: false, errorMessage: "Không tìm thấy sản phẩm." }, { status: 404, headers: privateJsonHeaders() });
         getSqliteDb().prepare("UPDATE products SET product_line=? WHERE id=?").run(productLine,id);
         await syncDbToCloud();
+        try {
+          revalidatePath("/");
+          revalidatePath("/san-pham/[slug]", "page");
+          revalidatePath("/yen-tuoi-chung-nong");
+          revalidatePath("/dat-hang");
+          revalidatePath("/gio-hang");
+          revalidatePath("/gui-qua");
+        } catch {}
         return NextResponse.json({ ok: true, id, product:getAllProducts().find(product=>product.id===id) }, { headers: privateJsonHeaders() });
       }
 
@@ -192,12 +209,27 @@ export async function POST(request: Request) {
       });
       getSqliteDb().prepare("UPDATE products SET product_line=? WHERE id=?").run(productLine,res.productId);
       await syncDbToCloud();
+      try {
+        revalidatePath("/");
+        revalidatePath("/san-pham/[slug]", "page");
+        revalidatePath("/yen-tuoi-chung-nong");
+        revalidatePath("/dat-hang");
+        revalidatePath("/gio-hang");
+        revalidatePath("/gui-qua");
+      } catch {}
       return NextResponse.json({...res,product:getAllProducts().find(product=>product.id===res.productId)},{headers:privateJsonHeaders()});
     }
 
     if (action === "delete_product") {
       const res = deleteProductByStaff(String(body.productId || ""));
       await syncDbToCloud();
+      try {
+        revalidatePath("/");
+        revalidatePath("/san-pham/[slug]", "page");
+        revalidatePath("/yen-tuoi-chung-nong");
+        revalidatePath("/dat-hang");
+        revalidatePath("/gio-hang");
+      } catch {}
       return NextResponse.json(res.ok ? res : {...res,errorMessage:"Sản phẩm không còn trong danh mục."},{status:res.ok ? 200 : 404,headers:privateJsonHeaders()});
     }
 
@@ -248,12 +280,18 @@ export async function POST(request: Request) {
         isOpen: Boolean(job.isOpen ?? true),
       });
       await syncDbToCloud();
+      try {
+        revalidatePath("/tuyen-dung");
+      } catch {}
       return NextResponse.json(res);
     }
 
     if (action === "delete_job") {
       const res = deleteJobPostingByStaff(String(body.jobId || ""));
       await syncDbToCloud();
+      try {
+        revalidatePath("/tuyen-dung");
+      } catch {}
       return NextResponse.json(res);
     }
 
