@@ -67,3 +67,12 @@ uses contain fitting; other slides retain their copy. Keep the responsive
 container height stable between slides to prevent page jumps. Regression
 coverage exercises autoplay wraparound, both arrows and direct selection
 with an uploaded banner present.
+
+Verified and released correction `b4a3e44` as deployment
+`dpl_DZR5wX84yzNNdHHTh2JCcwa7aGrG`. All 116 tests, TypeScript and build passed.
+On yenhami.com, exercised Next, Previous, direct slide 2/3 selection and
+observed autoplay return from slide 3 to the uploaded first banner. Desktop
+height remains 580px; mobile height remains 380px with all three selectors
+and no horizontal overflow. No stored settings, images or orders changed.
+Proof: `output/hero-carousel-restored-2026-10-16.jpg` and
+`output/hero-carousel-restored-mobile-2026-10-16.jpg`.
