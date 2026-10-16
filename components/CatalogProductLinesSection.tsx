@@ -13,7 +13,7 @@ export function CatalogProductLinesSection({
   products: ProductRecord[];
 }) {
   const { addItem } = useCart();
-  const [jarVolumeTab, setJarVolumeTab] = useState<"75ml" | "100ml" | "all">("75ml");
+  const [jarVolumeTab, setJarVolumeTab] = useState<number | "all">("all");
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   const giftSetProducts = useMemo(
@@ -25,6 +25,11 @@ export function CatalogProductLinesSection({
     () => products.filter((p) => getProductLine(p)==="jar"),
     [products]
   );
+  const jarVolumes = useMemo(
+    () => [...new Set(allJars.map((product) => product.volumeMl))].sort((a,b)=>a-b),
+    [allJars]
+  );
+  const selectedJarVolume = jarVolumeTab !== "all" && jarVolumes.includes(jarVolumeTab) ? jarVolumeTab : "all";
 
   const refinedNestProducts = useMemo(
     () =>
@@ -261,7 +266,7 @@ export function CatalogProductLinesSection({
               id="yen-hu-heading"
               className="font-serif-display text-2xl sm:text-3xl lg:text-[40px] font-semibold text-[#1d2327]"
             >
-              Yến Hũ Chưng Sẵn (75ml & 100ml)
+              Yến Hũ Chưng Sẵn
             </p>
 
             {/* Volume Switcher Tabs */}
@@ -270,44 +275,32 @@ export function CatalogProductLinesSection({
               aria-label="Chọn thể tích Yến Hũ"
               className="flex flex-nowrap overflow-x-auto gap-2 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <button
+              {jarVolumes.map((volume) => <button
+                key={volume}
                 type="button"
                 role="tab"
-                aria-selected={jarVolumeTab === "75ml"}
-                onClick={() => setJarVolumeTab("75ml")}
+                aria-selected={selectedJarVolume === volume}
+                onClick={() => setJarVolumeTab(volume)}
                 className={`shrink-0 min-h-[38px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                  jarVolumeTab === "75ml"
+                  selectedJarVolume === volume
                     ? "bg-[#155132] text-white"
                     : "bg-[#F6F4EE] text-[#1d2327] hover:bg-[#EBE6D8]"
                 }`}
               >
-                Hũ 75ml (40k–45k)
-              </button>
+                Hũ {volume}ml
+              </button>)}
               <button
                 type="button"
                 role="tab"
-                aria-selected={jarVolumeTab === "100ml"}
-                onClick={() => setJarVolumeTab("100ml")}
-                className={`shrink-0 min-h-[38px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                  jarVolumeTab === "100ml"
-                    ? "bg-[#155132] text-white"
-                    : "bg-[#F6F4EE] text-[#1d2327] hover:bg-[#EBE6D8]"
-                }`}
-              >
-                Hũ 100ml (100k–110k)
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={jarVolumeTab === "all"}
+                aria-selected={selectedJarVolume === "all"}
                 onClick={() => setJarVolumeTab("all")}
                 className={`shrink-0 min-h-[38px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                  jarVolumeTab === "all"
+                  selectedJarVolume === "all"
                     ? "bg-[#155132] text-white"
                     : "bg-[#F6F4EE] text-[#1d2327] hover:bg-[#EBE6D8]"
                 }`}
               >
-                Tất cả (11)
+                Tất cả ({allJars.length})
               </button>
             </div>
           </div>
@@ -316,9 +309,7 @@ export function CatalogProductLinesSection({
             {allJars.map((product) => {
               const isJustAdded = justAddedId === product.id;
               const isVisible =
-                jarVolumeTab === "all" ||
-                (jarVolumeTab === "75ml" && product.volumeMl === 75) ||
-                (jarVolumeTab === "100ml" && product.volumeMl === 100);
+                selectedJarVolume === "all" || product.volumeMl === selectedJarVolume;
               return (
                 <article
                   key={product.id}

@@ -15,10 +15,16 @@ and fresh-bowl pages. Always await the forced D1 refresh before reading the
 catalog. Do not rely on an ISR build-time seed or cache invalidation alone
 for commercial product names, prices and deletion visibility.
 
+The jar volume filter also used hardcoded 75ml/100ml tabs, a default 75ml
+selection, fixed price ranges and an 11-product count. Generate tabs from
+actual product volumes and show all jars by default, with a dynamic count.
+This prevents newly edited 70ml jars from being hidden by an obsolete filter.
+
 ## Verification
 
 - Regression test requires request rendering and checks successive home renders
   receive changed names/prices and removed products after a forced sync.
 - CMS integration test saves a new name and price and verifies canonical data;
   the order-history snapshot assertion follows that saved name.
-- 109 tests passed. No production products or prices changed during testing.
+- Jar regression test checks 70/100/120ml filters, current count and visibility.
+- No production products or prices changed during testing.
