@@ -12,7 +12,8 @@ import { ProductMenuSection } from "@/components/ProductMenuSection";
 import { CatalogProductLinesSection } from "@/components/CatalogProductLinesSection";
 import { FaqJsonLd } from "@/components/SeoJsonLd";
 
-export const revalidate = 60;
+// Product names, prices and visibility come from D1, never the build-time seed.
+export const dynamic = "force-dynamic";
 
 const FEATURED_CATEGORIES = [
   {

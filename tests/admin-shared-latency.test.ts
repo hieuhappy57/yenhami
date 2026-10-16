@@ -61,6 +61,9 @@ test("partial product saves merge fresh database fields and return canonical dat
     assert.equal(result.product.shortDescription,"Updated copy");
     for(const key of ["priceVnd","status","ingredients","supportedOptions","cautionNote"] as const) assert.deepEqual(result.product[key],before[key],key);
     const post=async(body:unknown)=>module.exports.POST(new Request("https://isolated.test/api/admin/cms",{method:"POST",body:JSON.stringify(body)}));
+    const renamed=await (await post({action:"upsert_product",product:{id:before.id,name:"Updated catalog name",priceVnd:345000}})).json();
+    assert.equal(renamed.product.name,"Updated catalog name");
+    assert.equal(renamed.product.priceVnd,345000);
     for(const productLine of Object.keys(productLines.PRODUCT_LINES)) {
       const response=await post({action:"upsert_product",product:{id:`custom-${productLine}`,name:`QA ${productLine}`,category:"nguyen-ban",productLine,volumeMl:productLine==="jar" ? 75 : 200,priceVnd:100000}});
       const body=await response.json();assert.equal(body.ok,true);
@@ -76,7 +79,7 @@ test("partial product saves merge fresh database fields and return canonical dat
     commercial=true;
     assert.equal((await post({action:"delete_product",productId:before.id})).status,200);
     assert.equal(database.getProductBySlug(before.slug),null);
-    assert.equal(database.getOrderRequestByReference({referenceCode:order.order!.referenceCode,isStaff:true})!.items[0].productNameSnapshot,before.name);
+    assert.equal(database.getOrderRequestByReference({referenceCode:order.order!.referenceCode,isStaff:true})!.items[0].productNameSnapshot,"Updated catalog name");
     assert.equal(database.calculateServerQuote({items:[{productId:before.id,quantity:1}]}).ok,false);
     database.resetDbConnectionForTest();
     assert.equal(database.getProductBySlug(before.slug),null,"deleted products must not be reseeded on restart");
